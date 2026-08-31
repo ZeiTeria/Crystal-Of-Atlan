@@ -30,10 +30,29 @@ update public.profiles set is_admin = true
 where id = (select id from auth.users order by created_at limit 1);
 ```
 
-## Two settings you must confirm
+## When the week turns
 
-`app_settings` guesses at two facts about the game. A wrong value here silently
-shifts every week boundary:
+`app_settings.reset_hour` and `app_settings.server_timezone` decide every week
+boundary the planner computes, so a wrong value here is silent and total.
 
-- `reset_hour` — defaults to `0` (midnight)
-- `server_timezone` — defaults to `Asia/Jakarta`
+0001 guessed at `0` / `Asia/Jakarta`. **0002 sets the real values: `6` /
+`Asia/Singapore`** — the game resets at 06:00 UTC+8, and Singapore is a
+permanent +08:00 zone with no daylight saving.
+
+## Running the row level security tests
+
+`src/lib/rls.test.ts` signs two real users into this project, so it needs
+credentials that are never committed. Without them it skips.
+
+1. **Authentication → Users → Add user**, twice, each with *Auto Confirm User*
+   ticked — email confirmation is on, and an unconfirmed user never gets a
+   session.
+2. Put both in `.env.local` (gitignored, and per-machine, so every PC needs its
+   own copy):
+
+   ```
+   VITE_TEST_A_EMAIL=...
+   VITE_TEST_A_PASSWORD=...
+   VITE_TEST_B_EMAIL=...
+   VITE_TEST_B_PASSWORD=...
+   ```
