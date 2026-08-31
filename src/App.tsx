@@ -1,41 +1,47 @@
 import { useEffect, useState } from 'react';
-import { supabase, configError } from './lib/supabase';
+import { configError } from './lib/supabase';
 import { getSession, signInWithDiscord, signOut, onAuthChange } from './lib/auth';
+import { loadProfile, type Profile } from './data/profile';
+import PlanScreen from './screens/PlanScreen';
+import CharactersScreen from './screens/CharactersScreen';
+import GridScreen from './screens/GridScreen';
+import HistoryScreen from './screens/HistoryScreen';
+import DungeonsScreen from './screens/DungeonsScreen';
 import type { Session } from '@supabase/supabase-js';
 import './App.css';
 
+export type View = 'plan' | 'characters' | 'grid' | 'history' | 'dungeons';
+
+const TABS: { view: View; label: string; adminOnly?: boolean }[] = [
+  { view: 'plan', label: 'Plan' },
+  { view: 'characters', label: 'Characters' },
+  { view: 'grid', label: 'Grid' },
+  { view: 'history', label: 'History' },
+  { view: 'dungeons', label: 'Dungeons', adminOnly: true },
+];
+
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [view, setView] = useState<View>('plan');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [profile, setProfile] = useState<{ discord_username: string | null; is_admin: boolean } | null>(null);
 
   useEffect(() => {
     let mounted = true;
-
-    async function loadInitialSession() {
-      try {
-        const currentSession = await getSession();
-        if (mounted) {
-          setSession(currentSession);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof Error ? err.message : String(err));
-          setLoading(false);
-        }
-      }
-    }
-
-    loadInitialSession();
-
-    const unsubscribe = onAuthChange((newSession) => {
-      if (mounted) {
-        setSession(newSession);
-      }
+    getSession()
+      .then((s) => {
+        if (mounted) setSession(s);
+      })
+      .catch((err: unknown) => {
+        if (mounted) setError(String(err));
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    const unsubscribe = onAuthChange((s) => {
+      if (mounted) setSession(s);
     });
-
     return () => {
       mounted = false;
       unsubscribe();
@@ -43,57 +49,22 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!session?.user) {
+    if (!session) {
       setProfile(null);
       return;
     }
-
     let mounted = true;
-
-    async function fetchProfile() {
-      try {
-        const { data, error: profileError } = await supabase
-          .from('profiles')
-          .select('discord_username, is_admin')
-          .single();
-
-        if (profileError) throw profileError;
-
-        if (mounted && data) {
-          // data has type { discord_username: string | null; is_admin: boolean }
-          setProfile(data);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-      }
-    }
-
-    fetchProfile();
-
+    loadProfile()
+      .then((p) => {
+        if (mounted) setProfile(p);
+      })
+      .catch((err: unknown) => {
+        if (mounted) setError(String(err));
+      });
     return () => {
       mounted = false;
     };
   }, [session]);
-
-  const handleSignIn = async () => {
-    try {
-      setError(null);
-      await signInWithDiscord();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      setError(null);
-      await signOut();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  };
 
   if (configError) {
     return (
@@ -104,33 +75,54 @@ export default function App() {
     );
   }
 
-  if (loading) {
-    return <div className="app-container">Loading...</div>;
-  }
+  if (loading) return <div className="app-container">Loading...</div>;
 
-  return (
-    <div className="app-container">
-      <h1>Crystal Of Atlan</h1>
-      
-      {error && <div className="error-message">Error: {error}</div>}
-
-      {!session ? (
-        <button onClick={handleSignIn} className="button">
+  if (!session) {
+    return (
+      <div className="app-container">
+        <h1>Crystal Of Atlan</h1>
+        {error && <div className="error-message">Error: {error}</div>}
+        <button className="button" onClick={() => void signInWithDiscord()}>
           Sign in with Discord
         </button>
-      ) : (
-        <div className="profile-container">
-          <div className="profile-info">
-            <span className="username">{profile?.discord_username || session.user.email}</span>
-            {profile?.is_admin && <span className="admin-badge">Admin</span>}
-          </div>
-          <button onClick={handleSignOut} className="button button-outline">
+      </div>
+    );
+  }
+
+  const tabs = TABS.filter((t) => !t.adminOnly || profile?.is_admin);
+
+  return (
+    <div className="app-container app-wide">
+      <header className="app-header">
+        <h1>Crystal Of Atlan</h1>
+        <div className="profile-info">
+          <span className="username">{profile?.discord_username ?? session.user.email}</span>
+          {profile?.is_admin && <span className="admin-badge">Admin</span>}
+          <button className="button button-outline" onClick={() => void signOut()}>
             Sign out
           </button>
         </div>
-      )}
+      </header>
 
-      <p className="footer-text">Planner coming next.</p>
+      <nav className="tabs">
+        {tabs.map((tab) => (
+          <button
+            key={tab.view}
+            className={tab.view === view ? 'tab tab-active' : 'tab'}
+            onClick={() => setView(tab.view)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      {error && <div className="error-message">Error: {error}</div>}
+
+      {view === 'plan' && <PlanScreen />}
+      {view === 'characters' && <CharactersScreen />}
+      {view === 'grid' && <GridScreen />}
+      {view === 'history' && <HistoryScreen />}
+      {view === 'dungeons' && profile?.is_admin && <DungeonsScreen />}
     </div>
   );
 }
