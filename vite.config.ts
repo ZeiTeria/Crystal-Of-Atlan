@@ -13,7 +13,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
     // Vitest runs in mode 'test', which loads only .env.test and .env.local -
     // so the project's public Supabase values, which live in .env.development,
     // are otherwise invisible to tests. Pull them in rather than keeping a
