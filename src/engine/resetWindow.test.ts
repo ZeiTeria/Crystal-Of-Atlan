@@ -60,6 +60,9 @@ describe('lastReset', () => {
     expect(() => lastReset(0, 4, WIB, now)).toThrow(RangeError);
     expect(() => lastReset(8, 4, WIB, now)).toThrow(RangeError);
     expect(() => lastReset(1, 24, WIB, now)).toThrow(RangeError);
+    expect(() => lastReset(1, -1, WIB, now)).toThrow(RangeError);
+    expect(() => lastReset(1.5, 4, WIB, now)).toThrow(RangeError);
+    expect(() => lastReset(1, 4.5, WIB, now)).toThrow(RangeError);
   });
 
   it('applies the daylight-saving offset correction on a transition day', () => {
@@ -86,6 +89,12 @@ describe('lastReset', () => {
   // transition day and can't tell a correct implementation from a one-step one
   // that skips the offset correction entirely (measured: 15 failures vs 0 with
   // weekday 7 included).
+  //
+  // The sweep deliberately fixes the hour at 4, which exists in every fixture
+  // zone. Sweeping gap hours (2 in America/New_York, 3 in Europe/Athens, 0 in
+  // America/Santiago) would fail the "reads back at the target hour" property
+  // against CORRECT code, because those wall-clock times genuinely do not exist
+  // on a transition day. Gap behaviour is pinned by named tests instead.
   it.each([WIB, NY, 'UTC', 'Europe/London'])(
     'always lands on the target weekday and hour in %s',
     (zone) => {
