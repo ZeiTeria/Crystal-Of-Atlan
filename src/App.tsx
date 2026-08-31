@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from './lib/supabase';
+import { supabase, configError } from './lib/supabase';
 import { getSession, signInWithDiscord, signOut, onAuthChange } from './lib/auth';
 import type { Session } from '@supabase/supabase-js';
 import './App.css';
@@ -94,6 +94,15 @@ export default function App() {
       setError(err instanceof Error ? err.message : String(err));
     }
   };
+
+  if (configError) {
+    return (
+      <div className="app-container">
+        <h1>Crystal Of Atlan</h1>
+        <div className="error-message">Error: {configError}</div>
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className="app-container">Loading...</div>;
