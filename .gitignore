@@ -4,3 +4,9 @@ dist/
 .env.*
 *.local
 .DS_Store
+
+# Editor and log noise (a public repo must not carry these)
+.vscode/
+.idea/
+*.log
+dist-ssr/
