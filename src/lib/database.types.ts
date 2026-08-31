@@ -1,3 +1,11 @@
+/**
+ * Hand-written to match `supabase/migrations/0001_init.sql`. Keep them in step.
+ *
+ * `Relationships`, `Views` and `Functions` are not optional decoration: postgrest-js
+ * only accepts a schema that structurally satisfies its `GenericSchema`, and a schema
+ * that does not resolves every selected row to `never` instead of failing. Deleting
+ * any of them silently untypes every query in the app.
+ */
 export interface Database {
   public: {
     Tables: {
@@ -23,6 +31,7 @@ export interface Database {
           reset_hour?: number;
           server_timezone?: string;
         };
+        Relationships: [];
       };
       profiles: {
         Row: {
@@ -43,6 +52,7 @@ export interface Database {
           is_admin?: boolean;
           created_at?: string;
         };
+        Relationships: [];
       };
       game_accounts: {
         Row: {
@@ -63,6 +73,7 @@ export interface Database {
           name?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       characters: {
         Row: {
@@ -86,6 +97,7 @@ export interface Database {
           class?: string | null;
           sort_order?: number;
         };
+        Relationships: [];
       };
       dungeons: {
         Row: {
@@ -130,6 +142,7 @@ export interface Database {
           sort_order?: number;
           is_active?: boolean;
         };
+        Relationships: [];
       };
       character_dungeon: {
         Row: {
@@ -150,6 +163,7 @@ export interface Database {
           tier?: 'none' | 'solo' | 'story' | 'elite' | 'legend';
           min_runs?: number;
         };
+        Relationships: [];
       };
       runs: {
         Row: {
@@ -173,7 +187,19 @@ export interface Database {
           ran_at?: string;
           gold_earned?: number;
         };
+        Relationships: [];
       };
     };
+    Views: Record<string, never>;
+    Functions: {
+      is_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+    };
+    Enums: {
+      tier: 'none' | 'solo' | 'story' | 'elite' | 'legend';
+    };
+    CompositeTypes: Record<string, never>;
   };
 }
