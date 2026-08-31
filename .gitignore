@@ -4,6 +4,7 @@ dist/
 .env.*
 !.env.example
 !.env.production
+!.env.development
 *.local
 .DS_Store
 
