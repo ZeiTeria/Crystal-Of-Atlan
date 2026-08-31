@@ -62,21 +62,49 @@ describe('lastReset', () => {
     expect(() => lastReset(1, 24, WIB, now)).toThrow(RangeError);
   });
 
-  // These three properties fully characterise the function, and unlike
-  // hand-computed dates they stay correct across DST transitions.
+  it('applies the daylight-saving offset correction on a transition day', () => {
+    // 2026-03-08 is the US spring-forward Sunday. A one-step conversion, using
+    // only the offset at the naive timestamp, returns 09:00Z = 05:00 EDT — the
+    // wrong hour. This case is what makes the correction in
+    // zonedWallClockToInstant necessary, and it is pinned here so the guarantee
+    // survives any edit to the swept zone list.
+    expect(lastReset(7, 4, NY, new Date('2026-03-08T18:00:00Z')).toISOString())
+      .toBe('2026-03-08T08:00:00.000Z');
+  });
+
+  it('shifts forward out of a daylight-saving gap rather than onto the previous day', () => {
+    // Santiago's DST begins at 00:00 on 2026-09-06, so midnight does not exist
+    // that day. The boundary must stay on the Sunday, not fall back to Saturday.
+    const got = lastReset(7, 0, 'America/Santiago', new Date('2026-09-07T12:00:00Z'));
+    expect(zonedWeekday(got, 'America/Santiago')).toBe(7);
+  });
+
+  // These three properties constrain the function — with an 8-day bound on the
+  // last one, they do not uniquely pin it — but unlike hand-computed dates they
+  // stay correct across DST transitions. Weekday 7 (Sunday) is included because
+  // US/EU DST transitions land on Sundays; without it the sweep never touches a
+  // transition day and can't tell a correct implementation from a one-step one
+  // that skips the offset correction entirely (measured: 15 failures vs 0 with
+  // weekday 7 included).
   it.each([WIB, NY, 'UTC', 'Europe/London'])(
     'always lands on the target weekday and hour in %s',
     (zone) => {
       const base = Date.UTC(2026, 0, 1);
       for (let i = 0; i < 400; i++) {
-        for (const weekday of [1, 4]) {
+        for (const weekday of [1, 4, 7]) {
           const now = new Date(base + i * 86_400_000 + (i * 3_600_000) % 86_400_000);
           const got = lastReset(weekday, 4, zone, now);
 
           expect(zonedWeekday(got, zone)).toBe(weekday);
           expect(partsIn(got, zone)).toEqual({ hour: 4, minute: 0 });
           expect(got.getTime()).toBeLessThanOrEqual(now.getTime());
-          expect(now.getTime() - got.getTime()).toBeLessThan(7 * 86_400_000);
+          // Not 7 days: across a fall-back week the true interval is 7 days + 1
+          // hour. Counterexample: now = 2026-11-02T08:59:59.999Z,
+          // lastReset(1, 4, 'America/New_York', now) = 2026-10-26T08:00:00.000Z,
+          // which is 7d + 1h - 1ms before now. The one-sample-per-day grid here
+          // never lands in that window on the right weekday, so a tighter bound
+          // would pass by accident and break under denser sampling.
+          expect(now.getTime() - got.getTime()).toBeLessThan(8 * 86_400_000);
         }
       }
     },

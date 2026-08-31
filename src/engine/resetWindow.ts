@@ -34,16 +34,38 @@ function zoneOffsetMs(instant: Date, timeZone: string): number {
 /**
  * The UTC instant at which a given wall-clock time occurs in `timeZone`.
  *
- * Done in two steps because the offset depends on the instant we are trying to
- * find: guess using the offset at the naive timestamp, then re-read the offset
- * at the guess and correct. One correction is enough for real time zones.
+ * The offset depends on the instant we are trying to find, so this iterates:
+ * guess using the offset at the naive timestamp, then re-read the offset at
+ * the guess and correct. A single correction is *not* always enough — if the
+ * naive guess and the corrected guess sit on opposite sides of a transition,
+ * the offset used to produce `first` no longer applies at `first` itself, and
+ * `first` does not read back as the requested wall-clock time even though
+ * that time exists and is unambiguous (e.g. 04:00 America/New_York on the US
+ * spring-forward day: the naive guess reads as pre-transition EST, overshoots
+ * past the transition, and only the second correction lands on 04:00 EDT).
+ * So convergence is checked explicitly rather than assumed after one step.
  */
 function zonedWallClockToInstant(
   year: number, month: number, day: number, hour: number, timeZone: string,
 ): Date {
   const naive = Date.UTC(year, month - 1, day, hour);
-  const guess = naive - zoneOffsetMs(new Date(naive), timeZone);
-  return new Date(naive - zoneOffsetMs(new Date(guess), timeZone));
+  const first = naive - zoneOffsetMs(new Date(naive), timeZone);
+  const second = naive - zoneOffsetMs(new Date(first), timeZone);
+  if (zoneOffsetMs(new Date(first), timeZone) === zoneOffsetMs(new Date(second), timeZone)) {
+    // Converged: `second` is a fixed point (correcting again would return
+    // `second` unchanged). This is the unique real instant for an unambiguous
+    // wall-clock time, or — in a FOLD, a time that happens twice — the earlier
+    // occurrence, which is the conservative choice for a boundary.
+    return new Date(second);
+  }
+  // Never converges: `first` and `second` keep alternating with each further
+  // correction. That is the signature of a GAP, a wall-clock time that never
+  // happens (e.g. 00:30 America/Santiago on its DST-start day), where no
+  // instant reads back as requested. There we take the LATER candidate, which
+  // lands just after the transition and stays on the requested calendar day
+  // (the same rule as Temporal's 'compatible' disambiguation). Returning the
+  // earlier one could push the boundary onto the previous day.
+  return new Date(Math.max(first, second));
 }
 
 /** ISO weekday of an instant as read in `timeZone`. Monday = 1 ... Sunday = 7. */
@@ -85,5 +107,18 @@ export function lastReset(
   };
 
   const candidate = at(proxy);
-  return candidate.getTime() <= now.getTime() ? candidate : at(proxy - 7 * DAY_MS);
+  const result = candidate.getTime() <= now.getTime() ? candidate : at(proxy - 7 * DAY_MS);
+
+  // The module exists to answer "which weekday's boundary is this" — a result
+  // that reads back as a different weekday must never be returned silently.
+  // zonedWallClockToInstant's gap handling (see above) should make this
+  // unreachable, but the check stays as a guarantee, not a formality.
+  if (zonedWeekday(result, timeZone) !== weekday) {
+    throw new RangeError(
+      `no instant in ${timeZone} on ISO weekday ${weekday} reads as hour ${hour}: ` +
+        'a daylight-saving gap swallowed the reset hour',
+    );
+  }
+
+  return result;
 }
