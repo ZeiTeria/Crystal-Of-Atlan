@@ -1,122 +1,127 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react';
+import { supabase } from './lib/supabase';
+import { getSession, signInWithDiscord, signOut, onAuthChange } from './lib/auth';
+import type { Session } from '@supabase/supabase-js';
+import './App.css';
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{ discord_username: string | null; is_admin: boolean } | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadInitialSession() {
+      try {
+        const currentSession = await getSession();
+        if (mounted) {
+          setSession(currentSession);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : String(err));
+          setLoading(false);
+        }
+      }
+    }
+
+    loadInitialSession();
+
+    const unsubscribe = onAuthChange((newSession) => {
+      if (mounted) {
+        setSession(newSession);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!session?.user) {
+      setProfile(null);
+      return;
+    }
+
+    let mounted = true;
+
+    async function fetchProfile() {
+      try {
+        const { data, error: profileError } = await supabase
+          .from('profiles')
+          .select('discord_username, is_admin')
+          .single();
+
+        if (profileError) throw profileError;
+
+        if (mounted && data) {
+          // data has type { discord_username: string | null; is_admin: boolean }
+          setProfile(data);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      }
+    }
+
+    fetchProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, [session]);
+
+  const handleSignIn = async () => {
+    try {
+      setError(null);
+      await signInWithDiscord();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      setError(null);
+      await signOut();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  if (loading) {
+    return <div className="app-container">Loading...</div>;
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+    <div className="app-container">
+      <h1>Crystal Of Atlan</h1>
+      
+      {error && <div className="error-message">Error: {error}</div>}
+
+      {!session ? (
+        <button onClick={handleSignIn} className="button">
+          Sign in with Discord
         </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      ) : (
+        <div className="profile-container">
+          <div className="profile-info">
+            <span className="username">{profile?.discord_username || session.user.email}</span>
+            {profile?.is_admin && <span className="admin-badge">Admin</span>}
+          </div>
+          <button onClick={handleSignOut} className="button button-outline">
+            Sign out
+          </button>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <p className="footer-text">Planner coming next.</p>
+    </div>
+  );
 }
-
-export default App
