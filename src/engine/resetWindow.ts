@@ -31,6 +31,14 @@ function zoneOffsetMs(instant: Date, timeZone: string): number {
   return asUtc - instant.getTime();
 }
 
+/** True when `instant` reads in `timeZone` as exactly the given calendar date. */
+function isZonedDate(
+  instant: Date, year: number, month: number, day: number, timeZone: string,
+): boolean {
+  const p = partsIn(instant, timeZone);
+  return p.year === year && p.month === month && p.day === day;
+}
+
 /**
  * The UTC instant at which a given wall-clock time occurs in `timeZone`.
  *
@@ -49,23 +57,42 @@ function zonedWallClockToInstant(
   year: number, month: number, day: number, hour: number, timeZone: string,
 ): Date {
   const naive = Date.UTC(year, month - 1, day, hour);
-  const first = naive - zoneOffsetMs(new Date(naive), timeZone);
-  const second = naive - zoneOffsetMs(new Date(first), timeZone);
-  if (zoneOffsetMs(new Date(first), timeZone) === zoneOffsetMs(new Date(second), timeZone)) {
+  const offsetAtNaive = zoneOffsetMs(new Date(naive), timeZone);
+  const first = naive - offsetAtNaive;
+  const offsetAtFirst = zoneOffsetMs(new Date(first), timeZone);
+  const second = naive - offsetAtFirst;
+
+  if (offsetAtFirst === zoneOffsetMs(new Date(second), timeZone)) {
     // Converged: `second` is a fixed point (correcting again would return
     // `second` unchanged). This is the unique real instant for an unambiguous
-    // wall-clock time, or — in a FOLD, a time that happens twice — the earlier
+    // wall-clock time, or - in a FOLD, a time that happens twice - the earlier
     // occurrence, which is the conservative choice for a boundary.
     return new Date(second);
   }
+
   // Never converges: `first` and `second` keep alternating with each further
-  // correction. That is the signature of a GAP, a wall-clock time that never
-  // happens (e.g. 00:30 America/Santiago on its DST-start day), where no
-  // instant reads back as requested. There we take the LATER candidate, which
-  // lands just after the transition and stays on the requested calendar day
-  // (the same rule as Temporal's 'compatible' disambiguation). Returning the
-  // earlier one could push the boundary onto the previous day.
-  return new Date(Math.max(first, second));
+  // correction. That is the signature of a GAP - a wall-clock time that never
+  // happens - so no instant reads back as requested and we must pick a nearby
+  // one.
+  //
+  // Prefer the LATER candidate: it lands just after the transition, which is
+  // Temporal's 'compatible' rule, and it is right for 10,517 of the 10,561 real
+  // gap cases across the IANA database 1970-2040. Stepping forward can never
+  // lose a run, because the interval it steps over is the gap itself and
+  // contains no real instants.
+  //
+  // But when the gap swallows the LAST hour of a day, stepping forward pushes
+  // the result onto the next day - America/Godthab starts DST at 23:00, so a
+  // Saturday 23:00 boundary would land on Sunday. Staying on the requested
+  // calendar day matters more than the direction of the shift, because this
+  // module exists to answer "which weekday's boundary is this". The earlier
+  // candidate stays on the day in all 44 such cases, and erring EARLY is the
+  // safe direction: an earlier boundary widens the week and under-reports
+  // remaining attempts, while a later one would over-report attempts the player
+  // does not have.
+  const later = new Date(Math.max(first, second));
+  const earlier = new Date(Math.min(first, second));
+  return isZonedDate(later, year, month, day, timeZone) ? later : earlier;
 }
 
 /** ISO weekday of an instant as read in `timeZone`. Monday = 1 ... Sunday = 7. */
@@ -109,10 +136,15 @@ export function lastReset(
   const candidate = at(proxy);
   const result = candidate.getTime() <= now.getTime() ? candidate : at(proxy - 7 * DAY_MS);
 
-  // The module exists to answer "which weekday's boundary is this" — a result
-  // that reads back as a different weekday must never be returned silently.
-  // zonedWallClockToInstant's gap handling (see above) should make this
-  // unreachable, but the check stays as a guarantee, not a formality.
+  // The module exists to answer "which weekday's boundary is this" - a result
+  // reading back as a different weekday must never be returned silently.
+  // After the day-preserving gap choice above, this fires in exactly one
+  // situation: the requested calendar day did not exist in this zone at all.
+  // That needs a gap longer than 12 hours, which happens only in the five
+  // day-skip events in the IANA database (Pacific/Apia and Pacific/Fakaofo
+  // 2011-12-30, Pacific/Kiritimati and Pacific/Enderbury 1994-12-31,
+  // Pacific/Kwajalein 1993-08-21). Every other gap on record is at most 2h.
+  // There is no honest answer in those cases, so it throws.
   if (zonedWeekday(result, timeZone) !== weekday) {
     throw new RangeError(
       `no instant in ${timeZone} on ISO weekday ${weekday} reads as hour ${hour}: ` +

@@ -82,6 +82,23 @@ describe('lastReset', () => {
     expect(zonedWeekday(got, 'America/Santiago')).toBe(7);
   });
 
+  it('keeps the boundary on the requested day when a gap swallows the last hour', () => {
+    // America/Godthab begins DST at 23:00, so 23:00 does not exist on the
+    // transition Saturday. Forward-shifting out of the gap would land on Sunday
+    // 00:00 and report the wrong weekday; the earlier candidate stays on the
+    // Saturday. Before the day-preserving choice this call threw a RangeError.
+    const got = lastReset(6, 23, 'America/Godthab', new Date('2026-03-29T12:00:00Z'));
+    expect(zonedWeekday(got, 'America/Godthab')).toBe(6);
+  });
+
+  it('throws when the requested calendar day never existed in the zone', () => {
+    // Samoa skipped 2011-12-30 entirely when it crossed the date line, so no
+    // instant reads back on that Friday at any hour. This is the only situation
+    // that can reach the weekday invariant, and throwing is the honest answer.
+    expect(() => lastReset(5, 4, 'Pacific/Apia', new Date('2012-01-05T12:00:00Z')))
+      .toThrow(RangeError);
+  });
+
   // These three properties constrain the function — with an 8-day bound on the
   // last one, they do not uniquely pin it — but unlike hand-computed dates they
   // stay correct across DST transitions. Weekday 7 (Sunday) is included because
