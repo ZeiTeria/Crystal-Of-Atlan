@@ -3,6 +3,7 @@ import { useMutation } from '../hooks/useMutation';
 import Meter from '../ui/Meter';
 import TierGem from '../ui/TierGem';
 import { groupSpans, matrixColumns } from './columns';
+import { templateCells, TIER_TEMPLATES } from './gridTemplate';
 import { sortOrderPatches } from '../ui/reorder';
 import { useSortableList } from '../ui/useSortableList';
 import CharacterPicker from '../ui/CharacterPicker';
@@ -35,6 +36,7 @@ export default function GridScreen() {
   const [grid, setGrid] = useState<Map<string, GridRow>>(new Map());
   const [accountId, setAccountId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [template, setTemplate] = useState('blank');
   const [phoneCharacterId, setPhoneCharacterId] = useState<string | null>(null);
   const isPhone = useMediaQuery(PHONE);
   const [loading, setLoading] = useState(true);
@@ -77,7 +79,16 @@ export default function GridScreen() {
     const name = draft.trim();
     if (name === '' || !accountId) return;
     await mutate(async () => {
-      await createCharacter(accountId, name);
+      const created = await createCharacter(accountId, name);
+      // Seeding the grid is part of creating the character, inside the same
+      // mutate, so a failure here surfaces and refreshes like any other rather
+      // than leaving a character that silently did not get its template.
+      const cells = templateCells(template, {
+        targetId: created.id,
+        dungeons,
+        lookup: (characterId, dungeonId) => grid.get(cellKey(characterId, dungeonId)),
+      });
+      if (cells.length > 0) await setGridCells(cells);
       setDraft('');
     });
   }
@@ -113,38 +124,11 @@ export default function GridScreen() {
    * schema defaults for whatever was left out. See setGridCell.
    */
   /**
-   * Copies the source character's whole row - what is DISPLAYED, not just its
-   * stored grid rows. An untouched pair has no row and shows the dungeon's
-   * defaults, so copying stored rows alone would leave the target matching only
-   * by coincidence, and diverging the moment a dungeon default changed.
+   * Writes the whole cell, never a patch. What is on screen for an untouched
+   * pair comes from the dungeon's defaults, so the caller passes the current
+   * displayed values alongside the change - otherwise the upsert would insert
+   * schema defaults for whatever was left out. See setGridCell.
    */
-  async function copyFrom(sourceId: string, target: CharacterRow) {
-    const source = characters.find((c) => c.id === sourceId);
-    if (!source) return;
-
-    const ok = window.confirm(
-      `Copy ${source.name}'s tiers and minimum runs onto ${target.name}? ` +
-        `${target.name}'s current grid is replaced.`,
-    );
-    if (!ok) return;
-
-    await mutate(async () => {
-      // Iterates every dungeon, not the ordered columns: this is about data,
-      // and must cover the catalogue whatever order it happens to be shown in.
-      await setGridCells(
-        dungeons.map((d) => {
-          const row = grid.get(cellKey(sourceId, d.id));
-          return {
-            character_id: target.id,
-            dungeon_id: d.id,
-            tier: row?.tier ?? d.default_tier,
-            min_runs: row?.min_runs ?? d.default_min_runs,
-          };
-        }),
-      );
-    });
-  }
-
   async function write(
     characterId: string,
     dungeonId: string,
@@ -329,35 +313,15 @@ export default function GridScreen() {
                     className="name-field"
                     disabled={c.is_active === false}
                   />
-                  <Button variant="outline"
-                    aria-label={`Delete ${c.name}`}
-                    onClick={() => void remove(c)}
-                  >
-                    ×
-                  </Button>
-                  {characters.length > 1 && (
-                    <select
-                      aria-label={`Copy grid onto ${c.name} from`}
-                      value=""
-                      disabled={busy || c.is_active === false}
-                      onChange={(e) => {
-                        const from = e.target.value;
-                        // Reset first: the select is a command, not a value, so
-                        // it must not sit showing the last source it was used with.
-                        e.target.value = '';
-                        if (from) void copyFrom(from, c);
-                      }}
+                  <span className="rowbtns">
+                    <Button
+                      variant="quiet"
+                      aria-label={`Delete ${c.name}`}
+                      onClick={() => void remove(c)}
                     >
-                      <option value="">Copy from…</option>
-                      {characters
-                        .filter((other) => other.id !== c.id)
-                        .map((other) => (
-                          <option key={other.id} value={other.id}>
-                            {other.name}
-                          </option>
-                        ))}
-                    </select>
-                  )}
+                      ×
+                    </Button>
+                  </span>
                 </div>
               </th>
               {columns.map((d) => {
@@ -422,6 +386,29 @@ export default function GridScreen() {
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Character name"
         />
+        <select
+          aria-label="Template"
+          value={template}
+          onChange={(e) => setTemplate(e.target.value)}
+        >
+          <option value="blank">Template: none</option>
+          <optgroup label="Every dungeon at">
+            {TIER_TEMPLATES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </optgroup>
+          {orderedCharacters.length > 0 && (
+            <optgroup label="Copy a character">
+              {orderedCharacters.map((c) => (
+                <option key={c.id} value={`char:${c.id}`}>
+                  {c.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
         <Button
           disabled={busy || draft.trim() === ''}
           onClick={() => void addCharacter()}

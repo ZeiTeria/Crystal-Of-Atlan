@@ -321,70 +321,70 @@ describe('GridScreen columns', () => {
   });
 });
 
-describe('GridScreen copy from another character', () => {
+describe('GridScreen templates when adding a character', () => {
   const rogue = { ...character, id: 'c2', name: 'Rogue', sort_order: 20 };
 
-  it('copies every dungeon of the source, defaults included', async () => {
-    // The source's untouched pairs have no grid row and show the dungeon's
-    // defaults. Copying only its stored rows would leave the target on the same
-    // values by luck, and diverge the moment a dungeon default changed.
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    vi.mocked(listCharacters).mockResolvedValue([character, rogue]);
+  async function addNamed(name: string, template?: string) {
+    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: name } });
+    if (template) fireEvent.change(screen.getByLabelText('Template'), { target: { value: template } });
+    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
+  }
+
+  it('writes no grid rows for the default blank template', async () => {
+    // A pair with no row already shows the dungeon's defaults, so writing them
+    // out would only freeze today's values.
+    render(<GridScreen />);
+    await screen.findByDisplayValue('Mage');
+    await addNamed('Rogue');
+    await waitFor(() => expect(vi.mocked(createCharacter)).toHaveBeenCalled());
+    expect(vi.mocked(setGridCells)).not.toHaveBeenCalled();
+  });
+
+  it('sets every dungeon to the chosen tier', async () => {
+    vi.mocked(createCharacter).mockResolvedValue({ ...character, id: 'new', name: 'Rogue' });
+    render(<GridScreen />);
+    await screen.findByDisplayValue('Mage');
+    await addNamed('Rogue', 'tier:legend');
+    await waitFor(() => {
+      expect(vi.mocked(setGridCells)).toHaveBeenCalledWith([
+        { character_id: 'new', dungeon_id: 'd1', tier: 'legend', min_runs: 1 },
+      ]);
+    });
+  });
+
+  it('copies an existing character, defaults included', async () => {
+    vi.mocked(createCharacter).mockResolvedValue({ ...character, id: 'new', name: 'Rogue' });
     vi.mocked(listGrid).mockResolvedValue([
-      { character_id: 'c1', dungeon_id: 'd1', tier: 'legend', min_runs: 3 },
+      { character_id: 'c1', dungeon_id: 'd1', tier: 'story', min_runs: 3 },
     ]);
     render(<GridScreen />);
-    fireEvent.change(await screen.findByLabelText('Copy grid onto Rogue from'), {
-      target: { value: 'c1' },
-    });
+    await screen.findByDisplayValue('Mage');
+    await addNamed('Rogue', 'char:c1');
     await waitFor(() => {
       expect(vi.mocked(setGridCells)).toHaveBeenCalledWith([
-        { character_id: 'c2', dungeon_id: 'd1', tier: 'legend', min_runs: 3 },
+        { character_id: 'new', dungeon_id: 'd1', tier: 'story', min_runs: 3 },
       ]);
     });
-    confirmSpy.mockRestore();
   });
 
-  it('falls back to the dungeon defaults for a pair the source never touched', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    vi.mocked(listCharacters).mockResolvedValue([character, rogue]);
-    vi.mocked(listGrid).mockResolvedValue([]);
-    render(<GridScreen />);
-    fireEvent.change(await screen.findByLabelText('Copy grid onto Rogue from'), {
-      target: { value: 'c1' },
-    });
-    await waitFor(() => {
-      expect(vi.mocked(setGridCells)).toHaveBeenCalledWith([
-        { character_id: 'c2', dungeon_id: 'd1', tier: 'elite', min_runs: 1 },
-      ]);
-    });
-    confirmSpy.mockRestore();
-  });
-
-  it('copies nothing when the confirm is declined', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+  it('offers every existing character as a template', async () => {
     vi.mocked(listCharacters).mockResolvedValue([character, rogue]);
     render(<GridScreen />);
-    fireEvent.change(await screen.findByLabelText('Copy grid onto Rogue from'), {
-      target: { value: 'c1' },
-    });
-    expect(vi.mocked(setGridCells)).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
-  });
-
-  it('never offers a character itself as its own copy source', async () => {
-    vi.mocked(listCharacters).mockResolvedValue([character, rogue]);
-    render(<GridScreen />);
-    const select = (await screen.findByLabelText('Copy grid onto Rogue from')) as HTMLSelectElement;
+    const select = (await screen.findByLabelText('Template')) as HTMLSelectElement;
     const values = [...select.options].map((o) => o.value);
-    expect(values).not.toContain('c2');
-    expect(values).toContain('c1');
+    expect(values).toContain('char:c1');
+    expect(values).toContain('char:c2');
+    expect(values).toContain('tier:legend');
+    expect(values).toContain('blank');
   });
 
-  it('offers no copy source when there is only one character', async () => {
+  it('no longer clutters the character row with a copy control', async () => {
+    // It moved to the Add block: five controls in a sticky first column is
+    // unreadable when the matrix is scrolled sideways.
+    vi.mocked(listCharacters).mockResolvedValue([character, rogue]);
     render(<GridScreen />);
-    await screen.findByLabelText('Mage tier in Abyss');
-    expect(screen.queryByLabelText('Copy grid onto Mage from')).toBe(null);
+    await screen.findByDisplayValue('Mage');
+    expect(screen.queryByLabelText('Copy grid onto Rogue from')).toBe(null);
   });
 });
 
