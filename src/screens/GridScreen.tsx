@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '../hooks/useMutation';
+import Meter from '../ui/Meter';
+import TierGem from '../ui/TierGem';
+import { groupSpans, matrixColumns } from './columns';
 import Button from '../ui/Button';
 import {
   currentGameAccountId,
@@ -116,6 +119,10 @@ export default function GridScreen() {
     );
   }
 
+  // Newest dungeon leftmost - deliberately the opposite of the Dungeons tab.
+  const columns = matrixColumns(dungeons);
+  const spans = groupSpans(columns);
+
   const dungeonTotals = new Map<string, number>();
   for (const d of dungeons) {
     let sum = 0;
@@ -135,13 +142,25 @@ export default function GridScreen() {
         Minimum runs is a hard floor — the planner refuses a plan that cannot meet it, rather
         than quietly dropping it.
       </p>
+      <p className="muted">
+        Newest dungeon first, so one you just added is the leftmost column — the opposite of
+        the Dungeons tab, which appends to the bottom.
+      </p>
       <ErrorBanner message={error} />
 
       <table className="datatable">
         <thead>
+          <tr className="groupband">
+            <th />
+            {spans.map((span, i) => (
+              <th key={i} colSpan={span.span} className={span.label ? 'grouped' : undefined}>
+                {span.label}
+              </th>
+            ))}
+          </tr>
           <tr>
             <th>Character</th>
-            {dungeons.map((d) => {
+            {columns.map((d) => {
               const currentTotal = dungeonTotals.get(d.id) ?? 0;
               const isOverLimit = currentTotal > d.account_attempts;
               const isAtLimit = currentTotal === d.account_attempts;
@@ -152,6 +171,11 @@ export default function GridScreen() {
                   <span className={isOverLimit ? 'error-text' : isAtLimit ? 'warning-text' : 'muted'}>
                     {currentTotal} / {d.account_attempts}
                   </span>
+                  <Meter
+                    value={currentTotal}
+                    max={d.account_attempts}
+                    tone={isOverLimit ? 'danger' : isAtLimit ? 'warn' : 'accent'}
+                  />
                 </th>
               );
             })}
@@ -183,7 +207,7 @@ export default function GridScreen() {
                   </Button>
                 </div>
               </th>
-              {dungeons.map((d) => {
+              {columns.map((d) => {
                 const row = grid.get(cellKey(c.id, d.id));
                 const tier: Tier = row?.tier ?? d.default_tier;
                 const minRuns = row?.min_runs ?? d.default_min_runs;
@@ -195,6 +219,7 @@ export default function GridScreen() {
 
                 return (
                   <td key={d.id}>
+                    <TierGem tier={tier} />
                     <select
                       aria-label={`${c.name} tier in ${d.name}`}
                       value={tier}

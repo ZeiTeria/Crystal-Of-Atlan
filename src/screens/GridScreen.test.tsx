@@ -284,3 +284,33 @@ describe('GridScreen character management', () => {
     expect(min.disabled).toBe(true);
   });
 });
+
+describe('GridScreen columns', () => {
+  const abyss = { ...dungeon, id: 'd1', name: 'Abyss', sort_order: 10, group_name: 'HexChess' };
+  const rift = { ...dungeon, id: 'd2', name: 'Rift', sort_order: 20, group_name: 'HexChess' };
+  const solo = { ...dungeon, id: 'd3', name: 'Solo', sort_order: 30, group_name: null };
+
+  beforeEach(() => {
+    vi.mocked(listDungeons).mockResolvedValue([abyss, rift, solo]);
+  });
+
+  it('puts the newest dungeon in the leftmost column', async () => {
+    render(<GridScreen />);
+    await screen.findByLabelText('Mage tier in Abyss');
+    const headers = screen.getAllByRole('columnheader').map((h) => h.textContent ?? '');
+    expect(headers.findIndex((t) => t.includes('Solo'))).toBeLessThan(
+      headers.findIndex((t) => t.includes('Abyss')),
+    );
+  });
+
+  it('bands the two dungeons of a family under one heading', async () => {
+    render(<GridScreen />);
+    await screen.findByLabelText('Mage tier in Abyss');
+    expect(screen.getByText('HexChess').closest('th')?.getAttribute('colspan')).toBe('2');
+  });
+
+  it('still shows a dungeon that belongs to no family', async () => {
+    render(<GridScreen />);
+    expect(await screen.findByLabelText('Mage tier in Solo')).toBeDefined();
+  });
+});

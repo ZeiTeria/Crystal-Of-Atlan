@@ -127,3 +127,37 @@
 .cellgold {
   font-size: 0.625rem;
 }
+
+/* Group band above the column headers. */
+.datatable .groupband th {
+  border-bottom: 0;
+  padding-bottom: var(--s1);
+  font-size: 0.5625rem;
+  letter-spacing: 0.16em;
+  color: var(--text-faint);
+}
+
+.datatable .groupband th.grouped {
+  color: var(--accent);
+  border-bottom: 1px solid var(--accent-edge);
+  padding-bottom: 2px;
+}
+
+/*
+ * Sticky labels. Without these the row and column names scroll away and the
+ * matrix becomes 108 anonymous numbers. The row header needs its own
+ * background, since the tr banding paints underneath it and would show through.
+ */
+.datatable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+}
+
+.datatable tbody th[scope='row'] {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+}
