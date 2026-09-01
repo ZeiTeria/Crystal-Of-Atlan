@@ -7,11 +7,11 @@ alter table public.dungeons add column if not exists short_name text;
 -- Seed the suggestions for the current catalogue, so the simplified view is
 -- usable the moment it ships. Every one can be edited on the Dungeons tab.
 update public.dungeons set short_name = 'HC'  where name = 'Checkmate';
-update public.dungeons set short_name = 'HQC' where name = 'Queen Coronation';
-update public.dungeons set short_name = 'LTF' where name = 'Temple Of Fate';
-update public.dungeons set short_name = 'LAD' where name = 'Apocalyptic Descent';
+update public.dungeons set short_name = 'QC' where name = 'Queen Coronation';
+update public.dungeons set short_name = 'TOF' where name = 'Temple Of Fate';
+update public.dungeons set short_name = 'AD' where name = 'Apocalyptic Descent';
 update public.dungeons set short_name = 'DL'  where name = 'Duskfeather Lair';
-update public.dungeons set short_name = 'KKS' where name = 'Kraken''s Spine';
-update public.dungeons set short_name = 'KHT' where name = 'Heart Of Taboos';
-update public.dungeons set short_name = 'GDD' where name = 'The Deep Dive';
-update public.dungeons set short_name = 'GSP' where name = 'Shackled Psyche';
+update public.dungeons set short_name = 'KS' where name = 'Kraken''s Spine';
+update public.dungeons set short_name = 'HOT' where name = 'Heart Of Taboos';
+update public.dungeons set short_name = 'DD' where name = 'The Deep Dive';
+update public.dungeons set short_name = 'SP' where name = 'Shackled Psyche';

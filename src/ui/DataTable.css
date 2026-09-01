@@ -32,9 +32,15 @@
 /*
  * Banding and hover paint only the scrolling cells. Both tints are translucent
  * rgba, and the sticky column must never be - see the sticky rules below.
+ *
+ * They are background-IMAGES, not a background shorthand. The tier tint is a
+ * background-COLOUR on the same cell, and a shorthand would reset it - which is
+ * exactly what used to happen: banding out-specified the tier rule and wiped
+ * the colour, so difficulty was visible on odd rows and invisible on even ones.
+ * As separate properties the two compose instead of competing.
  */
 .datatable tbody tr:nth-child(even) td {
-  background: var(--row-band);
+  background-image: linear-gradient(var(--row-band), var(--row-band));
 }
 
 /*
@@ -42,8 +48,12 @@
  * lights twelve dungeons you are not looking at, which is noise rather than a
  * pointer; the cell under the cursor is the thing being read.
  */
-.datatable tbody td:hover {
-  background: var(--accent-wash);
+/*
+ * `tr` is in this selector purely for specificity: without it the banding rule
+ * above out-weighs this one and a hovered cell on an even row would not light.
+ */
+.datatable tbody tr td:hover {
+  background-image: linear-gradient(var(--accent-wash), var(--accent-wash));
 }
 
 /*
@@ -136,12 +146,28 @@
   font-size: 0.5625rem;
   letter-spacing: 0.16em;
   color: var(--text-faint);
+  text-align: center;
 }
 
+/*
+ * The rule under a family is drawn inset rather than as a border, so two
+ * families side by side read as two rules with a gap - a full-width border on
+ * each ran them together into one line spanning both, which said the opposite
+ * of what the band is for.
+ */
 .datatable .groupband th.grouped {
+  position: relative;
   color: var(--accent);
+  padding-bottom: 4px;
+}
+
+.datatable .groupband th.grouped::after {
+  content: '';
+  position: absolute;
+  left: var(--s2);
+  right: var(--s2);
+  bottom: 0;
   border-bottom: 1px solid var(--accent-edge);
-  padding-bottom: 2px;
 }
 
 /*
@@ -189,9 +215,10 @@
 }
 
 /*
- * 108 cells each shouting two buttons is a wall. They appear on the row being
- * pointed at or keyboard-focused - and always on touch, where hover does not
- * exist and hiding them would make the plan unusable.
+ * 108 cells each shouting two buttons is a wall. They appear on the CELL being
+ * pointed at or keyboard-focused - per row still lit nine cells' worth of
+ * buttons at once, which is most of the wall back again - and always on touch,
+ * where hover does not exist and hiding them would make the plan unusable.
  *
  * visibility rather than display: the cell keeps its size, so rows do not jump
  * as the pointer moves across the matrix.
@@ -200,8 +227,8 @@
   visibility: hidden;
 }
 
-.datatable tbody tr:hover .rowbtns,
-.datatable tbody tr:focus-within .rowbtns {
+.datatable tbody td:hover .rowbtns,
+.datatable tbody td:focus-within .rowbtns {
   visibility: visible;
 }
 
