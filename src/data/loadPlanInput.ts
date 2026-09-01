@@ -63,6 +63,7 @@ export function buildPlanInput(rows: PlanRows, now: Date): PlanInput {
       default_min_runs: d.default_min_runs,
       sort_order: d.sort_order,
       group_name: d.group_name,
+      short_name: d.short_name,
     }));
 
   // Merge explicit grid rows over the dungeons' default tiers.

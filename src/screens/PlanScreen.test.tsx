@@ -7,12 +7,14 @@ import { logRun } from '../data/runs';
 import { currentGameAccountId } from '../data/accounts';
 import type { PlanInput } from '../engine/types';
 import { stubMatchMedia } from '../ui/testing/matchMedia';
+import { resetDensity } from '../ui/density';
 
 vi.mock('../data/loadPlanInput', () => ({ loadPlanInput: vi.fn() }));
 vi.mock('../data/runs', () => ({ logRun: vi.fn(), logRuns: vi.fn() }));
 vi.mock('../data/accounts', () => ({ currentGameAccountId: vi.fn() }));
 
 afterEach(() => {
+  resetDensity();
   vi.unstubAllGlobals();
   cleanup();
   vi.clearAllMocks();
@@ -30,6 +32,7 @@ const dungeon = {
   default_min_runs: 1,
   sort_order: 10,
   group_name: null,
+  short_name: null,
   goldEstimated: [],
   goldUnknown: false,
 };
@@ -82,7 +85,9 @@ describe('PlanScreen', () => {
   it('shows a row per assignment with its gold', async () => {
     render(<PlanScreen />);
     expect(await screen.findAllByText('Mage')).toBeDefined();
-    expect(screen.getByText('Abyss')).toBeDefined();
+    // Simplified is the default, so the column reads as its short label; the
+    // full name stays on the title.
+    expect(screen.getByRole('columnheader', { name: 'A' }).getAttribute('title')).toBe('Abyss');
   });
 
   it('counts down to the coming reset, not the one after it', async () => {

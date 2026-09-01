@@ -3,7 +3,10 @@ import { useMutation } from '../hooks/useMutation';
 import Meter from '../ui/Meter';
 import TierGem from '../ui/TierGem';
 import { groupSpans, matrixColumns } from './columns';
+import { suggestAbbreviation } from './abbreviate';
 import { templateCells, TIER_TEMPLATES } from './gridTemplate';
+import DensityToggle from '../ui/DensityToggle';
+import { useDensity } from '../ui/density';
 import { sortOrderPatches } from '../ui/reorder';
 import { useSortableList } from '../ui/useSortableList';
 import CharacterPicker from '../ui/CharacterPicker';
@@ -37,6 +40,7 @@ export default function GridScreen() {
   const [accountId, setAccountId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [template, setTemplate] = useState('blank');
+  const [density] = useDensity();
   const [phoneCharacterId, setPhoneCharacterId] = useState<string | null>(null);
   const isPhone = useMediaQuery(PHONE);
   const [loading, setLoading] = useState(true);
@@ -190,6 +194,15 @@ export default function GridScreen() {
       </p>
       <ErrorBanner message={error} />
 
+      <div className="row-actions density-row">
+        <DensityToggle />
+        <span className="muted">
+          {density === 'simple'
+            ? 'Short labels, tight rows. Hover a column for its full name.'
+            : 'Full dungeon names.'}
+        </span>
+      </div>
+
       {isPhone ? (
         <>
           <CharacterPicker
@@ -254,7 +267,7 @@ export default function GridScreen() {
         </>
       ) : (
       <div className="datatable-scroll matrix-scroll grid-scroll">
-      <table className="datatable matrix">
+      <table className={`datatable matrix ${density === 'simple' ? 'matrix-simple' : ''}`}>
         <thead>
           <tr className="groupband">
             <th />
@@ -271,8 +284,8 @@ export default function GridScreen() {
               const isOverLimit = currentTotal > d.account_attempts;
               const isAtLimit = currentTotal === d.account_attempts;
               return (
-                <th key={d.id}>
-                  {d.name}
+                <th key={d.id} title={d.name}>
+                  {density === 'simple' ? (d.short_name ?? suggestAbbreviation(d.name, d.group_name)) : d.name}
                   <br />
                   <span className={isOverLimit ? 'error-text' : isAtLimit ? 'warning-text' : 'muted'}>
                     {currentTotal} / {d.account_attempts}
@@ -336,7 +349,7 @@ export default function GridScreen() {
                 const maxAllowed = Math.min(d.character_attempts, maxAllowedByAccount);
 
                 return (
-                  <td key={d.id}>
+                  <td key={d.id} className={`tiercell tier-${tier}`}>
                     <TierGem tier={tier} />
                     <select
                       aria-label={`${c.name} tier in ${d.name}`}

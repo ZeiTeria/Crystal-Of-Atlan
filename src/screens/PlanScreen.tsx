@@ -15,6 +15,9 @@ import { solveOptimal } from '../engine/solver';
 import type { PaidTier, PlanInput, PlanResult, Tier } from '../engine/types';
 import { describeConflict, describeReason, gold, type Names } from './planText';
 import InfoDot from '../ui/InfoDot';
+import DensityToggle from '../ui/DensityToggle';
+import { useDensity } from '../ui/density';
+import { suggestAbbreviation } from './abbreviate';
 import { nextReset } from '../engine/resetWindow';
 import Meter from '../ui/Meter';
 import { groupSpans, matrixColumns } from './columns';
@@ -84,6 +87,7 @@ export default function PlanScreen() {
   const [solved, setSolved] = useState<Solved | null>(null);
   const [phoneCharacterId, setPhoneCharacterId] = useState<string | null>(null);
   const isPhone = useMediaQuery(PHONE);
+  const [density] = useDensity();
 
   const solveFn = useCallback(async () => {
     try {
@@ -205,7 +209,10 @@ export default function PlanScreen() {
             </p>
           )}
 
-          <p className="muted">Newest dungeon first, matching the Grid.</p>
+          <div className="row-actions density-row">
+            <DensityToggle />
+            <span className="muted">Newest dungeon first, matching the Grid.</span>
+          </div>
 
           <h3>Weekly Gold Progress</h3>
           <ul className="goldlist">
@@ -288,7 +295,7 @@ export default function PlanScreen() {
             </>
           ) : (
           <div className="datatable-scroll plan-scroll matrix-scroll">
-            <table className="datatable matrix plan-matrix">
+            <table className={`datatable matrix plan-matrix ${density === 'simple' ? 'matrix-simple' : ''}`}>
               <thead>
                 <tr className="groupband">
                   <th />
@@ -303,8 +310,10 @@ export default function PlanScreen() {
                     Character
                   </th>
                   {columns.map((d) => (
-                    <th key={d.id} scope="col">
-                      {d.name}
+                    <th key={d.id} scope="col" title={d.name}>
+                      {density === 'simple'
+                        ? (d.short_name ?? suggestAbbreviation(d.name, d.group_name))
+                        : d.name}
                     </th>
                   ))}
                 </tr>
@@ -325,7 +334,7 @@ export default function PlanScreen() {
                         );
                       }
                       return (
-                        <td key={d.id}>
+                        <td key={d.id} className={`tiercell tier-${tierOf.get(`${c.id}:${d.id}`) ?? 'none'}`}>
                           <div className="cellstack">
                             <strong className="runs num">{assignment.runs}x</strong>
                             <div className="row-actions rowbtns">

@@ -449,3 +449,69 @@
   align-items: center;
   gap: var(--s1);
 }
+
+/*
+ * Tier as a cell tint, so difficulty reads across the whole matrix at a glance
+ * rather than one gem at a time.
+ *
+ * Kept faint on purpose. These sit behind the run counts and the banding, and
+ * this is a table of numbers first - a saturated fill per cell would make the
+ * figures the second thing you see. `color-mix` puts the tier colour into the
+ * surface rather than over it, so the tint stays on-theme in both palettes.
+ */
+.tiercell.tier-solo {
+  background-color: color-mix(in srgb, var(--tier-solo) 8%, transparent);
+}
+
+.tiercell.tier-story {
+  background-color: color-mix(in srgb, var(--tier-story) 10%, transparent);
+}
+
+.tiercell.tier-elite {
+  background-color: color-mix(in srgb, var(--tier-elite) 11%, transparent);
+}
+
+.tiercell.tier-legend {
+  background-color: color-mix(in srgb, var(--tier-legend) 13%, transparent);
+}
+
+/* `none` means the character cannot enter: no tint, and visibly recessed. */
+.tiercell.tier-none {
+  opacity: 0.55;
+}
+
+/*
+ * Simplified: short labels and a tight table. This is the default, because nine
+ * full dungeon names across twelve characters does not fit a screen - the
+ * abbreviations exist so that it can.
+ */
+.matrix-simple {
+  font-size: 0.75rem;
+}
+
+.matrix-simple th,
+.matrix-simple td {
+  padding: var(--s1) var(--s2);
+}
+
+.matrix-simple thead tr:last-child th {
+  letter-spacing: 0.08em;
+}
+
+.matrix-simple .cellgold {
+  display: none;
+}
+
+.matrix-simple .runs {
+  font-size: var(--step-1);
+}
+
+.matrix-simple .meter {
+  margin-top: 2px;
+}
+
+.density-row {
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: var(--step-0);
+}

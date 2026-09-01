@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { stubMatchMedia } from '../ui/testing/matchMedia';
+import { resetDensity } from '../ui/density';
 import GridScreen from './GridScreen';
 import { listGrid, setGridCell, setGridCells } from '../data/grid';
 import { listDungeons } from '../data/dungeons';
@@ -29,6 +30,7 @@ vi.mock('../data/accounts', () => ({
 }));
 
 afterEach(() => {
+  resetDensity();
   cleanup();
   vi.clearAllMocks();
   vi.unstubAllGlobals();
@@ -50,6 +52,7 @@ const dungeon = {
   default_tier: 'elite' as const,
   default_min_runs: 1,
   group_name: null,
+  short_name: null,
 };
 
 const character = { id: 'c1', game_account_id: 'acc', name: 'Mage', class: null, sort_order: 0, is_active: true };
@@ -303,10 +306,10 @@ describe('GridScreen columns', () => {
   it('puts the newest dungeon in the leftmost column', async () => {
     render(<GridScreen />);
     await screen.findByLabelText('Mage tier in Abyss');
-    const headers = screen.getAllByRole('columnheader').map((h) => h.textContent ?? '');
-    expect(headers.findIndex((t) => t.includes('Solo'))).toBeLessThan(
-      headers.findIndex((t) => t.includes('Abyss')),
-    );
+    // Queried by title, not by text: the label itself changes with the density
+    // toggle, but the title is always the full name.
+    const headers = screen.getAllByRole('columnheader').map((h) => h.getAttribute('title') ?? '');
+    expect(headers.indexOf('Solo')).toBeLessThan(headers.indexOf('Abyss'));
   });
 
   it('bands the two dungeons of a family under one heading', async () => {
@@ -458,5 +461,40 @@ describe('GridScreen on a phone', () => {
         min_runs: 2,
       });
     });
+  });
+});
+
+describe('GridScreen density', () => {
+  it('shows a short label by default, because nine full names do not fit', async () => {
+    vi.mocked(listDungeons).mockResolvedValue([{ ...dungeon, name: 'Abyss', short_name: 'ABY' }]);
+    render(<GridScreen />);
+    await screen.findByLabelText('Mage tier in Abyss');
+    // The header also carries its cap counter, so match the label, not the
+    // whole accessible name.
+    expect(screen.getByRole('columnheader', { name: /^ABY/ })).toBeDefined();
+  });
+
+  it('falls back to a suggested label when none was written', async () => {
+    vi.mocked(listDungeons).mockResolvedValue([
+      { ...dungeon, name: 'Queen Coronation', group_name: 'HexChess', short_name: null },
+    ]);
+    render(<GridScreen />);
+    await screen.findByLabelText('Mage tier in Queen Coronation');
+    expect(screen.getByRole('columnheader', { name: /^HQC/ })).toBeDefined();
+  });
+
+  it('shows the full name when switched to detailed', async () => {
+    vi.mocked(listDungeons).mockResolvedValue([{ ...dungeon, name: 'Abyss', short_name: 'ABY' }]);
+    render(<GridScreen />);
+    await screen.findByLabelText('Mage tier in Abyss');
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed' }));
+    expect(await screen.findByRole('columnheader', { name: /^Abyss/ })).toBeDefined();
+  });
+
+  it('keeps the full name reachable on hover whatever the density', async () => {
+    vi.mocked(listDungeons).mockResolvedValue([{ ...dungeon, name: 'Abyss', short_name: 'ABY' }]);
+    render(<GridScreen />);
+    const header = await screen.findByRole('columnheader', { name: /^ABY/ });
+    expect(header.getAttribute('title')).toBe('Abyss');
   });
 });

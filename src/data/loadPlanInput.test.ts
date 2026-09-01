@@ -38,6 +38,7 @@ function aDungeonRow(id: string, overrides: Partial<Row<'dungeons'>> = {}): Row<
     default_tier: 'elite',
     default_min_runs: 1,
     group_name: null,
+    short_name: null,
     ...overrides,
   };
 }
@@ -164,6 +165,7 @@ describe('buildPlanInput', () => {
         // their columns, never read by the engine.
         sort_order: 0,
         group_name: null,
+        short_name: null,
         // Every tier has a figure in this fixture, so nothing was borrowed.
         goldEstimated: [],
         goldUnknown: false,

@@ -161,6 +161,7 @@ describe.skipIf(catalogueSkip)(
         default_tier: 'elite',
         default_min_runs: 1,
         group_name: null,
+        short_name: null,
       });
       dungeonId = created.id;
       expect(created.reset_weekday).toBe(4);
@@ -226,6 +227,7 @@ describe.skipIf(ownerSkip)(
         default_tier: 'elite',
         default_min_runs: 1,
         group_name: null,
+        short_name: null,
       });
         ownDungeonId = created.id;
         dungeon = created;

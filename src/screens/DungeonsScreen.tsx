@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '../hooks/useMutation';
 import Button from '../ui/Button';
+import { suggestAbbreviation } from './abbreviate';
 import { sortOrderPatches } from '../ui/reorder';
 import { useSortableList } from '../ui/useSortableList';
 import {
@@ -30,6 +31,7 @@ const TIERS: Tier[] = ['none', 'solo', 'story', 'elite', 'legend'];
 const BLANK: NewDungeon = {
   name: '',
   group_name: null,
+  short_name: null,
   account_attempts: 18,
   character_attempts: 3,
   reset_weekday: 1,
@@ -133,6 +135,7 @@ export default function DungeonsScreen() {
           <tr>
             <th>Name</th>
             <th>Group</th>
+            <th>Short</th>
             <th>Account/wk</th>
             <th>Character/wk</th>
             <th>Resets</th>
@@ -160,6 +163,22 @@ export default function DungeonsScreen() {
                   onBlur={(e) => {
                     const name = e.target.value.trim();
                     if (name !== '' && name !== d.name) void save(d.id, { name });
+                  }}
+                />
+              </td>
+              <td>
+                <input
+                  aria-label={`${d.name} short label`}
+                  defaultValue={d.short_name ?? ''}
+                  size={5}
+                  placeholder={suggestAbbreviation(d.name, d.group_name)}
+                  onBlur={(e) => {
+                    // Empty means "use the suggestion", so it stores null rather
+                    // than an empty string - a deliberate label is never
+                    // overwritten, and an absent one is never frozen.
+                    const next = e.target.value.trim();
+                    const value = next === '' ? null : next;
+                    if (value !== d.short_name) void save(d.id, { short_name: value });
                   }}
                 />
               </td>

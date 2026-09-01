@@ -119,6 +119,7 @@ export interface Database {
           default_tier: 'none' | 'solo' | 'story' | 'elite' | 'legend';
           default_min_runs: number;
           group_name: string | null;
+          short_name: string | null;
         };
         Insert: {
           id?: string;
@@ -136,6 +137,7 @@ export interface Database {
           default_tier?: 'none' | 'solo' | 'story' | 'elite' | 'legend';
           default_min_runs?: number;
           group_name?: string | null;
+          short_name?: string | null;
         };
         Update: {
           id?: string;
@@ -153,6 +155,7 @@ export interface Database {
           default_tier?: 'none' | 'solo' | 'story' | 'elite' | 'legend';
           default_min_runs?: number;
           group_name?: string | null;
+          short_name?: string | null;
         };
         Relationships: [];
       };

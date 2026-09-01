@@ -10,6 +10,8 @@ export interface NewDungeon {
   name: string;
   /** Display grouping, e.g. 'HexChess'. null means the dungeon has no family. */
   group_name: string | null;
+  /** Short label for the simplified matrix, e.g. 'HC'. */
+  short_name: string | null;
   account_attempts: number;
   character_attempts: number;
   reset_weekday: number;

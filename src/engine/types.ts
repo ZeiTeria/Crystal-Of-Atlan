@@ -29,6 +29,8 @@ export interface Dungeon {
    */
   sort_order: number;
   group_name: string | null;
+  /** Short label for the simplified matrix. Display only, like the two above. */
+  short_name: string | null;
   /**
    * Tiers whose gold was borrowed from another tier because the catalogue has
    * no figure for them yet. Display only - the solver simply uses `gold`, which
