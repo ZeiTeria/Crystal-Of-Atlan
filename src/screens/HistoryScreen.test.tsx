@@ -18,6 +18,17 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+/** A promise the test controls the settlement of, to catch a mid-flight state. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 beforeEach(() => {
   vi.mocked(currentGameAccountId).mockResolvedValue('acc');
   vi.mocked(listCharacters).mockResolvedValue([
@@ -67,6 +78,22 @@ describe('HistoryScreen', () => {
     });
     await waitFor(() => {
       expect(vi.mocked(listRecentRuns).mock.calls.length).toBeGreaterThan(1);
+    });
+  });
+
+  it('disables Undo immediately and deletes only once when clicked twice before the delete settles', async () => {
+    const gate = deferred<void>();
+    vi.mocked(deleteRun).mockReturnValue(gate.promise);
+    render(<HistoryScreen />);
+    const undo = (await screen.findByRole('button', { name: /undo/i })) as HTMLButtonElement;
+
+    fireEvent.click(undo);
+    expect(undo.disabled).toBe(true);
+    fireEvent.click(undo); // a disabled button must not fire a second deleteRun
+
+    gate.resolve();
+    await waitFor(() => {
+      expect(vi.mocked(deleteRun)).toHaveBeenCalledTimes(1);
     });
   });
 

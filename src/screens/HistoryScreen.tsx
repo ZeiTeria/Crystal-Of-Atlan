@@ -10,6 +10,7 @@ export default function HistoryScreen() {
   const [dungeonNames, setDungeonNames] = useState<Map<string, string>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -34,13 +35,21 @@ export default function HistoryScreen() {
   }, [refresh]);
 
   async function undo(run: RunRow) {
+    // Raised before any await: `disabled={busy}` only takes effect once React
+    // re-renders, which happens synchronously before the next click can be
+    // dispatched — but only if this is set before the first await, not after.
+    setBusy(true);
     try {
-      await deleteRun(run.id);
-      setError(null);
-    } catch (err: unknown) {
-      setError(String(err));
+      try {
+        await deleteRun(run.id);
+        setError(null);
+      } catch (err: unknown) {
+        setError(String(err));
+      }
+      await refresh();
+    } finally {
+      setBusy(false);
     }
-    await refresh();
   }
 
   if (loading) return <p>Loading history...</p>;
@@ -63,6 +72,7 @@ export default function HistoryScreen() {
                 <div className="row-actions">
                   <button
                     className="button button-outline"
+                    disabled={busy}
                     aria-label={`Undo ${dungeonNames.get(run.dungeon_id) ?? 'run'}`}
                     onClick={() => void undo(run)}
                   >
