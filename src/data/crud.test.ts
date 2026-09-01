@@ -8,8 +8,6 @@ import {
   listCharacters,
 } from './accounts';
 import { listGrid, setGridCell } from './grid';
-import { deleteRun, listRecentRuns, logRun } from './runs';
-import { loadPlanInput } from './loadPlanInput';
 
 /**
  * Every screen test mocks `src/data/`, so nothing yet proves those queries
@@ -284,24 +282,6 @@ describe.skipIf(ownerSkip)(
       expect(updated?.min_runs).toBe(2);
     });
 
-    it('logs a run and feeds it back into the engine input', { timeout: NETWORK_TIMEOUT }, async () => {
-      await logRun(characterId, dungeon.id, 30);
-      const input = await loadPlanInput(accountId);
-      // One of this character's attempts on the dungeon is spent, and the
-      // gold is counted against the fixed 1,000,000 weekly cap.
-      expect(input.characterAttemptsLeft[characterId]?.[dungeon.id]).toBe(
-        dungeon.character_attempts - 1,
-      );
-      expect(input.goldHeadroom[characterId]).toBe(1_000_000 - 30);
-    });
-
-    it('undoes a run', { timeout: NETWORK_TIMEOUT }, async () => {
-      const recent = await listRecentRuns([characterId]);
-      const first = recent[0];
-      expect(first).toBeDefined();
-      await deleteRun(first!.id);
-      expect(await listRecentRuns([characterId])).toEqual([]);
-    });
   },
 );
 

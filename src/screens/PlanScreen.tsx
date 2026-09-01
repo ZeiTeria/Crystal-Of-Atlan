@@ -3,7 +3,6 @@ import { useMutation } from '../hooks/useMutation';
 import Button from '../ui/Button';
 import { currentGameAccountId } from '../data/accounts';
 import { loadPlanInput } from '../data/loadPlanInput';
-import { logRun, logRuns } from '../data/runs';
 import {
   attemptCeiling,
   explainCeiling,
@@ -112,25 +111,12 @@ export default function PlanScreen() {
     }
   }, []);
 
-  const { busy, error, mutate, refresh: solve } = useMutation(solveFn);
+  // No `mutate`: the Plan is read-only now. Solving is a refresh, not a write.
+  const { busy, error, refresh: solve } = useMutation(solveFn);
 
   useEffect(() => {
     void solve().catch(() => setSolved(null));
   }, [solve]);
-
-  async function markDone(characterId: string, dungeonId: string, goldPerRun: number) {
-    await mutate(async () => {
-      await logRun(characterId, dungeonId, goldPerRun);
-    });
-  }
-
-  async function markAllDone(characterId: string, dungeonId: string, goldPerRun: number, count: number) {
-    if (count <= 0) return;
-    await mutate(async () => {
-      const runs = Array(count).fill({ character_id: characterId, dungeon_id: dungeonId, gold_earned: goldPerRun });
-      await logRuns(runs);
-    });
-  }
 
   if (!solved) {
     return (
@@ -252,25 +238,6 @@ export default function PlanScreen() {
                           </div>
                           <div className="act">
                             <span className="big num">{a.runs}</span>
-                            <Button
-                              disabled={busy}
-                              aria-label={`Log one run of ${d?.name ?? ''} by ${shownCharacter.name}`}
-                              onClick={() => void markDone(a.characterId, a.dungeonId, a.goldPerRun)}
-                            >
-                              Log 1
-                            </Button>
-                            {a.runs > 1 && (
-                              <Button
-                                variant="outline"
-                                disabled={busy}
-                                aria-label={`Log all ${a.runs} runs of ${d?.name ?? ''} by ${shownCharacter.name}`}
-                                onClick={() =>
-                                  void markAllDone(a.characterId, a.dungeonId, a.goldPerRun, a.runs)
-                                }
-                              >
-                                All
-                              </Button>
-                            )}
                           </div>
                         </div>
                       );
@@ -342,26 +309,6 @@ export default function PlanScreen() {
                         <td key={d.id} className={`runcell runs-${Math.min(assignment.runs, 3)}`}>
                           <div className="cellstack">
                             <strong className="runs num">{assignment.runs}x</strong>
-                            <div className="row-actions rowbtns">
-                              <Button
-                                disabled={busy}
-                                aria-label={`Log one run of ${d.name} by ${c.name}`}
-                                onClick={() => void markDone(c.id, d.id, assignment.goldPerRun)}
-                              >
-                                Log 1
-                              </Button>
-                              {assignment.runs > 1 && (
-                                <Button variant="outline"
-                                  disabled={busy}
-                                  aria-label={`Log all ${assignment.runs} runs of ${d.name} by ${c.name}`}
-                                  onClick={() =>
-                                    void markAllDone(c.id, d.id, assignment.goldPerRun, assignment.runs)
-                                  }
-                                >
-                                  All
-                                </Button>
-                              )}
-                            </div>
                             <span className="cellgold-line">
                               <span className="muted cellgold num">
                                 {gold(assignment.goldTotal)}

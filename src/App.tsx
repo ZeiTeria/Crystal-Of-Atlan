@@ -9,20 +9,16 @@ import Tabs from './ui/Tabs';
 import ThemeToggle from './ui/ThemeToggle';
 import PlanScreen from './screens/PlanScreen';
 import GridScreen from './screens/GridScreen';
-import HistoryScreen from './screens/HistoryScreen';
-import StatsScreen from './screens/StatsScreen';
 import DungeonsScreen from './screens/DungeonsScreen';
 import type { Session } from '@supabase/supabase-js';
 import './App.css';
 import ErrorBanner from './ui/ErrorBanner';
 
-export type View = 'plan' | 'grid' | 'history' | 'stats' | 'dungeons';
+export type View = 'plan' | 'grid' | 'dungeons';
 
 const TABS: { view: View; label: string; adminOnly?: boolean }[] = [
   { view: 'plan', label: 'Plan' },
   { view: 'grid', label: 'Characters & Grid' },
-  { view: 'history', label: 'History' },
-  { view: 'stats', label: 'Stats' },
   { view: 'dungeons', label: 'Dungeons', adminOnly: true },
 ];
 
@@ -121,8 +117,6 @@ export default function App() {
 
       {view === 'plan' && <PlanScreen />}
       {view === 'grid' && <GridScreen />}
-      {view === 'history' && <HistoryScreen />}
-      {view === 'stats' && <StatsScreen />}
       {view === 'dungeons' && profile?.is_admin && <DungeonsScreen />}
     </div>
   );

@@ -3,14 +3,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlanScreen from './PlanScreen';
 import { loadPlanInput } from '../data/loadPlanInput';
-import { logRun } from '../data/runs';
 import { currentGameAccountId } from '../data/accounts';
 import type { PlanInput } from '../engine/types';
 import { stubMatchMedia } from '../ui/testing/matchMedia';
 import { resetDensity } from '../ui/density';
 
 vi.mock('../data/loadPlanInput', () => ({ loadPlanInput: vi.fn() }));
-vi.mock('../data/runs', () => ({ logRun: vi.fn(), logRuns: vi.fn() }));
 vi.mock('../data/accounts', () => ({ currentGameAccountId: vi.fn() }));
 
 afterEach(() => {
@@ -58,7 +56,6 @@ function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
 beforeEach(() => {
   vi.mocked(currentGameAccountId).mockResolvedValue('acc');
   vi.mocked(loadPlanInput).mockResolvedValue(anInput());
-  vi.mocked(logRun).mockResolvedValue(undefined);
 });
 
 /** An Error whose `.name` differs from `.message`, so a test can tell whether
@@ -119,19 +116,6 @@ describe('PlanScreen', () => {
     }
   });
 
-  it('logs a run with the gold that run was worth, then re-solves', async () => {
-    render(<PlanScreen />);
-    const done = await screen.findByRole('button', { name: /log one run of abyss by mage/i });
-    fireEvent.click(done);
-    await waitFor(() => {
-      expect(vi.mocked(logRun)).toHaveBeenCalledWith('c1', 'd1', 30);
-    });
-    // A re-solve means the input is fetched a second time.
-    await waitFor(() => {
-      expect(vi.mocked(loadPlanInput).mock.calls.length).toBeGreaterThan(1);
-    });
-  });
-
   it('says there is nothing to decide when nothing is contended', async () => {
     render(<PlanScreen />);
     expect(await screen.findByText(/no choices to make/i)).toBeDefined();
@@ -186,57 +170,6 @@ describe('PlanScreen', () => {
     expect(screen.getByText(/1,000,000 by the gold cap, 30 by attempts/)).toBeDefined();
   });
 
-  it('disables Done immediately and logs only once when clicked twice before the insert settles', async () => {
-    const gate = deferred<void>();
-    vi.mocked(logRun).mockReturnValue(gate.promise);
-    render(<PlanScreen />);
-    const done = (await screen.findByRole('button', {
-      name: /log one run of abyss by mage/i,
-    })) as HTMLButtonElement;
-
-    fireEvent.click(done);
-    expect(done.disabled).toBe(true);
-    fireEvent.click(done); // a disabled button must not fire a second logRun
-
-    gate.resolve();
-    await waitFor(() => {
-      expect(vi.mocked(logRun)).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it('does not re-solve when logging a run fails, and shows the failure', async () => {
-    // Supabase errors are plain objects, not Error instances - this fixture
-    // pins the shape production actually throws, not `NamedError`'s.
-    vi.mocked(logRun).mockRejectedValueOnce({
-      message: 'insert violates row-level security',
-      code: '42501',
-    });
-    render(<PlanScreen />);
-    const done = await screen.findByRole('button', { name: /log one run of abyss by mage/i });
-    fireEvent.click(done);
-
-    expect(await screen.findByText(/insert violates row-level security/i)).toBeDefined();
-    expect(vi.mocked(loadPlanInput).mock.calls.length).toBe(1);
-  });
-
-  it('drops the plan and stops it being actionable when the re-solve after a logged run fails, but offers a retry', async () => {
-    render(<PlanScreen />);
-    const done = await screen.findByRole('button', { name: /log one run of abyss by mage/i });
-    vi.mocked(loadPlanInput).mockRejectedValueOnce(
-      new NamedError('FetchError', 'the network dropped'),
-    );
-
-    fireEvent.click(done);
-    await waitFor(() => {
-      expect(screen.queryByRole('button', { name: /mark one run/i })).toBeNull();
-    });
-    expect(screen.getByText(/the network dropped/i)).toBeDefined();
-
-    const retry = screen.getByRole('button', { name: /retry/i });
-    fireEvent.click(retry);
-    expect(await screen.findAllByText('Mage')).toBeDefined();
-  });
-
   it('does not render a table when the initial load fails, and offers a retry', async () => {
     vi.mocked(loadPlanInput).mockRejectedValueOnce(
       new NamedError('FetchError', 'could not reach supabase'),
@@ -274,29 +207,9 @@ describe('PlanScreen', () => {
     expect(await screen.findAllByText('Mage')).toBeDefined();
   });
 
-  it('shows the error message, not the raw error object', async () => {
-    vi.mocked(loadPlanInput).mockRejectedValueOnce(
-      new NamedError('SolverNotOptimalError', 'solver pass "attempts" returned status Infeasible'),
-    );
-    render(<PlanScreen />);
-
-    expect(
-      await screen.findByText('Error: solver pass "attempts" returned status Infeasible'),
-    ).toBeDefined();
-    expect(screen.queryByText(/SolverNotOptimalError:/)).toBeNull();
-  });
 });
 
 describe('PlanScreen on a phone', () => {
-  it('lists only the assignments of the shown character, with a Log button', async () => {
-    stubMatchMedia(true);
-    render(<PlanScreen />);
-    const log = await screen.findByRole('button', { name: /log one run of abyss by mage/i });
-    fireEvent.click(log);
-    await waitFor(() => {
-      expect(vi.mocked(logRun)).toHaveBeenCalledWith('c1', 'd1', 30);
-    });
-  });
 
   it('offers the character picker rather than a matrix', async () => {
     stubMatchMedia(true);

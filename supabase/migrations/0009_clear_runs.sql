@@ -1,0 +1,13 @@
+-- Clears every logged run.
+--
+-- The app stopped offering a Log button: it is a reference for how many runs a
+-- character needs and what they pay, not a tracker of what has been done. But
+-- the planner still SUBTRACTS logged runs from the attempts and gold headroom
+-- it has to spend, so runs left behind from before would quietly shrink every
+-- plan with no screen left to see or undo them.
+--
+-- IRREVERSIBLE. There is no backup of this table; run it once, deliberately.
+--
+-- If logging is ever restored, nothing here needs undoing - the table, its
+-- policies and its foreign keys are untouched, only the rows go.
+delete from public.runs;
