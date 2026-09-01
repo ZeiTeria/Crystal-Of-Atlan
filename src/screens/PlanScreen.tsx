@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { errorMessage } from '../errorMessage';
+import { useMutation } from '../hooks/useMutation';
 import { currentGameAccountId } from '../data/accounts';
 import { loadPlanInput } from '../data/loadPlanInput';
-import { logRun } from '../data/runs';
+import { logRun, logRuns } from '../data/runs';
 import {
   attemptCeiling,
   explainCeiling,
@@ -13,6 +13,29 @@ import {
 import { solveOptimal } from '../engine/solver';
 import type { PlanInput, PlanResult } from '../engine/types';
 import { describeConflict, describeReason, gold, type Names } from './planText';
+import { lastReset } from '../engine/resetWindow';
+
+function Countdown({ nextReset }: { nextReset: Date }) {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const diff = nextReset.getTime() - now.getTime();
+  if (diff <= 0) return <span>Resetting...</span>;
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / 1000 / 60) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
+
+  return (
+    <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+      {days}d {hours}h {minutes.toString().padStart(2, '0')}m {seconds.toString().padStart(2, '0')}s
+    </span>
+  );
+}
 
 interface Solved {
   input: PlanInput;
@@ -25,15 +48,8 @@ interface Solved {
 
 export default function PlanScreen() {
   const [solved, setSolved] = useState<Solved | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(true);
 
-  const solve = useCallback(async () => {
-    setBusy(true);
-    // Clear any stale error up front so a Retry shows "Solving..." while the
-    // new attempt is in flight, rather than leaving the old failure on screen
-    // looking unchanged until this attempt itself settles.
-    setError(null);
+  const solveFn = useCallback(async () => {
     try {
       const accountId = await currentGameAccountId();
       const input = await loadPlanInput(accountId);
@@ -46,38 +62,30 @@ export default function PlanScreen() {
         goldCeiling: goldCapCeiling(input),
         attemptsCeiling: attemptCeiling(input),
       });
-      setError(null);
     } catch (err: unknown) {
-      // A failed re-solve leaves `solved` pointing at a plan the database no
-      // longer agrees with, so the stale snapshot is dropped rather than kept
-      // actionable — every Done button disappears along with it.
-      setError(errorMessage(err));
       setSolved(null);
-    } finally {
-      setBusy(false);
+      throw err;
     }
   }, []);
 
+  const { busy, error, mutate, refresh: solve } = useMutation(solveFn);
+
   useEffect(() => {
-    void solve();
+    void solve().catch(() => setSolved(null));
   }, [solve]);
 
   async function markDone(characterId: string, dungeonId: string, goldPerRun: number) {
-    // Raised before any await: `disabled={busy}` only takes effect once React
-    // re-renders, which happens synchronously before the next click can be
-    // dispatched — but only if this is set before the first await, not after.
-    setBusy(true);
-    try {
+    await mutate(async () => {
       await logRun(characterId, dungeonId, goldPerRun);
-      setError(null);
-    } catch (err: unknown) {
-      setError(errorMessage(err));
-      setBusy(false);
-      return;
-    }
-    // Re-solve against what is left, rather than decrementing a local number:
-    // one logged run can change which dungeons the rest of the week should use.
-    await solve();
+    });
+  }
+
+  async function markAllDone(characterId: string, dungeonId: string, goldPerRun: number, count: number) {
+    if (count <= 0) return;
+    await mutate(async () => {
+      const runs = Array(count).fill({ character_id: characterId, dungeon_id: dungeonId, gold_earned: goldPerRun });
+      await logRuns(runs);
+    });
   }
 
   if (!solved) {
@@ -119,9 +127,22 @@ export default function PlanScreen() {
     );
   }
 
+  // next reset is just the most recent reset relative to a date 8 days from now
+  const nextResetDate = lastReset(
+    input.settings.goldResetWeekday,
+    input.settings.resetHour,
+    input.settings.timeZone,
+    new Date(Date.now() + 8 * 24 * 60 * 60 * 1000)
+  );
+
   return (
     <section>
-      <h2>Plan</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <h2>Plan</h2>
+        <span className="muted" style={{ fontSize: '0.9em' }}>
+          Resets in: <strong><Countdown nextReset={nextResetDate} /></strong>
+        </span>
+      </div>
       {error && <div className="error-message">Error: {error}</div>}
 
       {result.status === 'infeasible' ? (
@@ -138,45 +159,95 @@ export default function PlanScreen() {
         <>
           {solved.relaxed && (
             <p>
-              <strong>No choices to make</strong> — every character can simply run its maximum.
+              <strong>No choices to make</strong> - every character can simply run its maximum.
             </p>
           )}
 
-          <table>
-            <thead>
-              <tr>
-                <th>Character</th>
-                <th>Dungeon</th>
-                <th>Runs</th>
-                <th>Gold each</th>
-                <th>Gold total</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {result.assignments.map((a) => (
-                <tr key={`${a.characterId}:${a.dungeonId}`}>
-                  <td>{names.character(a.characterId)}</td>
-                  <td>{names.dungeon(a.dungeonId)}</td>
-                  <td>{a.runs}</td>
-                  <td>{gold(a.goldPerRun)}</td>
-                  <td>{gold(a.goldTotal)}</td>
-                  <td>
-                    <div className="row-actions">
-                      <button
-                        className="button"
-                        disabled={busy}
-                        aria-label={`Mark one run of ${names.dungeon(a.dungeonId)} by ${names.character(a.characterId)} as done`}
-                        onClick={() => void markDone(a.characterId, a.dungeonId, a.goldPerRun)}
-                      >
-                        Done
-                      </button>
-                    </div>
-                  </td>
+          <h3>Weekly Gold Progress</h3>
+          <ul style={{ marginBottom: '24px' }}>
+            {input.characters.map((c) => {
+              const cap = input.settings.goldCap;
+              const headroom = input.goldHeadroom[c.id] ?? cap;
+              const earned = cap - headroom;
+              const isCapped = earned >= cap;
+              return (
+                <li key={c.id}>
+                  <strong>{c.name}</strong>: {gold(earned)} / {gold(cap)}{' '}
+                  {isCapped && <span className="warning-text">(Capped!)</span>}
+                </li>
+              );
+            })}
+          </ul>
+
+          <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
+            <table style={{ minWidth: 'max-content' }}>
+              <thead>
+                <tr>
+                  <th scope="col" style={{ width: '150px' }}>
+                    Character
+                  </th>
+                  {input.dungeons.map((d) => (
+                    <th key={d.id} scope="col">
+                      {d.name}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {input.characters.map((c) => (
+                  <tr key={c.id}>
+                    <th scope="row">{c.name}</th>
+                    {input.dungeons.map((d) => {
+                      const assignment = result.assignments.find(
+                        (a) => a.characterId === c.id && a.dungeonId === d.id,
+                      );
+                      if (!assignment) {
+                        return (
+                          <td key={d.id} className="muted" style={{ textAlign: 'center' }}>
+                            -
+                          </td>
+                        );
+                      }
+                      return (
+                        <td key={d.id}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                            <strong style={{ fontSize: '1.1em' }}>{assignment.runs}x</strong>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                className="button"
+                                disabled={busy}
+                                aria-label={`Log one run of ${d.name} by ${c.name}`}
+                                onClick={() => void markDone(c.id, d.id, assignment.goldPerRun)}
+                                style={{ padding: '2px 8px', fontSize: '12px' }}
+                              >
+                                Log 1
+                              </button>
+                              {assignment.runs > 1 && (
+                                <button
+                                  className="button button-outline"
+                                  disabled={busy}
+                                  aria-label={`Log all ${assignment.runs} runs of ${d.name} by ${c.name}`}
+                                  onClick={() =>
+                                    void markAllDone(c.id, d.id, assignment.goldPerRun, assignment.runs)
+                                  }
+                                  style={{ padding: '2px 8px', fontSize: '12px' }}
+                                >
+                                  All
+                                </button>
+                              )}
+                            </div>
+                            <span className="muted" style={{ fontSize: '12px' }}>
+                              {gold(assignment.goldTotal)}
+                            </span>
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {result.assignments.length === 0 && (
             <p className="muted">Nothing left to run this week.</p>

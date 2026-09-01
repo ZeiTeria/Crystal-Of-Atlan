@@ -8,7 +8,7 @@ import { currentGameAccountId } from '../data/accounts';
 import type { PlanInput } from '../engine/types';
 
 vi.mock('../data/loadPlanInput', () => ({ loadPlanInput: vi.fn() }));
-vi.mock('../data/runs', () => ({ logRun: vi.fn() }));
+vi.mock('../data/runs', () => ({ logRun: vi.fn(), logRuns: vi.fn() }));
 vi.mock('../data/accounts', () => ({ currentGameAccountId: vi.fn() }));
 
 afterEach(() => {
@@ -24,6 +24,8 @@ const dungeon = {
   resetWeekday: 1,
   questCoverage: false,
   gold: { solo: 10, story: 20, elite: 30, legend: 40 },
+  default_tier: 'elite' as const,
+  default_min_runs: 1,
 };
 
 function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
@@ -34,6 +36,12 @@ function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
     accountAttemptsLeft: { d1: 18 },
     characterAttemptsLeft: { c1: { d1: 3 } },
     goldHeadroom: { c1: 1_000_000 },
+    settings: {
+      goldCap: 1_000_000,
+      goldResetWeekday: 1,
+      resetHour: 6,
+      timeZone: 'UTC',
+    },
     ...overrides,
   };
 }
@@ -67,13 +75,13 @@ function deferred<T>() {
 describe('PlanScreen', () => {
   it('shows a row per assignment with its gold', async () => {
     render(<PlanScreen />);
-    expect(await screen.findByText('Mage')).toBeDefined();
+    expect(await screen.findAllByText('Mage')).toBeDefined();
     expect(screen.getByText('Abyss')).toBeDefined();
   });
 
   it('logs a run with the gold that run was worth, then re-solves', async () => {
     render(<PlanScreen />);
-    const done = await screen.findByRole('button', { name: /mark one run of abyss by mage/i });
+    const done = await screen.findByRole('button', { name: /log one run of abyss by mage/i });
     fireEvent.click(done);
     await waitFor(() => {
       expect(vi.mocked(logRun)).toHaveBeenCalledWith('c1', 'd1', 30);
@@ -113,7 +121,7 @@ describe('PlanScreen', () => {
     // Math.max, +, or dropping either term would all print something other than 50.
     vi.mocked(loadPlanInput).mockResolvedValue(anInput({ goldHeadroom: { c1: 50 } }));
     render(<PlanScreen />);
-    await screen.findByText('Mage');
+    await screen.findAllByText('Mage');
     expect(await screen.findByText(/at most 50/)).toBeDefined();
     expect(screen.getByText(/50 by the gold cap, 90 by attempts/)).toBeDefined();
 
@@ -131,7 +139,7 @@ describe('PlanScreen', () => {
       anInput({ goldHeadroom: { c1: 1_000_000 }, accountAttemptsLeft: { d1: 1 } }),
     );
     render(<PlanScreen />);
-    await screen.findByText('Mage');
+    await screen.findAllByText('Mage');
     expect(await screen.findByText(/at most 30/)).toBeDefined();
     expect(screen.getByText(/1,000,000 by the gold cap, 30 by attempts/)).toBeDefined();
   });
@@ -141,7 +149,7 @@ describe('PlanScreen', () => {
     vi.mocked(logRun).mockReturnValue(gate.promise);
     render(<PlanScreen />);
     const done = (await screen.findByRole('button', {
-      name: /mark one run of abyss by mage/i,
+      name: /log one run of abyss by mage/i,
     })) as HTMLButtonElement;
 
     fireEvent.click(done);
@@ -162,7 +170,7 @@ describe('PlanScreen', () => {
       code: '42501',
     });
     render(<PlanScreen />);
-    const done = await screen.findByRole('button', { name: /mark one run of abyss by mage/i });
+    const done = await screen.findByRole('button', { name: /log one run of abyss by mage/i });
     fireEvent.click(done);
 
     expect(await screen.findByText(/insert violates row-level security/i)).toBeDefined();
@@ -171,7 +179,7 @@ describe('PlanScreen', () => {
 
   it('drops the plan and stops it being actionable when the re-solve after a logged run fails, but offers a retry', async () => {
     render(<PlanScreen />);
-    const done = await screen.findByRole('button', { name: /mark one run of abyss by mage/i });
+    const done = await screen.findByRole('button', { name: /log one run of abyss by mage/i });
     vi.mocked(loadPlanInput).mockRejectedValueOnce(
       new NamedError('FetchError', 'the network dropped'),
     );
@@ -184,7 +192,7 @@ describe('PlanScreen', () => {
 
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
-    expect(await screen.findByText('Mage')).toBeDefined();
+    expect(await screen.findAllByText('Mage')).toBeDefined();
   });
 
   it('does not render a table when the initial load fails, and offers a retry', async () => {
@@ -198,7 +206,7 @@ describe('PlanScreen', () => {
 
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
-    expect(await screen.findByText('Mage')).toBeDefined();
+    expect(await screen.findAllByText('Mage')).toBeDefined();
   });
 
   it('clears the stale error and shows progress while a retry is in flight', async () => {
@@ -221,7 +229,7 @@ describe('PlanScreen', () => {
     expect(screen.getByText(/solving/i)).toBeDefined();
 
     gate.resolve(anInput());
-    expect(await screen.findByText('Mage')).toBeDefined();
+    expect(await screen.findAllByText('Mage')).toBeDefined();
   });
 
   it('shows the error message, not the raw error object', async () => {
