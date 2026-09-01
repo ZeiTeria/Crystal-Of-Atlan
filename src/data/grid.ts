@@ -40,3 +40,18 @@ export async function setGridCell(
     );
   if (error) throw error;
 }
+
+/**
+ * Upsert many cells in one round trip. Same whole-cell contract as
+ * setGridCell, for the same reason: an omitted column would insert a schema
+ * default rather than what the screen was showing.
+ */
+export async function setGridCells(
+  cells: { character_id: string; dungeon_id: string; tier: Tier; min_runs: number }[],
+): Promise<void> {
+  if (cells.length === 0) return;
+  const { error } = await supabase
+    .from('character_dungeon')
+    .upsert(cells, { onConflict: 'character_id,dungeon_id' });
+  if (error) throw error;
+}

@@ -14,7 +14,7 @@ import {
   type CharacterRow,
 } from '../data/accounts';
 import { listDungeons, type DungeonRow } from '../data/dungeons';
-import { listGrid, setGridCell, type GridRow } from '../data/grid';
+import { listGrid, setGridCell, setGridCells, type GridRow } from '../data/grid';
 import type { Tier } from '../engine/types';
 import ErrorBanner from '../ui/ErrorBanner';
 
@@ -87,6 +87,39 @@ export default function GridScreen() {
    * displayed values alongside the change - otherwise the upsert would insert
    * schema defaults for whatever was left out. See setGridCell.
    */
+  /**
+   * Copies the source character's whole row - what is DISPLAYED, not just its
+   * stored grid rows. An untouched pair has no row and shows the dungeon's
+   * defaults, so copying stored rows alone would leave the target matching only
+   * by coincidence, and diverging the moment a dungeon default changed.
+   */
+  async function copyFrom(sourceId: string, target: CharacterRow) {
+    const source = characters.find((c) => c.id === sourceId);
+    if (!source) return;
+
+    const ok = window.confirm(
+      `Copy ${source.name}'s tiers and minimum runs onto ${target.name}? ` +
+        `${target.name}'s current grid is replaced.`,
+    );
+    if (!ok) return;
+
+    await mutate(async () => {
+      // Iterates every dungeon, not the ordered columns: this is about data,
+      // and must cover the catalogue whatever order it happens to be shown in.
+      await setGridCells(
+        dungeons.map((d) => {
+          const row = grid.get(cellKey(sourceId, d.id));
+          return {
+            character_id: target.id,
+            dungeon_id: d.id,
+            tier: row?.tier ?? d.default_tier,
+            min_runs: row?.min_runs ?? d.default_min_runs,
+          };
+        }),
+      );
+    });
+  }
+
   async function write(
     characterId: string,
     dungeonId: string,
@@ -205,6 +238,29 @@ export default function GridScreen() {
                   >
                     ×
                   </Button>
+                  {characters.length > 1 && (
+                    <select
+                      aria-label={`Copy grid onto ${c.name} from`}
+                      value=""
+                      disabled={busy || c.is_active === false}
+                      onChange={(e) => {
+                        const from = e.target.value;
+                        // Reset first: the select is a command, not a value, so
+                        // it must not sit showing the last source it was used with.
+                        e.target.value = '';
+                        if (from) void copyFrom(from, c);
+                      }}
+                    >
+                      <option value="">Copy from…</option>
+                      {characters
+                        .filter((other) => other.id !== c.id)
+                        .map((other) => (
+                          <option key={other.id} value={other.id}>
+                            {other.name}
+                          </option>
+                        ))}
+                    </select>
+                  )}
                 </div>
               </th>
               {columns.map((d) => {
