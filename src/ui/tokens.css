@@ -12,7 +12,7 @@
   --bg: #0f1013;
   --surface: #16181d;
   --surface-2: #1c1f26;
-  --line: rgba(255, 255, 255, 0.09);
+  --line: rgba(255, 255, 255, 0.07);
   --line-strong: rgba(255, 255, 255, 0.18);
   --text: #e8edf2;
   --text-dim: #8b93a1;
@@ -59,8 +59,15 @@
   --s7: 48px;
   --s8: 72px;
 
-  --r-control: 2px;
-  --r-panel: 4px;
+  /*
+   * The official site uses near-square corners (.02rem / .2rem). Copied
+   * literally they read as harsh, because we also stack uppercase Heavy labels
+   * and solid fills on top - any one of the three is fine, all three at once is
+   * blocky. Softened deliberately; the geometry stays tighter than a typical
+   * rounded UI, so it still reads as the same family.
+   */
+  --r-control: 6px;
+  --r-panel: 10px;
 
   color-scheme: dark;
 }
