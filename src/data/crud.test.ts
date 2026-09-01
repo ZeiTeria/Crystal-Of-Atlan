@@ -38,7 +38,35 @@ import { loadPlanInput } from './loadPlanInput';
  *    block's to delete). It SKIPS - naming the reason - only when neither is
  *    possible: not admin, and the catalogue has nothing to borrow.
  *
- * Both blocks skip entirely when credentials are absent, same as before.
+ * The owner-scoped block also needs a game account to hang characters off.
+ * It used to obtain one via `currentGameAccountId()` (the oldest account for
+ * the signed-in user) and infer ownership from whether that account existed
+ * before the call. That inference took two round-trips - select, then decide
+ * - and vitest runs test files concurrently, so `rls.test.ts` (which inserts
+ * its own account under the same test user) could insert in the gap between
+ * them: this file would latch "not mine" or "mine" based on a stale read,
+ * and a wrong latch either leaked an account forever or deleted one that
+ * `rls.test.ts` was still using. Narrowing the gap is not the same as
+ * closing it. It also made a crashed prior run's leftover account
+ * indistinguishable from a borrowed one, so it could never self-heal.
+ *
+ * The fix, applied the same way this file already treats dungeons via
+ * `OWNER_DUNGEON_NAME`, and the way `rls.test.ts` treats its own accounts:
+ * this file creates its own account with a distinctive name
+ * (`crud-test-account`), inserted directly rather than obtained from
+ * `currentGameAccountId()`, and sweeps by that name in both `beforeAll` and
+ * `afterAll`. A crashed run leaves a same-named row for the *next* run's
+ * sweep to catch instead of leaking, and the name (not a latched flag) is
+ * what proves this file owns the row - `rls-test-account` is never
+ * `crud-test-account`, so the two suites can run concurrently without
+ * touching each other's data.
+ *
+ * `currentGameAccountId()` itself keeps its own coverage - see the
+ * `currentGameAccountId` block below - it just no longer supplies the
+ * account this file works in.
+ *
+ * All three blocks skip entirely when credentials are absent, same as
+ * before.
  */
 
 const email = import.meta.env.VITE_TEST_A_EMAIL;
@@ -50,6 +78,7 @@ const configured = Boolean(
 const NETWORK_TIMEOUT = 30_000;
 const DUNGEON_NAME = 'crud-test-dungeon';
 const OWNER_DUNGEON_NAME = 'crud-test-owner-dungeon';
+const ACCOUNT_NAME = 'crud-test-account';
 const CHARACTER_NAME = 'crud-test-character';
 
 const ADMIN_REMEDY =
@@ -64,6 +93,7 @@ const ADMIN_REMEDY =
  * top-level await.
  */
 let isAdmin = false;
+let signedInUserId = '';
 let catalogueDungeon: DungeonRow | undefined;
 
 if (configured) {
@@ -74,6 +104,7 @@ if (configured) {
   if (signInError) throw new Error(`test user A could not sign in: ${signInError.message}`);
   const userId = signInData.user?.id;
   if (!userId) throw new Error('test user A signed in without a user id');
+  signedInUserId = userId;
 
   // RLS permits exactly this: a user reading their own `profiles` row.
   const { data: profile, error: profileError } = await supabase
@@ -155,8 +186,19 @@ describe.skipIf(ownerSkip)(
     let ownDungeonId: string | undefined;
 
     let accountId: string;
-    let ownAccountId: string | undefined;
     let characterId: string;
+
+    /**
+     * Removes only this file's own account, by name. Characters, grid rows
+     * and runs cascade from it. Called in both `beforeAll` (so a crashed
+     * prior run self-heals instead of leaking) and `afterAll` (so a normal
+     * run leaves nothing behind) - the same shape `rls.test.ts` uses for its
+     * `rls-test-account`.
+     */
+    async function sweepOwnAccount() {
+      const { error } = await supabase.from('game_accounts').delete().eq('name', ACCOUNT_NAME);
+      if (error) throw error;
+    }
 
     beforeAll(async () => {
       if (isAdmin) {
@@ -187,33 +229,27 @@ describe.skipIf(ownerSkip)(
         dungeon = catalogueDungeon as DungeonRow;
       }
 
-      // `currentGameAccountId` returns the *oldest* existing account for this
-      // user and only creates one when none exists yet - same shape as the
-      // dungeon above. Vitest runs test files concurrently by default (no
-      // `fileParallelism`/`pool` override in this project), and `rls.test.ts`
-      // inserts its own account under this same test user, so this file must
-      // not assume the account it gets back is one it is free to delete: it
-      // may be borrowing a row that suite is still using. Check before
-      // calling, not after, so the check itself cannot race the call.
-      const priorAccounts = await supabase.from('game_accounts').select('id').limit(1);
-      if (priorAccounts.error) throw priorAccounts.error;
-      const accountExistedBefore = priorAccounts.data.length > 0;
-
-      accountId = await currentGameAccountId();
-      if (!accountExistedBefore) ownAccountId = accountId;
-      for (const c of await listCharacters(accountId)) {
-        if (c.name === CHARACTER_NAME) await deleteCharacter(c.id);
-      }
+      // This file's own account, created directly rather than obtained from
+      // `currentGameAccountId()` - see the file-level comment for why
+      // sharing that account with `rls.test.ts` was a race. Sweeping first
+      // means a row left behind by a crashed prior run of this file is
+      // removed before creating a fresh one, rather than accumulating.
+      await sweepOwnAccount();
+      const created = await supabase
+        .from('game_accounts')
+        .insert({ owner_id: signedInUserId, name: ACCOUNT_NAME })
+        .select()
+        .single();
+      if (created.error) throw new Error(`could not create ${ACCOUNT_NAME}: ${created.error.message}`);
+      accountId = created.data.id;
     }, NETWORK_TIMEOUT);
 
     afterAll(async () => {
       // Deleting the character cascades its grid rows and runs.
       if (characterId) await deleteCharacter(characterId);
-      // Cleanup must stay honest about which case ran: an account (or
-      // dungeon) this block created must not leak, while one it borrowed is
-      // somebody else's data - possibly still in use by a concurrently
-      // running suite - and must survive untouched.
-      if (ownAccountId) await supabase.from('game_accounts').delete().eq('id', ownAccountId);
+      // Unconditional and name-scoped: this account is always this block's
+      // own, so cleanup never risks touching another suite's data.
+      await sweepOwnAccount();
       if (ownDungeonId) await deleteDungeon(ownDungeonId);
     }, NETWORK_TIMEOUT);
 
@@ -252,3 +288,24 @@ describe.skipIf(ownerSkip)(
     });
   },
 );
+
+/*
+ * `currentGameAccountId()` no longer supplies the account the owner-scoped
+ * block above works in (see the file-level comment for why sharing it with
+ * `rls.test.ts` was a race), but its own contract - that concurrent callers
+ * converge on the same account rather than each creating their own - is real
+ * behaviour worth covering directly, and it is exactly what was fixed to make
+ * that convergence happen (see the re-read in `oldestGameAccountId` inside
+ * `currentGameAccountId`, in `src/data/accounts.ts`). This test asserts that
+ * contract - idempotency - without touching whatever account it returns: the
+ * account may be a real one already in use elsewhere, so it is read, never
+ * deleted.
+ */
+describe.skipIf(!configured)('currentGameAccountId', () => {
+  it('converges repeated calls on the same account', { timeout: NETWORK_TIMEOUT }, async () => {
+    const first = await currentGameAccountId();
+    const second = await currentGameAccountId();
+    expect(first).toBeTruthy();
+    expect(second).toBe(first);
+  });
+});
