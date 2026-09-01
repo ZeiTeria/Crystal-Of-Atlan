@@ -11,6 +11,7 @@ import {
 } from '../data/dungeons';
 
 import type { Tier } from '../engine/types';
+import ErrorBanner from '../ui/ErrorBanner';
 
 const WEEKDAYS = [
   { value: 1, label: 'Monday' },
@@ -118,7 +119,7 @@ export default function DungeonsScreen() {
   return (
     <section>
       <h2>Dungeons</h2>
-      {error && <div className="error-message">Error: {error}</div>}
+      <ErrorBanner message={error} />
 
       {dungeons.length === 0 && <p className="muted">No dungeons in the catalogue yet.</p>}
 

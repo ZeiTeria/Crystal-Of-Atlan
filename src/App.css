@@ -41,15 +41,6 @@ h1 {
   font-weight: bold;
 }
 
-.error-message {
-  background-color: var(--error-bg);
-  color: var(--error-text);
-  padding: 12px 16px;
-  border-radius: 8px;
-  width: 100%;
-  box-sizing: border-box;
-  font-size: 0.9rem;
-}
 
 
 
@@ -137,26 +128,7 @@ td {
   font-size: 0.9rem;
 }
 
-input,
-select {
-  background-color: #1e1e1e;
-  color: var(--text-color);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 4px;
-  padding: 4px 6px;
-  font-size: 0.9rem;
-}
 
-input.error-input {
-  border-color: var(--error-bg);
-  color: var(--error-bg);
-}
-.error-text {
-  color: var(--error-bg);
-}
-.warning-text {
-  color: var(--badge-bg);
-}
 
 .row-actions {
   display: flex;
@@ -164,6 +136,3 @@ input.error-input {
 }
 
 
-.muted {
-  color: var(--text-muted);
-}

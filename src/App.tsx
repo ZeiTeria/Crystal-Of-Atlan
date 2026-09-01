@@ -12,6 +12,7 @@ import StatsScreen from './screens/StatsScreen';
 import DungeonsScreen from './screens/DungeonsScreen';
 import type { Session } from '@supabase/supabase-js';
 import './App.css';
+import ErrorBanner from './ui/ErrorBanner';
 
 export type View = 'plan' | 'grid' | 'history' | 'stats' | 'dungeons';
 
@@ -73,7 +74,7 @@ export default function App() {
     return (
       <div className="app-container">
         <h1>Crystal Of Atlan</h1>
-        <div className="error-message">Error: {configError}</div>
+        <ErrorBanner message={configError} />
       </div>
     );
   }
@@ -84,7 +85,7 @@ export default function App() {
     return (
       <div className="app-container">
         <h1>Crystal Of Atlan</h1>
-        {error && <div className="error-message">Error: {error}</div>}
+        <ErrorBanner message={error} />
         <Button onClick={() => void signInWithDiscord()}>
           Sign in with Discord
         </Button>
@@ -119,7 +120,7 @@ export default function App() {
         ))}
       </nav>
 
-      {error && <div className="error-message">Error: {error}</div>}
+      <ErrorBanner message={error} />
 
       {view === 'plan' && <PlanScreen />}
       {view === 'grid' && <GridScreen />}

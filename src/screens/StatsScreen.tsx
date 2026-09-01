@@ -5,6 +5,7 @@ import { listAllRuns } from '../data/runs';
 import { loadPlanInput } from '../data/loadPlanInput';
 import { lastReset } from '../engine/resetWindow';
 import { gold } from './planText';
+import ErrorBanner from '../ui/ErrorBanner';
 
 export default function StatsScreen() {
   const [loading, setLoading] = useState(true);
@@ -48,7 +49,7 @@ export default function StatsScreen() {
   return (
     <section>
       <h2>Historical Stats</h2>
-      {error && <div className="error-message">Error: {error}</div>}
+      <ErrorBanner message={error} />
       
       {weeks.length === 0 ? (
         <p className="muted">No runs logged yet to show stats.</p>

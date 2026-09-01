@@ -5,6 +5,7 @@ import { currentGameAccountId, listCharacters } from '../data/accounts';
 import { listDungeons } from '../data/dungeons';
 import { deleteRun, listRecentRuns, type RunRow } from '../data/runs';
 import { gold } from './planText';
+import ErrorBanner from '../ui/ErrorBanner';
 
 export default function HistoryScreen() {
   const [runs, setRuns] = useState<RunRow[]>([]);
@@ -48,7 +49,7 @@ export default function HistoryScreen() {
   return (
     <section>
       <h2>History</h2>
-      {error && <div className="error-message">Error: {error}</div>}
+      <ErrorBanner message={error} />
       {runs.length === 0 && <p className="muted">No runs logged yet.</p>}
 
       {Array.from(groupedRuns.entries()).map(([date, dayRuns]) => (

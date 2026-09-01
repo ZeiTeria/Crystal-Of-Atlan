@@ -13,6 +13,7 @@ import {
 import { listDungeons, type DungeonRow } from '../data/dungeons';
 import { listGrid, setGridCell, type GridRow } from '../data/grid';
 import type { Tier } from '../engine/types';
+import ErrorBanner from '../ui/ErrorBanner';
 
 const TIERS: Tier[] = ['none', 'solo', 'story', 'elite', 'legend'];
 
@@ -128,7 +129,7 @@ export default function GridScreen() {
         Minimum runs is a hard floor — the planner refuses a plan that cannot meet it, rather
         than quietly dropping it.
       </p>
-      {error && <div className="error-message">Error: {error}</div>}
+      <ErrorBanner message={error} />
 
       <table>
         <thead>

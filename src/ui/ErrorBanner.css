@@ -1,0 +1,12 @@
+.errorbanner {
+  background: var(--danger);
+  /*
+   * The one literal colour allowed anywhere. White reads correctly on the
+   * danger red of BOTH themes, so tokenising it would only add a token that
+   * always holds the same value. Do not "fix" this into var(--text).
+   */
+  color: #ffffff;
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-panel);
+  font-size: var(--step-0);
+}

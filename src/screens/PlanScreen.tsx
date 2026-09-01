@@ -15,6 +15,7 @@ import { solveOptimal } from '../engine/solver';
 import type { PlanInput, PlanResult } from '../engine/types';
 import { describeConflict, describeReason, gold, type Names } from './planText';
 import { nextReset } from '../engine/resetWindow';
+import ErrorBanner from '../ui/ErrorBanner';
 
 /**
  * Time left until the gold cap resets. The boundary is recomputed from the
@@ -143,7 +144,7 @@ export default function PlanScreen() {
           Resets in: <strong><Countdown settings={input.settings} /></strong>
         </span>
       </div>
-      {error && <div className="error-message">Error: {error}</div>}
+      <ErrorBanner message={error} />
 
       {result.status === 'infeasible' ? (
         <>

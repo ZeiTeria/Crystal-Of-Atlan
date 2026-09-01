@@ -1,0 +1,37 @@
+input,
+select {
+  font: inherit;
+  font-size: var(--step-0);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-control);
+  padding: 5px var(--s2);
+}
+
+input:hover:not(:disabled),
+select:hover:not(:disabled) {
+  border-color: var(--text-faint);
+}
+
+input:disabled,
+select:disabled {
+  opacity: 0.5;
+}
+
+input.error-input {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.muted {
+  color: var(--text-dim);
+}
+
+.error-text {
+  color: var(--danger);
+}
+
+.warning-text {
+  color: var(--warn);
+}
