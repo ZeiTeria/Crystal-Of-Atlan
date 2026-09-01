@@ -160,6 +160,10 @@ describe('buildPlanInput', () => {
         gold: { solo: 1, story: 2, elite: 3, legend: 4 },
         default_tier: 'elite',
         default_min_runs: 1,
+        // Display only - carried through so the screens can order and band
+        // their columns, never read by the engine.
+        sort_order: 0,
+        group_name: null,
       },
     ]);
   });

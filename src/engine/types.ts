@@ -22,6 +22,13 @@ export interface Dungeon {
   default_tier: Tier;
   /** The fallback min runs a character has if they don't have an explicit entry in the grid. */
   default_min_runs: number;
+  /**
+   * Display only. The engine never reads either of these - the screens order
+   * their columns by sort_order and band them by group_name, and a plan is
+   * identical whatever they hold.
+   */
+  sort_order: number;
+  group_name: string | null;
 }
 
 export interface Character {

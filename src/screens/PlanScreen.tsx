@@ -15,6 +15,8 @@ import { solveOptimal } from '../engine/solver';
 import type { PlanInput, PlanResult } from '../engine/types';
 import { describeConflict, describeReason, gold, type Names } from './planText';
 import { nextReset } from '../engine/resetWindow';
+import Meter from '../ui/Meter';
+import { groupSpans, matrixColumns } from './columns';
 import ErrorBanner from '../ui/ErrorBanner';
 
 /**
@@ -136,6 +138,10 @@ export default function PlanScreen() {
     );
   }
 
+  // Same order as the Grid: newest dungeon leftmost.
+  const columns = matrixColumns(input.dungeons);
+  const spans = groupSpans(columns);
+
   return (
     <section>
       <div className="plan-head">
@@ -164,6 +170,8 @@ export default function PlanScreen() {
             </p>
           )}
 
+          <p className="muted">Newest dungeon first, matching the Grid.</p>
+
           <h3>Weekly Gold Progress</h3>
           <ul className="goldlist">
             {input.characters.map((c) => {
@@ -173,8 +181,10 @@ export default function PlanScreen() {
               const isCapped = earned >= cap;
               return (
                 <li key={c.id}>
-                  <strong>{c.name}</strong>: {gold(earned)} / {gold(cap)}{' '}
+                  <strong>{c.name}</strong>: <span className="num">{gold(earned)}</span> /{' '}
+                  <span className="num">{gold(cap)}</span>{' '}
                   {isCapped && <span className="warning-text">(Capped!)</span>}
+                  <Meter value={earned} max={cap} tone={isCapped ? 'warn' : 'accent'} />
                 </li>
               );
             })}
@@ -183,11 +193,19 @@ export default function PlanScreen() {
           <div className="datatable-scroll plan-scroll">
             <table className="datatable plan-matrix">
               <thead>
+                <tr className="groupband">
+                  <th />
+                  {spans.map((span, i) => (
+                    <th key={i} colSpan={span.span} className={span.label ? 'grouped' : undefined}>
+                      {span.label}
+                    </th>
+                  ))}
+                </tr>
                 <tr>
                   <th scope="col" className="plan-who">
                     Character
                   </th>
-                  {input.dungeons.map((d) => (
+                  {columns.map((d) => (
                     <th key={d.id} scope="col">
                       {d.name}
                     </th>
@@ -198,7 +216,7 @@ export default function PlanScreen() {
                 {input.characters.map((c) => (
                   <tr key={c.id}>
                     <th scope="row">{c.name}</th>
-                    {input.dungeons.map((d) => {
+                    {columns.map((d) => {
                       const assignment = result.assignments.find(
                         (a) => a.characterId === c.id && a.dungeonId === d.id,
                       );
@@ -213,7 +231,7 @@ export default function PlanScreen() {
                         <td key={d.id}>
                           <div className="cellstack">
                             <strong className="runs num">{assignment.runs}x</strong>
-                            <div className="row-actions">
+                            <div className="row-actions rowbtns">
                               <Button
                                 disabled={busy}
                                 aria-label={`Log one run of ${d.name} by ${c.name}`}

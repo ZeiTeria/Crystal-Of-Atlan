@@ -161,3 +161,26 @@
   z-index: 1;
   background: var(--surface);
 }
+
+/*
+ * 108 cells each shouting two buttons is a wall. They appear on the row being
+ * pointed at or keyboard-focused - and always on touch, where hover does not
+ * exist and hiding them would make the plan unusable.
+ *
+ * visibility rather than display: the cell keeps its size, so rows do not jump
+ * as the pointer moves across the matrix.
+ */
+.rowbtns {
+  visibility: hidden;
+}
+
+.datatable tbody tr:hover .rowbtns,
+.datatable tbody tr:focus-within .rowbtns {
+  visibility: visible;
+}
+
+@media (hover: none) {
+  .rowbtns {
+    visibility: visible;
+  }
+}
