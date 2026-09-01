@@ -121,6 +121,21 @@ describe('PlanScreen', () => {
     expect(screen.getByText(/cannot be used/i)).toBeDefined();
   });
 
+  it('reports the tighter of the two ceilings when the attempt ceiling is the binding one', async () => {
+    // goldHeadroom is deliberately generous (1,000,000) so it cannot be the
+    // binding term; accountAttemptsLeft (1) makes the attempt ceiling
+    // 1 * 30 = 30. Math.min(a, b) and plain `a` (goldCeiling) would both
+    // render 1,000,000 here, so only the attempts term being present is what
+    // makes this case fail on Math.max, `+`, or a dropped attempts term.
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({ goldHeadroom: { c1: 1_000_000 }, accountAttemptsLeft: { d1: 1 } }),
+    );
+    render(<PlanScreen />);
+    await screen.findByText('Mage');
+    expect(await screen.findByText(/at most 30/)).toBeDefined();
+    expect(screen.getByText(/1,000,000 by the gold cap, 30 by attempts/)).toBeDefined();
+  });
+
   it('disables Done immediately and logs only once when clicked twice before the insert settles', async () => {
     const gate = deferred<void>();
     vi.mocked(logRun).mockReturnValue(gate.promise);
@@ -180,6 +195,29 @@ describe('PlanScreen', () => {
 
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
+    expect(await screen.findByText('Mage')).toBeDefined();
+  });
+
+  it('clears the stale error and shows progress while a retry is in flight', async () => {
+    vi.mocked(loadPlanInput).mockRejectedValueOnce(
+      new NamedError('FetchError', 'could not reach supabase'),
+    );
+    render(<PlanScreen />);
+    expect(await screen.findByText(/could not reach supabase/i)).toBeDefined();
+
+    const gate = deferred<PlanInput>();
+    vi.mocked(loadPlanInput).mockReturnValue(gate.promise);
+    const retry = screen.getByRole('button', { name: /retry/i });
+    fireEvent.click(retry);
+
+    // While the retry is in flight, the old failure must not still be on
+    // screen looking unchanged — progress should be visible instead.
+    await waitFor(() => {
+      expect(screen.queryByText(/could not reach supabase/i)).toBeNull();
+    });
+    expect(screen.getByText(/solving/i)).toBeDefined();
+
+    gate.resolve(anInput());
     expect(await screen.findByText('Mage')).toBeDefined();
   });
 

@@ -29,6 +29,10 @@ export default function PlanScreen() {
 
   const solve = useCallback(async () => {
     setBusy(true);
+    // Clear any stale error up front so a Retry shows "Solving..." while the
+    // new attempt is in flight, rather than leaving the old failure on screen
+    // looking unchanged until this attempt itself settles.
+    setError(null);
     try {
       const accountId = await currentGameAccountId();
       const input = await loadPlanInput(accountId);
