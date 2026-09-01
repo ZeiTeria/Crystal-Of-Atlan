@@ -4,21 +4,27 @@ import { supabase } from '../lib/supabase';
 export type CharacterRow = Database['public']['Tables']['characters']['Row'];
 
 /**
- * The account this app works with. The schema allows several per user, but the
- * UI deliberately uses one; the first one, created on demand.
- *
- * Row level security scopes the select to the signed-in user, so "the first
- * row" cannot be somebody else's.
+ * The oldest game account row for the signed-in user, or null if none exists
+ * yet. Row level security scopes the select to that user, so "the oldest row"
+ * cannot be somebody else's.
  */
-export async function currentGameAccountId(): Promise<string> {
+async function oldestGameAccountId(): Promise<string | null> {
   const existing = await supabase
     .from('game_accounts')
     .select('id')
     .order('created_at')
     .limit(1);
   if (existing.error) throw existing.error;
-  const first = existing.data[0];
-  if (first) return first.id;
+  return existing.data[0]?.id ?? null;
+}
+
+/**
+ * The account this app works with. The schema allows several per user, but the
+ * UI deliberately uses one; the first one, created on demand.
+ */
+export async function currentGameAccountId(): Promise<string> {
+  const first = await oldestGameAccountId();
+  if (first) return first;
 
   const { data: user, error: userError } = await supabase.auth.getUser();
   if (userError) throw userError;
@@ -31,7 +37,29 @@ export async function currentGameAccountId(): Promise<string> {
     .select('id')
     .single();
   if (created.error) throw created.error;
-  return created.data.id;
+
+  /*
+   * Re-read the oldest row instead of returning `created.data.id` here. This
+   * function reads-then-creates, and two callers can both pass the empty
+   * select above before either insert lands: React `<StrictMode>`
+   * double-invokes the mount effect in dev, and two browser tabs do it in
+   * production. There is deliberately no unique constraint on `owner_id` (see
+   * the design spec — multiple game accounts per user is a kept-open future
+   * feature), so both inserts succeed and two rows exist.
+   *
+   * If each caller trusted its own insert's id, they would settle on
+   * *different* accounts: the caller whose insert landed second would add
+   * characters to the newer row, while every subsequent page load (via this
+   * same oldest-row select) resolves the older one first — so those
+   * characters would appear to have vanished. Re-reading after inserting
+   * makes every caller converge on the same account no matter who won the
+   * race; the loser's row becomes an inert duplicate instead of somewhere
+   * data can strand. Do not remove this re-read as "redundant" with the
+   * insert above — it is the fix.
+   */
+  const settled = await oldestGameAccountId();
+  if (!settled) throw new Error('game account insert did not persist');
+  return settled;
 }
 
 export async function listCharacters(gameAccountId: string): Promise<CharacterRow[]> {
