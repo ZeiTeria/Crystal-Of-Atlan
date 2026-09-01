@@ -31,9 +31,11 @@ const dungeon = {
   gold_legend: 4,
   sort_order: 0,
   is_active: true,
+  default_tier: 'elite' as const,
+  default_min_runs: 1,
 };
 
-const character = { id: 'c1', game_account_id: 'acc', name: 'Mage', class: null, sort_order: 0 };
+const character = { id: 'c1', game_account_id: 'acc', name: 'Mage', class: null, sort_order: 0, is_active: true };
 
 beforeEach(() => {
   vi.mocked(currentGameAccountId).mockResolvedValue('acc');
@@ -54,11 +56,11 @@ describe('GridScreen', () => {
     expect(min.value).toBe('2');
   });
 
-  it('defaults a pair with no row to locked', async () => {
+  it('defaults a pair with no row to the dungeon default tier', async () => {
     vi.mocked(listGrid).mockResolvedValue([]);
     render(<GridScreen />);
     const tier = (await screen.findByLabelText('Mage tier in Abyss')) as HTMLSelectElement;
-    expect(tier.value).toBe('none');
+    expect(tier.value).toBe('elite');
   });
 
   it('upserts a tier change immediately', async () => {

@@ -21,7 +21,6 @@ vi.mock('./data/profile', () => ({
 
 // Every screen is stubbed: this test is about the shell, not their contents.
 vi.mock('./screens/PlanScreen', () => ({ default: () => <div>plan screen</div> }));
-vi.mock('./screens/CharactersScreen', () => ({ default: () => <div>characters screen</div> }));
 vi.mock('./screens/GridScreen', () => ({ default: () => <div>grid screen</div> }));
 vi.mock('./screens/HistoryScreen', () => ({ default: () => <div>history screen</div> }));
 vi.mock('./screens/DungeonsScreen', () => ({ default: () => <div>dungeons screen</div> }));

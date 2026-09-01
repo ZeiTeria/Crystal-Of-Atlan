@@ -4,20 +4,20 @@ import { configError } from './lib/supabase';
 import { getSession, signInWithDiscord, signOut, onAuthChange } from './lib/auth';
 import { loadProfile, type Profile } from './data/profile';
 import PlanScreen from './screens/PlanScreen';
-import CharactersScreen from './screens/CharactersScreen';
 import GridScreen from './screens/GridScreen';
 import HistoryScreen from './screens/HistoryScreen';
+import StatsScreen from './screens/StatsScreen';
 import DungeonsScreen from './screens/DungeonsScreen';
 import type { Session } from '@supabase/supabase-js';
 import './App.css';
 
-export type View = 'plan' | 'characters' | 'grid' | 'history' | 'dungeons';
+export type View = 'plan' | 'grid' | 'history' | 'stats' | 'dungeons';
 
 const TABS: { view: View; label: string; adminOnly?: boolean }[] = [
   { view: 'plan', label: 'Plan' },
-  { view: 'characters', label: 'Characters' },
-  { view: 'grid', label: 'Grid' },
+  { view: 'grid', label: 'Characters & Grid' },
   { view: 'history', label: 'History' },
+  { view: 'stats', label: 'Stats' },
   { view: 'dungeons', label: 'Dungeons', adminOnly: true },
 ];
 
@@ -120,9 +120,9 @@ export default function App() {
       {error && <div className="error-message">Error: {error}</div>}
 
       {view === 'plan' && <PlanScreen />}
-      {view === 'characters' && <CharactersScreen />}
       {view === 'grid' && <GridScreen />}
       {view === 'history' && <HistoryScreen />}
+      {view === 'stats' && <StatsScreen />}
       {view === 'dungeons' && profile?.is_admin && <DungeonsScreen />}
     </div>
   );

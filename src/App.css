@@ -182,6 +182,17 @@ select {
   font-size: 0.9rem;
 }
 
+input.error-input {
+  border-color: var(--error-bg);
+  color: var(--error-bg);
+}
+.error-text {
+  color: var(--error-bg);
+}
+.warning-text {
+  color: var(--badge-bg);
+}
+
 .row-actions {
   display: flex;
   gap: 8px;

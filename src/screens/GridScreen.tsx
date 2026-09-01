@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { errorMessage } from '../errorMessage';
-import { currentGameAccountId, listCharacters, type CharacterRow } from '../data/accounts';
+import { useMutation } from '../hooks/useMutation';
+import {
+  currentGameAccountId,
+  listCharacters,
+  createCharacter,
+  deleteCharacter,
+  renameCharacter,
+  toggleCharacterActive,
+  type CharacterRow,
+} from '../data/accounts';
 import { listDungeons, type DungeonRow } from '../data/dungeons';
 import { listGrid, setGridCell, type GridRow } from '../data/grid';
 import type { Tier } from '../engine/types';
@@ -15,41 +23,67 @@ export default function GridScreen() {
   const [characters, setCharacters] = useState<CharacterRow[]>([]);
   const [dungeons, setDungeons] = useState<DungeonRow[]>([]);
   const [grid, setGrid] = useState<Map<string, GridRow>>(new Map());
-  const [error, setError] = useState<string | null>(null);
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
-    try {
-      const accountId = await currentGameAccountId();
-      const [chars, dungs] = await Promise.all([listCharacters(accountId), listDungeons()]);
-      const rows = await listGrid(chars.map((c) => c.id));
-      setCharacters(chars);
-      setDungeons(dungs.filter((d) => d.is_active));
-      setGrid(new Map(rows.map((r) => [cellKey(r.character_id, r.dungeon_id), r])));
-      setError(null);
-    } catch (err: unknown) {
-      setError(errorMessage(err));
-    } finally {
-      setLoading(false);
-    }
+  const refreshFn = useCallback(async () => {
+    const aid = await currentGameAccountId();
+    setAccountId(aid);
+    const [chars, dungs] = await Promise.all([listCharacters(aid), listDungeons()]);
+    const rows = await listGrid(chars.map((c) => c.id));
+    setCharacters(chars);
+    setDungeons(dungs.filter((d) => d.is_active));
+    setGrid(new Map(rows.map((r) => [cellKey(r.character_id, r.dungeon_id), r])));
   }, []);
 
+  const { busy, error, mutate, refresh } = useMutation(refreshFn);
+
   useEffect(() => {
-    void refresh();
+    void refresh().finally(() => setLoading(false));
   }, [refresh]);
+
+  async function addCharacter() {
+    const name = draft.trim();
+    if (name === '' || !accountId) return;
+    await mutate(async () => {
+      await createCharacter(accountId, name);
+      setDraft('');
+    });
+  }
+
+  async function rename(character: CharacterRow, next: string) {
+    const name = next.trim();
+    if (name === '' || name === character.name) return;
+    await mutate(async () => {
+      await renameCharacter(character.id, name);
+    });
+  }
+
+  async function toggleActive(character: CharacterRow, is_active: boolean) {
+    await mutate(async () => {
+      await toggleCharacterActive(character.id, is_active);
+    });
+  }
+
+  async function remove(character: CharacterRow) {
+    const ok = window.confirm(
+      `Delete ${character.name}? Its unlocked tiers and all its logged runs go too.`,
+    );
+    if (!ok) return;
+    await mutate(async () => {
+      await deleteCharacter(character.id);
+    });
+  }
 
   async function write(
     characterId: string,
     dungeonId: string,
     patch: { tier?: Tier; min_runs?: number },
   ) {
-    try {
+    await mutate(async () => {
       await setGridCell(characterId, dungeonId, patch);
-      setError(null);
-    } catch (err: unknown) {
-      setError(errorMessage(err));
-    }
-    await refresh();
+    });
   }
 
   if (loading) return <p>Loading grid...</p>;
@@ -74,12 +108,23 @@ export default function GridScreen() {
     );
   }
 
+  const dungeonTotals = new Map<string, number>();
+  for (const d of dungeons) {
+    let sum = 0;
+    for (const c of characters) {
+      if (c.is_active !== false) {
+        sum += grid.get(cellKey(c.id, d.id))?.min_runs ?? d.default_min_runs;
+      }
+    }
+    dungeonTotals.set(d.id, sum);
+  }
+
   return (
     <section>
       <h2>Grid</h2>
       <p className="muted">
         Tier is what that character has unlocked; <strong>none</strong> means it cannot enter.
-        Minimum runs is a hard floor — the planner refuses a plan that cannot meet it, rather
+        Minimum runs is a hard floor - the planner refuses a plan that cannot meet it, rather
         than quietly dropping it.
       </p>
       {error && <div className="error-message">Error: {error}</div>}
@@ -88,25 +133,67 @@ export default function GridScreen() {
         <thead>
           <tr>
             <th>Character</th>
-            {dungeons.map((d) => (
-              <th key={d.id}>{d.name}</th>
-            ))}
+            {dungeons.map((d) => {
+              const currentTotal = dungeonTotals.get(d.id) ?? 0;
+              const isOverLimit = currentTotal > d.account_attempts;
+              const isAtLimit = currentTotal === d.account_attempts;
+              return (
+                <th key={d.id}>
+                  {d.name}
+                  <br />
+                  <span className={isOverLimit ? 'error-text' : isAtLimit ? 'warning-text' : 'muted'}>
+                    {currentTotal} / {d.account_attempts}
+                  </span>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
           {characters.map((c) => (
-            <tr key={c.id}>
-              <th scope="row">{c.name}</th>
+            <tr key={c.id} style={{ opacity: c.is_active !== false ? 1 : 0.5 }}>
+              <th scope="row">
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={c.is_active !== false}
+                    aria-label={`Include ${c.name} in plan`}
+                    onChange={(e) => void toggleActive(c, e.target.checked)}
+                  />
+                  <input
+                    aria-label={`${c.name} name`}
+                    defaultValue={c.name}
+                    onBlur={(e) => void rename(c, e.target.value)}
+                    style={{ width: '120px' }}
+                    disabled={c.is_active === false}
+                  />
+                  <button
+                    className="button button-outline"
+                    aria-label={`Delete ${c.name}`}
+                    onClick={() => void remove(c)}
+                    style={{ padding: '4px 8px' }}
+                  >
+                    ×
+                  </button>
+                </div>
+              </th>
               {dungeons.map((d) => {
                 const row = grid.get(cellKey(c.id, d.id));
-                const tier: Tier = row?.tier ?? 'none';
-                const minRuns = row?.min_runs ?? 0;
+                const tier: Tier = row?.tier ?? d.default_tier;
+                const minRuns = row?.min_runs ?? d.default_min_runs;
+                
+                const currentTotal = dungeonTotals.get(d.id) ?? 0;
+                const isOverLimit = currentTotal > d.account_attempts;
+                const maxAllowedByAccount = Math.max(minRuns, d.account_attempts - currentTotal + minRuns);
+                const maxAllowed = Math.min(d.character_attempts, maxAllowedByAccount);
+
                 return (
                   <td key={d.id}>
                     <select
                       aria-label={`${c.name} tier in ${d.name}`}
                       value={tier}
                       onChange={(e) => void write(c.id, d.id, { tier: e.target.value as Tier })}
+                      disabled={c.is_active === false}
                     >
                       {TIERS.map((t) => (
                         <option key={t} value={t}>
@@ -115,14 +202,18 @@ export default function GridScreen() {
                       ))}
                     </select>
                     <input
+                      key={minRuns}
                       type="number"
+                      className={isOverLimit ? 'error-input' : ''}
                       min={0}
+                      max={maxAllowed}
                       aria-label={`${c.name} minimum runs in ${d.name}`}
                       defaultValue={minRuns}
-                      onBlur={(e) => {
+                      onChange={(e) => {
                         const next = Number(e.target.value);
                         if (next !== minRuns) void write(c.id, d.id, { min_runs: next });
                       }}
+                      disabled={c.is_active === false}
                     />
                   </td>
                 );
@@ -131,6 +222,24 @@ export default function GridScreen() {
           ))}
         </tbody>
       </table>
+
+      <h3>Add a character</h3>
+      <div className="row-actions">
+        <input
+          aria-label="New character name"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Character name"
+        />
+        <button
+          className="button"
+          disabled={busy || draft.trim() === ''}
+          onClick={() => void addCharacter()}
+          style={{ width: 'auto' }}
+        >
+          Add character
+        </button>
+      </div>
     </section>
   );
 }
