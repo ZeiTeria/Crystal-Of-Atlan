@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { stubMatchMedia } from '../ui/testing/matchMedia';
 import GridScreen from './GridScreen';
 import { listGrid, setGridCell, setGridCells } from '../data/grid';
 import { listDungeons } from '../data/dungeons';
@@ -30,6 +31,7 @@ vi.mock('../data/accounts', () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
 });
 
 const dungeon = {
@@ -416,5 +418,45 @@ describe('GridScreen character reordering', () => {
     fireEvent.keyDown(grip, { key: 'Escape' });
 
     expect(vi.mocked(setCharacterOrder)).not.toHaveBeenCalled();
+  });
+});
+
+describe('GridScreen on a phone', () => {
+  const rogue = { ...character, id: 'c2', name: 'Rogue', sort_order: 20 };
+
+  it('shows one character at a time instead of the matrix', async () => {
+    stubMatchMedia(true);
+    vi.mocked(listCharacters).mockResolvedValue([character, rogue]);
+    render(<GridScreen />);
+    await screen.findByLabelText('Mage tier in Abyss');
+
+    // Rogue's controls are not rendered at all - the phone tree is one
+    // character, not a narrow version of twelve.
+    expect(screen.queryByLabelText('Rogue tier in Abyss')).toBe(null);
+    expect(screen.getByRole('tab', { name: 'Rogue' })).toBeDefined();
+  });
+
+  it('switches character from the picker', async () => {
+    stubMatchMedia(true);
+    vi.mocked(listCharacters).mockResolvedValue([character, rogue]);
+    render(<GridScreen />);
+    await screen.findByLabelText('Mage tier in Abyss');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Rogue' }));
+    expect(await screen.findByLabelText('Rogue tier in Abyss')).toBeDefined();
+    expect(screen.queryByLabelText('Mage tier in Abyss')).toBe(null);
+  });
+
+  it('still writes the whole cell from the phone tree', async () => {
+    stubMatchMedia(true);
+    render(<GridScreen />);
+    const tier = await screen.findByLabelText('Mage tier in Abyss');
+    fireEvent.change(tier, { target: { value: 'legend' } });
+    await waitFor(() => {
+      expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
+        tier: 'legend',
+        min_runs: 2,
+      });
+    });
   });
 });

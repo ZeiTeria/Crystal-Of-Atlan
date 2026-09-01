@@ -5,6 +5,8 @@ import TierGem from '../ui/TierGem';
 import { groupSpans, matrixColumns } from './columns';
 import { sortOrderPatches } from '../ui/reorder';
 import { useSortableList } from '../ui/useSortableList';
+import CharacterPicker from '../ui/CharacterPicker';
+import { PHONE, useMediaQuery } from '../ui/useMediaQuery';
 import Button from '../ui/Button';
 import {
   currentGameAccountId,
@@ -33,6 +35,8 @@ export default function GridScreen() {
   const [grid, setGrid] = useState<Map<string, GridRow>>(new Map());
   const [accountId, setAccountId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [phoneCharacterId, setPhoneCharacterId] = useState<string | null>(null);
+  const isPhone = useMediaQuery(PHONE);
   const [loading, setLoading] = useState(true);
 
   const refreshFn = useCallback(async () => {
@@ -63,6 +67,11 @@ export default function GridScreen() {
   });
   const byId = new Map(characters.map((c) => [c.id, c]));
   const orderedCharacters = order.map((id) => byId.get(id)).filter((c) => c !== undefined);
+
+  // The phone shows one character at a time. Falls back to the first rather
+  // than showing nothing when the selection names a character since deleted.
+  const shownCharacter =
+    orderedCharacters.find((c) => c.id === phoneCharacterId) ?? orderedCharacters[0];
 
   async function addCharacter() {
     const name = draft.trim();
@@ -197,6 +206,69 @@ export default function GridScreen() {
       </p>
       <ErrorBanner message={error} />
 
+      {isPhone ? (
+        <>
+          <CharacterPicker
+            characters={orderedCharacters}
+            selectedId={shownCharacter?.id ?? null}
+            onSelect={setPhoneCharacterId}
+          />
+          {shownCharacter && (
+            <div className="pcard gridcard">
+              {columns.map((d, i) => {
+                const c = shownCharacter;
+                const row = grid.get(cellKey(c.id, d.id));
+                const tier: Tier = row?.tier ?? d.default_tier;
+                const minRuns = row?.min_runs ?? d.default_min_runs;
+                const headChanged = i === 0 || columns[i - 1]?.group_name !== d.group_name;
+                return (
+                  <div key={d.id}>
+                    {headChanged && (
+                      <div className="grouphead">{d.group_name ?? 'Ungrouped'}</div>
+                    )}
+                    <div className="gridrow">
+                      <span className="dn2">
+                        <TierGem tier={tier} />
+                        {d.name}
+                      </span>
+                      <select
+                        aria-label={`${c.name} tier in ${d.name}`}
+                        value={tier}
+                        onChange={(e) =>
+                          void write(c.id, d.id, {
+                            tier: e.target.value as Tier,
+                            min_runs: minRuns,
+                          })
+                        }
+                        disabled={c.is_active === false}
+                      >
+                        {TIERS.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        key={minRuns}
+                        type="number"
+                        min={0}
+                        max={d.character_attempts}
+                        aria-label={`${c.name} minimum runs in ${d.name}`}
+                        defaultValue={minRuns}
+                        onBlur={(e) => {
+                          const next = Number(e.target.value);
+                          if (next !== minRuns) void write(c.id, d.id, { tier, min_runs: next });
+                        }}
+                        disabled={c.is_active === false}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      ) : (
       <table className="datatable">
         <thead>
           <tr className="groupband">
@@ -340,6 +412,7 @@ export default function GridScreen() {
           ))}
         </tbody>
       </table>
+      )}
 
       <h3>Add a character</h3>
       <div className="row-actions">

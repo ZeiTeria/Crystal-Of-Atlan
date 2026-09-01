@@ -1,0 +1,31 @@
+.picker {
+  display: flex;
+  gap: var(--s2);
+  overflow-x: auto;
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--line);
+  /* Horizontal scrolling only: a vertical drag here should scroll the page. */
+  touch-action: pan-x;
+}
+
+.picker-tab {
+  font: inherit;
+  font-weight: 900;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: var(--s2) var(--s3);
+  min-height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.picker-tab.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}

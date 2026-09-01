@@ -222,3 +222,132 @@
 .datatable tbody tr.sorting th {
   background: var(--accent-wash);
 }
+
+/*
+ * Phone layouts. These are a different component tree, not a restyled table -
+ * nine columns cannot be made to work at 390px - so the rules here style that
+ * tree rather than overriding the matrix.
+ */
+.pcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  padding: var(--s3);
+}
+
+.prow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--s3);
+  padding-bottom: var(--s3);
+  border-bottom: 1px solid var(--line);
+}
+
+.prow:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.prow .info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.prow .dn {
+  font-weight: 900;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.prow .sub {
+  font-size: 0.625rem;
+  color: var(--text-dim);
+}
+
+.prow .act {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.prow .big {
+  font-weight: 900;
+  font-size: var(--step-2);
+  line-height: 1;
+  min-width: 24px;
+  text-align: right;
+}
+
+/* Thumb-sized targets: this is used next to the game, one-handed. */
+.prow .btn {
+  min-height: 40px;
+}
+
+.gridcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.gridcard .grouphead {
+  font-weight: 900;
+  font-size: 0.5625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--line);
+}
+
+.gridcard .grouphead:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.gridrow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.gridrow:last-child {
+  border-bottom: 0;
+}
+
+.gridrow .dn2 {
+  font-weight: 900;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.gridrow select,
+.gridrow input {
+  min-height: 40px;
+}
+
+/* Below the breakpoint the wide tables that remain must not force the page
+   sideways; they scroll inside their own container instead. */
+@media (max-width: 720px) {
+  .app-container {
+    padding: var(--s4) var(--s3);
+  }
+
+  .datatable {
+    font-size: var(--step-0);
+  }
+}

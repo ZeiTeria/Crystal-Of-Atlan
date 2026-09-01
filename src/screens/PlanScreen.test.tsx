@@ -6,12 +6,14 @@ import { loadPlanInput } from '../data/loadPlanInput';
 import { logRun } from '../data/runs';
 import { currentGameAccountId } from '../data/accounts';
 import type { PlanInput } from '../engine/types';
+import { stubMatchMedia } from '../ui/testing/matchMedia';
 
 vi.mock('../data/loadPlanInput', () => ({ loadPlanInput: vi.fn() }));
 vi.mock('../data/runs', () => ({ logRun: vi.fn(), logRuns: vi.fn() }));
 vi.mock('../data/accounts', () => ({ currentGameAccountId: vi.fn() }));
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   cleanup();
   vi.clearAllMocks();
 });
@@ -273,5 +275,23 @@ describe('PlanScreen', () => {
       await screen.findByText('Error: solver pass "attempts" returned status Infeasible'),
     ).toBeDefined();
     expect(screen.queryByText(/SolverNotOptimalError:/)).toBeNull();
+  });
+});
+
+describe('PlanScreen on a phone', () => {
+  it('lists only the assignments of the shown character, with a Log button', async () => {
+    stubMatchMedia(true);
+    render(<PlanScreen />);
+    const log = await screen.findByRole('button', { name: /log one run of abyss by mage/i });
+    fireEvent.click(log);
+    await waitFor(() => {
+      expect(vi.mocked(logRun)).toHaveBeenCalledWith('c1', 'd1', 30);
+    });
+  });
+
+  it('offers the character picker rather than a matrix', async () => {
+    stubMatchMedia(true);
+    render(<PlanScreen />);
+    expect(await screen.findByRole('tab', { name: 'Mage' })).toBeDefined();
   });
 });

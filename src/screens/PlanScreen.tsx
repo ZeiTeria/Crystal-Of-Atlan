@@ -17,6 +17,8 @@ import { describeConflict, describeReason, gold, type Names } from './planText';
 import { nextReset } from '../engine/resetWindow';
 import Meter from '../ui/Meter';
 import { groupSpans, matrixColumns } from './columns';
+import CharacterPicker from '../ui/CharacterPicker';
+import { PHONE, useMediaQuery } from '../ui/useMediaQuery';
 import ErrorBanner from '../ui/ErrorBanner';
 
 /**
@@ -59,6 +61,8 @@ interface Solved {
 
 export default function PlanScreen() {
   const [solved, setSolved] = useState<Solved | null>(null);
+  const [phoneCharacterId, setPhoneCharacterId] = useState<string | null>(null);
+  const isPhone = useMediaQuery(PHONE);
 
   const solveFn = useCallback(async () => {
     try {
@@ -142,6 +146,12 @@ export default function PlanScreen() {
   const columns = matrixColumns(input.dungeons);
   const spans = groupSpans(columns);
 
+  // The phone shows one character at a time. Falls back to the first rather
+  // than showing nothing when the selection names a character that has since
+  // been deleted or parked.
+  const shownCharacter =
+    input.characters.find((c) => c.id === phoneCharacterId) ?? input.characters[0];
+
   return (
     <section>
       <div className="plan-head">
@@ -190,6 +200,62 @@ export default function PlanScreen() {
             })}
           </ul>
 
+          {isPhone ? (
+            <>
+              <CharacterPicker
+                characters={input.characters}
+                selectedId={shownCharacter?.id ?? null}
+                onSelect={setPhoneCharacterId}
+              />
+              {shownCharacter && (
+                <div className="pcard">
+                  {(() => {
+                    const mine = result.assignments.filter(
+                      (a) => a.characterId === shownCharacter.id,
+                    );
+                    if (mine.length === 0) {
+                      return <p className="muted">Nothing planned for {shownCharacter.name}.</p>;
+                    }
+                    return mine.map((a) => {
+                      const d = columns.find((x) => x.id === a.dungeonId);
+                      return (
+                        <div className="prow" key={a.dungeonId}>
+                          <div className="info">
+                            <span className="dn">{d?.name ?? a.dungeonId}</span>
+                            <span className="sub num">
+                              {gold(a.goldPerRun)} each &middot; {gold(a.goldTotal)} total
+                            </span>
+                          </div>
+                          <div className="act">
+                            <span className="big num">{a.runs}</span>
+                            <Button
+                              disabled={busy}
+                              aria-label={`Log one run of ${d?.name ?? ''} by ${shownCharacter.name}`}
+                              onClick={() => void markDone(a.characterId, a.dungeonId, a.goldPerRun)}
+                            >
+                              Log 1
+                            </Button>
+                            {a.runs > 1 && (
+                              <Button
+                                variant="outline"
+                                disabled={busy}
+                                aria-label={`Log all ${a.runs} runs of ${d?.name ?? ''} by ${shownCharacter.name}`}
+                                onClick={() =>
+                                  void markAllDone(a.characterId, a.dungeonId, a.goldPerRun, a.runs)
+                                }
+                              >
+                                All
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              )}
+            </>
+          ) : (
           <div className="datatable-scroll plan-scroll">
             <table className="datatable plan-matrix">
               <thead>
@@ -263,6 +329,7 @@ export default function PlanScreen() {
               </tbody>
             </table>
           </div>
+          )}
 
           {result.assignments.length === 0 && (
             <p className="muted">Nothing left to run this week.</p>
