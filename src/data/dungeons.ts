@@ -8,6 +8,8 @@ export type DungeonRow = Database['public']['Tables']['dungeons']['Row'];
 /** Every column a person edits. Defaults live in the screen, not here. */
 export interface NewDungeon {
   name: string;
+  /** Display grouping, e.g. 'HexChess'. null means the dungeon has no family. */
+  group_name: string | null;
   account_attempts: number;
   character_attempts: number;
   reset_weekday: number;

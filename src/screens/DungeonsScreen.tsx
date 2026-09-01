@@ -27,6 +27,7 @@ const TIERS: Tier[] = ['none', 'solo', 'story', 'elite', 'legend'];
 
 const BLANK: NewDungeon = {
   name: '',
+  group_name: null,
   account_attempts: 18,
   character_attempts: 3,
   reset_weekday: 1,
@@ -127,6 +128,7 @@ export default function DungeonsScreen() {
         <thead>
           <tr>
             <th>Name</th>
+            <th>Group</th>
             <th>Account/wk</th>
             <th>Character/wk</th>
             <th>Resets</th>
@@ -150,6 +152,22 @@ export default function DungeonsScreen() {
                   onBlur={(e) => {
                     const name = e.target.value.trim();
                     if (name !== '' && name !== d.name) void save(d.id, { name });
+                  }}
+                />
+              </td>
+              <td>
+                <input
+                  aria-label={`${d.name} group`}
+                  defaultValue={d.group_name ?? ''}
+                  list="dungeon-groups"
+                  placeholder="none"
+                  onBlur={(e) => {
+                    // An emptied field stores null, never '': an empty-string
+                    // family would be treated as real and banded together with
+                    // every other ungrouped dungeon.
+                    const next = e.target.value.trim();
+                    const value = next === '' ? null : next;
+                    if (value !== d.group_name) void save(d.id, { group_name: value });
                   }}
                 />
               </td>
@@ -196,6 +214,9 @@ export default function DungeonsScreen() {
                     type="number"
                     aria-label={`${d.name} ${c.label} gold`}
                     defaultValue={d[c.key]}
+                    // 36 figures get typed into fields already holding a 0;
+                    // without this every one needs the 0 cleared first.
+                    onFocus={(e) => e.target.select()}
                     onBlur={(e) => void save(d.id, c.patch(Number(e.target.value)))}
                   />
                 </td>
@@ -227,7 +248,7 @@ export default function DungeonsScreen() {
                   aria-label={`${d.name} default min runs`}
                   value={d.default_min_runs}
                   min={0}
-                  max={1}
+                  max={d.character_attempts}
                   onChange={(e) => void save(d.id, { default_min_runs: Number(e.target.value) })}
                 />
               </td>
@@ -260,6 +281,12 @@ export default function DungeonsScreen() {
         </tbody>
       </table>
 
+      <datalist id="dungeon-groups">
+        {[...new Set(dungeons.map((d) => d.group_name).filter((g) => g !== null))].map((g) => (
+          <option key={g} value={g} />
+        ))}
+      </datalist>
+
       <h3>Add a dungeon</h3>
       <p className="muted">
         Gold values can be filled in later; the name is the only thing needed to create one.
@@ -287,7 +314,7 @@ export default function DungeonsScreen() {
           aria-label="New dungeon default min runs"
           value={draft.default_min_runs}
           min={0}
-          max={1}
+          max={draft.character_attempts}
           onChange={(e) => setDraft({ ...draft, default_min_runs: Number(e.target.value) })}
         />
         <Button

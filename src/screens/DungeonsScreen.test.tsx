@@ -141,3 +141,35 @@ describe('DungeonsScreen', () => {
     confirmSpy.mockRestore();
   });
 });
+
+describe('DungeonsScreen groups', () => {
+  it('saves a dungeon group', async () => {
+    render(<DungeonsScreen />);
+    const field = await screen.findByLabelText('Abyss group');
+    fireEvent.change(field, { target: { value: 'HexChess' } });
+    fireEvent.blur(field);
+    await waitFor(() => {
+      expect(vi.mocked(updateDungeon)).toHaveBeenCalledWith('d1', { group_name: 'HexChess' });
+    });
+  });
+
+  it('stores an emptied group as null rather than an empty string', async () => {
+    // An empty-string family would be treated as real by groupSpans and banded
+    // together with every other ungrouped dungeon.
+    vi.mocked(listDungeons).mockResolvedValue([{ ...abyss, group_name: 'HexChess' }]);
+    render(<DungeonsScreen />);
+    const field = await screen.findByLabelText('Abyss group');
+    fireEvent.change(field, { target: { value: '   ' } });
+    fireEvent.blur(field);
+    await waitFor(() => {
+      expect(vi.mocked(updateDungeon)).toHaveBeenCalledWith('d1', { group_name: null });
+    });
+  });
+
+  it('does not write when the group comes back unchanged', async () => {
+    render(<DungeonsScreen />);
+    const field = await screen.findByLabelText('Abyss group');
+    fireEvent.blur(field);
+    expect(vi.mocked(updateDungeon)).not.toHaveBeenCalled();
+  });
+});
