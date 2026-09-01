@@ -25,7 +25,17 @@ type Highs = Awaited<ReturnType<typeof highsLoader>>;
 let instance: Promise<Highs> | null = null;
 /** The WebAssembly module is loaded once and reused. */
 function highs(): Promise<Highs> {
-  instance ??= highsLoader();
+  const options = import.meta.env.MODE !== 'test'
+    ? {
+        locateFile: (file: string) => {
+          if (file.endsWith('.wasm')) {
+            return new URL('../../node_modules/highs/build/highs.wasm', import.meta.url).href;
+          }
+          return file;
+        },
+      }
+    : {};
+  instance ??= highsLoader(options);
   return instance;
 }
 
