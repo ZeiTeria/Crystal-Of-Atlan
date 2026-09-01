@@ -93,7 +93,10 @@ describe('GridScreen', () => {
     const tier = await screen.findByLabelText('Mage tier in Abyss');
     fireEvent.change(tier, { target: { value: 'legend' } });
     await waitFor(() => {
-      expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', { tier: 'legend' });
+      expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
+        tier: 'legend',
+        min_runs: 2,
+      });
     });
   });
 
@@ -103,7 +106,10 @@ describe('GridScreen', () => {
     fireEvent.change(min, { target: { value: '3' } });
     fireEvent.blur(min);
     await waitFor(() => {
-      expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', { min_runs: 3 });
+      expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
+        tier: 'elite',
+        min_runs: 3,
+      });
     });
   });
 
@@ -120,7 +126,43 @@ describe('GridScreen', () => {
 
     fireEvent.blur(min);
     await waitFor(() => {
-      expect(vi.mocked(setGridCell)).toHaveBeenCalledExactlyOnceWith('c1', 'd1', { min_runs: 10 });
+      expect(vi.mocked(setGridCell)).toHaveBeenCalledExactlyOnceWith('c1', 'd1', {
+        tier: 'elite',
+        min_runs: 10,
+      });
+    });
+  });
+
+  it('writes the whole cell when a tier changes, so the minimum is not reset', async () => {
+    // A cell with no row yet shows the dungeon's defaults. Sending only the
+    // tier makes the upsert insert a row whose min_runs takes the SCHEMA
+    // default of 0, so the displayed minimum of 1 silently becomes 0.
+    vi.mocked(listGrid).mockResolvedValue([]);
+    render(<GridScreen />);
+    const tier = await screen.findByLabelText('Mage tier in Abyss');
+    fireEvent.change(tier, { target: { value: 'legend' } });
+    await waitFor(() => {
+      expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
+        tier: 'legend',
+        min_runs: 1,
+      });
+    });
+  });
+
+  it('writes the whole cell when a minimum changes, so the tier is not locked to none', async () => {
+    // The same hole in the other direction, and worse: an inserted row would
+    // take tier 'none', which means "cannot enter" - the planner drops the pair
+    // entirely rather than merely planning it badly.
+    vi.mocked(listGrid).mockResolvedValue([]);
+    render(<GridScreen />);
+    const min = await screen.findByLabelText('Mage minimum runs in Abyss');
+    fireEvent.change(min, { target: { value: '3' } });
+    fireEvent.blur(min);
+    await waitFor(() => {
+      expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
+        tier: 'elite',
+        min_runs: 3,
+      });
     });
   });
 

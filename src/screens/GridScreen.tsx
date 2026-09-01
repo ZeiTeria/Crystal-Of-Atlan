@@ -78,13 +78,19 @@ export default function GridScreen() {
     });
   }
 
+  /**
+   * Writes the whole cell, never a patch. What is on screen for an untouched
+   * pair comes from the dungeon's defaults, so the caller passes the current
+   * displayed values alongside the change - otherwise the upsert would insert
+   * schema defaults for whatever was left out. See setGridCell.
+   */
   async function write(
     characterId: string,
     dungeonId: string,
-    patch: { tier?: Tier; min_runs?: number },
+    cell: { tier: Tier; min_runs: number },
   ) {
     await mutate(async () => {
-      await setGridCell(characterId, dungeonId, patch);
+      await setGridCell(characterId, dungeonId, cell);
     });
   }
 
@@ -192,7 +198,9 @@ export default function GridScreen() {
                     <select
                       aria-label={`${c.name} tier in ${d.name}`}
                       value={tier}
-                      onChange={(e) => void write(c.id, d.id, { tier: e.target.value as Tier })}
+                      onChange={(e) =>
+                        void write(c.id, d.id, { tier: e.target.value as Tier, min_runs: minRuns })
+                      }
                       disabled={c.is_active === false}
                     >
                       {TIERS.map((t) => (
@@ -215,7 +223,7 @@ export default function GridScreen() {
                       // digit after the first.
                       onBlur={(e) => {
                         const next = Number(e.target.value);
-                        if (next !== minRuns) void write(c.id, d.id, { min_runs: next });
+                        if (next !== minRuns) void write(c.id, d.id, { tier, min_runs: next });
                       }}
                       disabled={c.is_active === false}
                     />

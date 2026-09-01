@@ -17,16 +17,25 @@ export async function listGrid(characterIds: string[]): Promise<GridRow[]> {
 /**
  * Upsert, not update: most pairs have no row until someone touches them, and
  * the primary key is (character_id, dungeon_id) so a conflict is the same cell.
+ *
+ * `cell` is the WHOLE cell, deliberately not a partial patch. An upsert that
+ * omits a column inserts that column's SCHEMA default, which is not what the
+ * screen was showing: an untouched pair displays the dungeon's default_tier and
+ * default_min_runs, so a tier-only write would insert min_runs 0 (quietly
+ * dropping a minimum of 1) and a min-runs-only write would insert tier 'none' -
+ * which means "cannot enter", and makes the planner discard the pair outright.
+ *
+ * Requiring both fields is what makes that class of bug unrepresentable.
  */
 export async function setGridCell(
   characterId: string,
   dungeonId: string,
-  patch: { tier?: Tier; min_runs?: number },
+  cell: { tier: Tier; min_runs: number },
 ): Promise<void> {
   const { error } = await supabase
     .from('character_dungeon')
     .upsert(
-      { character_id: characterId, dungeon_id: dungeonId, ...patch },
+      { character_id: characterId, dungeon_id: dungeonId, ...cell },
       { onConflict: 'character_id,dungeon_id' },
     );
   if (error) throw error;
