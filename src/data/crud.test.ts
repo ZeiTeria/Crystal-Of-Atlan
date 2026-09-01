@@ -29,10 +29,14 @@ import { loadPlanInput } from './loadPlanInput';
  *    the signed-in account to be an admin. It SKIPS - loudly, naming the
  *    exact SQL to run - when the account is not admin.
  *  - The OWNER-SCOPED block (characters, the grid upsert, logging a run,
- *    loadPlanInput, undo) needs no admin rights, so it runs for any
- *    signed-in account. It borrows an existing active dungeon from the
- *    catalogue instead of creating one, and SKIPS - naming the reason - only
- *    if the catalogue has no active dungeon to borrow.
+ *    loadPlanInput, undo) needs a dungeon to work against but not admin
+ *    rights to run its own assertions. It prefers to be self-sufficient: if
+ *    the signed-in account is admin, it creates and deletes its own
+ *    throwaway dungeon, independent of the catalogue block above. Only when
+ *    the account is not admin does it fall back to borrowing an existing
+ *    active dungeon from the catalogue (and leaves it alone - it is not this
+ *    block's to delete). It SKIPS - naming the reason - only when neither is
+ *    possible: not admin, and the catalogue has nothing to borrow.
  *
  * Both blocks skip entirely when credentials are absent, same as before.
  */
@@ -45,6 +49,7 @@ const configured = Boolean(
 
 const NETWORK_TIMEOUT = 30_000;
 const DUNGEON_NAME = 'crud-test-dungeon';
+const OWNER_DUNGEON_NAME = 'crud-test-owner-dungeon';
 const CHARACTER_NAME = 'crud-test-character';
 
 const ADMIN_REMEDY =
@@ -130,10 +135,10 @@ describe.skipIf(catalogueSkip)(
   },
 );
 
-const ownerSkip = !configured || !catalogueDungeon;
+const ownerSkip = !configured || (!isAdmin && !catalogueDungeon);
 const ownerSkipReason =
-  configured && !catalogueDungeon
-    ? 'the catalogue has no active dungeon to borrow - create one as admin first (see the catalogue block above)'
+  configured && !isAdmin && !catalogueDungeon
+    ? `not admin and the catalogue has no active dungeon to borrow - either run as admin (${ADMIN_REMEDY.replace(/\n/g, ' ')}), or create an active dungeon as admin first`
     : undefined;
 if (ownerSkipReason) {
   console.warn(`[crud.test] owner-scoped block SKIPPED - ${ownerSkipReason}`);
@@ -142,14 +147,45 @@ if (ownerSkipReason) {
 describe.skipIf(ownerSkip)(
   ownerSkipReason ? `owner-scoped data [SKIPPED: ${ownerSkipReason}]` : 'owner-scoped data',
   () => {
-    // Only reached when catalogueDungeon is defined: ownerSkip above already
-    // guards every test body in this block on that being true.
-    const dungeon = catalogueDungeon as DungeonRow;
+    // Only reached when ownerSkip above is false: either isAdmin is true (so
+    // this block creates its own dungeon in beforeAll below) or
+    // catalogueDungeon is defined (the borrow fallback). `dungeon` is set in
+    // beforeAll either way, before any `it` runs.
+    let dungeon: DungeonRow;
+    let ownDungeonId: string | undefined;
 
     let accountId: string;
     let characterId: string;
 
     beforeAll(async () => {
+      if (isAdmin) {
+        // Self-sufficient path: don't depend on the catalogue containing
+        // anything. Leftovers from a failed prior run would make the
+        // assertions below ambiguous.
+        const stale = await listDungeons();
+        for (const d of stale.filter((d) => d.name === OWNER_DUNGEON_NAME)) {
+          await deleteDungeon(d.id);
+        }
+        const created = await createDungeon({
+          name: OWNER_DUNGEON_NAME,
+          account_attempts: 18,
+          character_attempts: 3,
+          reset_weekday: 4,
+          quest_coverage: true,
+          gold_solo: 10,
+          gold_story: 20,
+          gold_elite: 30,
+          gold_legend: 40,
+          is_active: true,
+        });
+        ownDungeonId = created.id;
+        dungeon = created;
+      } else {
+        // Non-admin fallback: borrow, never delete. ownerSkip above
+        // guarantees catalogueDungeon is defined on this branch.
+        dungeon = catalogueDungeon as DungeonRow;
+      }
+
       accountId = await currentGameAccountId();
       for (const c of await listCharacters(accountId)) {
         if (c.name === CHARACTER_NAME) await deleteCharacter(c.id);
@@ -157,11 +193,13 @@ describe.skipIf(ownerSkip)(
     }, NETWORK_TIMEOUT);
 
     afterAll(async () => {
-      // Deleting the character cascades its grid rows and runs. The borrowed
-      // dungeon itself is never touched - it belongs to the catalogue block,
-      // not this one.
+      // Deleting the character cascades its grid rows and runs.
       if (characterId) await deleteCharacter(characterId);
       if (accountId) await supabase.from('game_accounts').delete().eq('id', accountId);
+      // Cleanup must stay honest about which case ran: a created dungeon
+      // must not leak, while a borrowed one is somebody else's (or the
+      // catalogue block's) data and must survive untouched.
+      if (ownDungeonId) await deleteDungeon(ownDungeonId);
     }, NETWORK_TIMEOUT);
 
     it('round-trips a character', { timeout: NETWORK_TIMEOUT }, async () => {
@@ -182,8 +220,8 @@ describe.skipIf(ownerSkip)(
     it('logs a run and feeds it back into the engine input', { timeout: NETWORK_TIMEOUT }, async () => {
       await logRun(characterId, dungeon.id, 30);
       const input = await loadPlanInput(accountId);
-      // One of this character's attempts on the borrowed dungeon is spent,
-      // and the gold is counted against the fixed 1,000,000 weekly cap.
+      // One of this character's attempts on the dungeon is spent, and the
+      // gold is counted against the fixed 1,000,000 weekly cap.
       expect(input.characterAttemptsLeft[characterId]?.[dungeon.id]).toBe(
         dungeon.character_attempts - 1,
       );
