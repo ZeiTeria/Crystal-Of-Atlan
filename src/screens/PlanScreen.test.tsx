@@ -165,8 +165,10 @@ describe('PlanScreen', () => {
     expect(await screen.findByText(/at most 50/)).toBeDefined();
     expect(screen.getByText(/50 by the gold cap, 90 by attempts/)).toBeDefined();
 
-    expect(screen.getByText(/why it stops there/i)).toBeDefined();
-    expect(screen.getByText(/cannot be used/i)).toBeDefined();
+    // The reason is no longer prose under a heading: it is a "?" beside the
+    // leftover count, which only appears when the leftover is not zero.
+    expect(screen.getByText(/attempts left over/i)).toBeDefined();
+    expect(screen.getByRole('button', { name: /cannot be used/i })).toBeDefined();
   });
 
   it('reports the tighter of the two ceilings when the attempt ceiling is the binding one', async () => {
@@ -391,5 +393,31 @@ describe('PlanScreen explanation on hover', () => {
     fireEvent.mouseLeave(wrap);
 
     expect(screen.getByRole('dialog')).toBeDefined();
+  });
+});
+
+describe('PlanScreen leftover attempts', () => {
+  it('shows what the plan does not use, out of what is left this week', async () => {
+    // 18 remaining, and the plan can only spend 3 of them - one character with
+    // a per-character cap of 3 - so 15 go unused.
+    render(<PlanScreen />);
+    await screen.findAllByText('Mage');
+    expect(screen.getByText('15 / 18')).toBeDefined();
+  });
+
+  it('explains a leftover that is not zero', async () => {
+    render(<PlanScreen />);
+    const dot = await screen.findByRole('button', { name: /cannot be used|left unused/i });
+    fireEvent.click(dot);
+    expect(screen.getByRole('dialog')).toBeDefined();
+  });
+
+  it('says nothing when nothing is left over', async () => {
+    // Exactly as many attempts remaining as the plan can spend.
+    vi.mocked(loadPlanInput).mockResolvedValue(anInput({ accountAttemptsLeft: { d1: 3 } }));
+    render(<PlanScreen />);
+    await screen.findAllByText('Mage');
+    expect(screen.getByText('0 / 3')).toBeDefined();
+    expect(screen.queryByRole('button', { name: /left unused|cannot be used/i })).toBe(null);
   });
 });

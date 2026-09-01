@@ -16,7 +16,14 @@
 }
 
 .app-wide {
-  max-width: 1180px;
+  /*
+   * Left-aligned, not centred. The signed-out card is a small centred box, but
+   * the app proper is a wide matrix: centring it puts equal dead margin on both
+   * sides of a table that would rather have the width, and makes the whole
+   * thing shift sideways as the tab changes.
+   */
+  max-width: 1400px;
+  margin-inline: 0 auto;
   align-items: stretch;
   text-align: left;
 }

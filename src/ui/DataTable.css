@@ -30,6 +30,19 @@
 }
 
 /*
+ * Dungeon columns are centred - the label sits over a column of centred run
+ * counts, and a left-aligned heading over centred figures reads as misaligned.
+ * The first column is the character heading and stays left with its names.
+ */
+.matrix thead th {
+  text-align: center;
+}
+
+.matrix thead th:first-child {
+  text-align: left;
+}
+
+/*
  * Banding and hover paint only the scrolling cells. Both tints are translucent
  * rgba, and the sticky column must never be - see the sticky rules below.
  *
@@ -553,4 +566,47 @@
 
 .matrix-simple .who-gold {
   font-size: 0.5625rem;
+}
+
+/*
+ * The Plan colours by RUN COUNT, not by difficulty.
+ *
+ * The Grid is where difficulty is chosen, so tier is the useful thing to see
+ * there. The Plan answers "how much of this does each character do", and a
+ * ramp on the count makes the heavy cells findable without reading a single
+ * number. Difficulty is still on the row through its gem.
+ *
+ * One hue at rising strength rather than four colours: the count is ordered,
+ * and an ordered quantity wants an ordered scale.
+ */
+.runcell.runs-0 {
+  opacity: 0.5;
+}
+
+.runcell.runs-1 {
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.runcell.runs-2 {
+  background-color: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.runcell.runs-3 {
+  background-color: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+/*
+ * The leftover-attempts table. Narrow on purpose: it is a short list of
+ * dungeon against one figure, and stretching it to the full width of the
+ * matrix above would imply the two line up column for column.
+ */
+.leftovers {
+  max-width: 420px;
+}
+
+.leftover-line {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s2);
 }

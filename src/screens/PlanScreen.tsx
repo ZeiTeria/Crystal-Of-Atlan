@@ -333,13 +333,13 @@ export default function PlanScreen() {
                       );
                       if (!assignment) {
                         return (
-                          <td key={d.id} className="muted center">
+                          <td key={d.id} className="muted center runcell runs-0">
                             -
                           </td>
                         );
                       }
                       return (
-                        <td key={d.id} className={`tiercell tier-${tierOf.get(`${c.id}:${d.id}`) ?? 'none'}`}>
+                        <td key={d.id} className={`runcell runs-${Math.min(assignment.runs, 3)}`}>
                           <div className="cellstack">
                             <strong className="runs num">{assignment.runs}x</strong>
                             <div className="row-actions rowbtns">
@@ -398,15 +398,64 @@ export default function PlanScreen() {
             </li>
           </ul>
 
-          {solved.reasons.length > 0 && (
-            <>
-              <h3>Why it stops there</h3>
-              <ul>
-                {solved.reasons.map((r, i) => (
+          <h3>Attempts left over</h3>
+          <p className="muted">
+            How many of this week's remaining attempts the plan does not use. A "?" says why
+            the leftover is not zero; nothing to explain means nothing is wasted.
+          </p>
+          <table className="datatable leftovers">
+            <thead>
+              <tr>
+                <th scope="col">Dungeon</th>
+                <th scope="col" className="num">
+                  Left over / remaining
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {columns.map((d) => {
+                const remaining = input.accountAttemptsLeft[d.id] ?? 0;
+                const planned = result.assignments
+                  .filter((a) => a.dungeonId === d.id)
+                  .reduce((sum, a) => sum + a.runs, 0);
+                const leftOver = Math.max(0, remaining - planned);
+                // Prefer the solver's own account of this dungeon; fall back to
+                // the general reason, which is always one of these three.
+                const reason = solved.reasons.find(
+                  (r) => 'dungeonId' in r && r.dungeonId === d.id,
+                );
+                const why = reason
+                  ? describeReason(reason, names)
+                  : `${leftOver} attempts on ${d.name} are left unused. Either no character has it unlocked at a difficulty worth running, or the characters that do have hit their own weekly limit or their gold cap.`;
+                return (
+                  <tr key={d.id}>
+                    <th scope="row" title={d.name}>
+                      {density === 'simple'
+                        ? (d.short_name ?? suggestAbbreviation(d.name, d.group_name))
+                        : d.name}
+                    </th>
+                    <td className="num">
+                      <span className="leftover-line">
+                        <span className={leftOver > 0 ? 'warning-text' : undefined}>
+                          {leftOver} / {remaining}
+                        </span>
+                        {leftOver > 0 && <InfoDot label={why}>{why}</InfoDot>}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {solved.reasons.some((r) => r.kind === 'gold-cap-reached') && (
+            <ul className="muted">
+              {solved.reasons
+                .filter((r) => r.kind === 'gold-cap-reached')
+                .map((r, i) => (
                   <li key={i}>{describeReason(r, names)}</li>
                 ))}
-              </ul>
-            </>
+            </ul>
           )}
         </>
       )}
