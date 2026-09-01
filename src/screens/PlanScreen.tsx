@@ -43,7 +43,11 @@ export default function PlanScreen() {
       });
       setError(null);
     } catch (err: unknown) {
-      setError(String(err));
+      // A failed re-solve leaves `solved` pointing at a plan the database no
+      // longer agrees with, so the stale snapshot is dropped rather than kept
+      // actionable — every Done button disappears along with it.
+      setError(err instanceof Error ? err.message : String(err));
+      setSolved(null);
     } finally {
       setBusy(false);
     }
@@ -54,11 +58,16 @@ export default function PlanScreen() {
   }, [solve]);
 
   async function markDone(characterId: string, dungeonId: string, goldPerRun: number) {
+    // Raised before any await: `disabled={busy}` only takes effect once React
+    // re-renders, which happens synchronously before the next click can be
+    // dispatched — but only if this is set before the first await, not after.
+    setBusy(true);
     try {
       await logRun(characterId, dungeonId, goldPerRun);
       setError(null);
     } catch (err: unknown) {
-      setError(String(err));
+      setError(err instanceof Error ? err.message : String(err));
+      setBusy(false);
       return;
     }
     // Re-solve against what is left, rather than decrementing a local number:
@@ -66,7 +75,18 @@ export default function PlanScreen() {
     await solve();
   }
 
-  if (!solved) return <p>{error ? `Error: ${error}` : 'Solving...'}</p>;
+  if (!solved) {
+    return (
+      <>
+        <p>{error ? `Error: ${error}` : 'Solving...'}</p>
+        {error && (
+          <button className="button" disabled={busy} onClick={() => void solve()}>
+            Retry
+          </button>
+        )}
+      </>
+    );
+  }
 
   const { input, result } = solved;
   const names: Names = {
