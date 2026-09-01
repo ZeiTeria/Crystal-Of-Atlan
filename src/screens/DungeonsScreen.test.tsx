@@ -35,6 +35,7 @@ const abyss = {
   is_active: true,
   default_tier: 'elite' as const,
   default_min_runs: 1,
+  group_name: null,
 };
 
 /** A promise the test controls the settlement of, to catch a mid-flight state. */

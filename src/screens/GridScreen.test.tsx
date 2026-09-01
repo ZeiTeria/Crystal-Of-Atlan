@@ -45,6 +45,7 @@ const dungeon = {
   is_active: true,
   default_tier: 'elite' as const,
   default_min_runs: 1,
+  group_name: null,
 };
 
 const character = { id: 'c1', game_account_id: 'acc', name: 'Mage', class: null, sort_order: 0, is_active: true };

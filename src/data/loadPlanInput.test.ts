@@ -37,6 +37,7 @@ function aDungeonRow(id: string, overrides: Partial<Row<'dungeons'>> = {}): Row<
     is_active: true,
     default_tier: 'elite',
     default_min_runs: 1,
+    group_name: null,
     ...overrides,
   };
 }

@@ -50,6 +50,7 @@ beforeEach(() => {
       is_active: true,
       default_tier: 'elite' as const,
       default_min_runs: 1,
+      group_name: null,
     },
   ]);
   vi.mocked(listRecentRuns).mockResolvedValue([
