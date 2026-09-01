@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { errorMessage } from '../errorMessage';
 import { currentGameAccountId } from '../data/accounts';
 import { loadPlanInput } from '../data/loadPlanInput';
 import { logRun } from '../data/runs';
@@ -50,7 +51,7 @@ export default function PlanScreen() {
       // A failed re-solve leaves `solved` pointing at a plan the database no
       // longer agrees with, so the stale snapshot is dropped rather than kept
       // actionable — every Done button disappears along with it.
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errorMessage(err));
       setSolved(null);
     } finally {
       setBusy(false);
@@ -70,7 +71,7 @@ export default function PlanScreen() {
       await logRun(characterId, dungeonId, goldPerRun);
       setError(null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errorMessage(err));
       setBusy(false);
       return;
     }

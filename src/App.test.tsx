@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Session } from '@supabase/supabase-js';
 import App from './App';
@@ -27,6 +27,7 @@ vi.mock('./screens/HistoryScreen', () => ({ default: () => <div>history screen</
 vi.mock('./screens/DungeonsScreen', () => ({ default: () => <div>dungeons screen</div> }));
 
 afterEach(() => {
+  cleanup();
   currentSession = null;
   currentProfile = null;
 });

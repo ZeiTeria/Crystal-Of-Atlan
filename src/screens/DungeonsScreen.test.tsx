@@ -35,6 +35,17 @@ const abyss = {
   is_active: true,
 };
 
+/** A promise the test controls the settlement of, to catch a mid-flight state. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 beforeEach(() => {
   // This vitest config does not set `test.clearMocks`, so a vi.fn() created by a
   // `vi.mock` factory keeps its call history across tests in the same file. Clear
@@ -74,6 +85,39 @@ describe('DungeonsScreen', () => {
     expect(vi.mocked(createDungeon)).not.toHaveBeenCalled();
   });
 
+  it('disables Add while the trimmed name is empty', async () => {
+    render(<DungeonsScreen />);
+    await screen.findByDisplayValue('Abyss');
+    const addButton = screen.getByRole('button', { name: /add dungeon/i }) as HTMLButtonElement;
+    expect(addButton.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('New dungeon name'), { target: { value: '   ' } });
+    expect(addButton.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('New dungeon name'), { target: { value: 'Vault' } });
+    expect(addButton.disabled).toBe(false);
+  });
+
+  it('disables Add immediately and creates only once when clicked twice before the create settles', async () => {
+    const gate = deferred<typeof abyss>();
+    vi.mocked(createDungeon).mockReturnValue(gate.promise);
+    render(<DungeonsScreen />);
+    await screen.findByDisplayValue('Abyss');
+    fireEvent.change(screen.getByLabelText('New dungeon name'), {
+      target: { value: 'Vault' },
+    });
+    const addButton = screen.getByRole('button', { name: /add dungeon/i }) as HTMLButtonElement;
+
+    fireEvent.click(addButton);
+    expect(addButton.disabled).toBe(true);
+    fireEvent.click(addButton); // a disabled button must not fire a second createDungeon
+
+    gate.resolve({ ...abyss, id: 'd2', name: 'Vault' });
+    await waitFor(() => {
+      expect(vi.mocked(createDungeon)).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('saves an edited gold value as a number, not a string', async () => {
     render(<DungeonsScreen />);
     const legend = await screen.findByLabelText('Abyss legend gold');
@@ -84,12 +128,12 @@ describe('DungeonsScreen', () => {
     });
   });
 
-  it('asks before deleting', async () => {
+  it('warns that deleting a dungeon takes every logged run of it with it', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<DungeonsScreen />);
     await screen.findByDisplayValue('Abyss');
     fireEvent.click(screen.getByRole('button', { name: /delete abyss/i }));
-    expect(confirmSpy).toHaveBeenCalled();
+    expect(confirmSpy.mock.calls[0]?.[0]).toMatch(/logged run/i);
     expect(vi.mocked(deleteDungeon)).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
   });

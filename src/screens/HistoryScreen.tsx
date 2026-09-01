@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { errorMessage } from '../errorMessage';
 import { currentGameAccountId, listCharacters } from '../data/accounts';
 import { listDungeons } from '../data/dungeons';
 import { deleteRun, listRecentRuns, type RunRow } from '../data/runs';
@@ -24,7 +25,7 @@ export default function HistoryScreen() {
       setRuns(await listRecentRuns(characters.map((c) => c.id)));
       setError(null);
     } catch (err: unknown) {
-      setError(String(err));
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -44,7 +45,7 @@ export default function HistoryScreen() {
         await deleteRun(run.id);
         setError(null);
       } catch (err: unknown) {
-        setError(String(err));
+        setError(errorMessage(err));
       }
       await refresh();
     } finally {

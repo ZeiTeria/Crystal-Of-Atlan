@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { errorMessage } from '../errorMessage';
 import {
   createDungeon,
   deleteDungeon,
@@ -46,13 +47,14 @@ export default function DungeonsScreen() {
   const [draft, setDraft] = useState<NewDungeon>(BLANK);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
       setDungeons(await listDungeons());
       setError(null);
     } catch (err: unknown) {
-      setError(String(err));
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -68,30 +70,43 @@ export default function DungeonsScreen() {
       await updateDungeon(id, patch);
       setError(null);
     } catch (err: unknown) {
-      setError(String(err));
+      setError(errorMessage(err));
     }
     await refresh();
   }
 
   async function add() {
     if (draft.name.trim() === '') return;
+    // Raised before any await: `disabled={busy}` only takes effect once React
+    // re-renders, which happens synchronously before the next click can be
+    // dispatched — but only if this is set before the first await, not after.
+    setBusy(true);
     try {
-      await createDungeon({ ...draft, name: draft.name.trim() });
-      setDraft(BLANK);
-      setError(null);
-    } catch (err: unknown) {
-      setError(String(err));
+      try {
+        await createDungeon({ ...draft, name: draft.name.trim() });
+        setDraft(BLANK);
+        setError(null);
+      } catch (err: unknown) {
+        setError(errorMessage(err));
+      }
+      await refresh();
+    } finally {
+      setBusy(false);
     }
-    await refresh();
   }
 
   async function remove(dungeon: DungeonRow) {
-    if (!window.confirm(`Delete ${dungeon.name}? This cannot be undone.`)) return;
+    if (
+      !window.confirm(
+        `Delete ${dungeon.name}? Every logged run of it, for every character, is deleted too.`,
+      )
+    )
+      return;
     try {
       await deleteDungeon(dungeon.id);
       setError(null);
     } catch (err: unknown) {
-      setError(String(err));
+      setError(errorMessage(err));
     }
     await refresh();
   }
@@ -102,6 +117,8 @@ export default function DungeonsScreen() {
     <section>
       <h2>Dungeons</h2>
       {error && <div className="error-message">Error: {error}</div>}
+
+      {dungeons.length === 0 && <p className="muted">No dungeons in the catalogue yet.</p>}
 
       <table>
         <thead>
@@ -213,7 +230,11 @@ export default function DungeonsScreen() {
           onChange={(e) => setDraft({ ...draft, name: e.target.value })}
           placeholder="Dungeon name"
         />
-        <button className="button" onClick={() => void add()}>
+        <button
+          className="button"
+          disabled={busy || draft.name.trim() === ''}
+          onClick={() => void add()}
+        >
           Add dungeon
         </button>
       </div>

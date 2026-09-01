@@ -36,6 +36,17 @@ const mage = {
   sort_order: 0,
 };
 
+/** A promise the test controls the settlement of, to catch a mid-flight state. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 beforeEach(() => {
   vi.mocked(currentGameAccountId).mockResolvedValue('acc');
   vi.mocked(listCharacters).mockResolvedValue([mage]);
@@ -70,6 +81,39 @@ describe('CharactersScreen', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /add character/i }));
     expect(vi.mocked(createCharacter)).not.toHaveBeenCalled();
+  });
+
+  it('disables Add while the trimmed draft is empty', async () => {
+    render(<CharactersScreen />);
+    await screen.findByDisplayValue('Mage');
+    const addButton = screen.getByRole('button', { name: /add character/i }) as HTMLButtonElement;
+    expect(addButton.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: '   ' } });
+    expect(addButton.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: 'Rogue' } });
+    expect(addButton.disabled).toBe(false);
+  });
+
+  it('disables Add immediately and creates only once when clicked twice before the create settles', async () => {
+    const gate = deferred<typeof mage>();
+    vi.mocked(createCharacter).mockReturnValue(gate.promise);
+    render(<CharactersScreen />);
+    await screen.findByDisplayValue('Mage');
+    fireEvent.change(screen.getByLabelText('New character name'), {
+      target: { value: 'Rogue' },
+    });
+    const addButton = screen.getByRole('button', { name: /add character/i }) as HTMLButtonElement;
+
+    fireEvent.click(addButton);
+    expect(addButton.disabled).toBe(true);
+    fireEvent.click(addButton); // a disabled button must not fire a second createCharacter
+
+    gate.resolve({ ...mage, id: 'c2', name: 'Rogue' });
+    await waitFor(() => {
+      expect(vi.mocked(createCharacter)).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('renames on blur', async () => {

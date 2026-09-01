@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { errorMessage } from './errorMessage';
 import { configError } from './lib/supabase';
 import { getSession, signInWithDiscord, signOut, onAuthChange } from './lib/auth';
 import { loadProfile, type Profile } from './data/profile';
@@ -34,7 +35,7 @@ export default function App() {
         if (mounted) setSession(s);
       })
       .catch((err: unknown) => {
-        if (mounted) setError(String(err));
+        if (mounted) setError(errorMessage(err));
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -59,7 +60,7 @@ export default function App() {
         if (mounted) setProfile(p);
       })
       .catch((err: unknown) => {
-        if (mounted) setError(String(err));
+        if (mounted) setError(errorMessage(err));
       });
     return () => {
       mounted = false;

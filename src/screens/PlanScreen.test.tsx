@@ -155,9 +155,12 @@ describe('PlanScreen', () => {
   });
 
   it('does not re-solve when logging a run fails, and shows the failure', async () => {
-    vi.mocked(logRun).mockRejectedValueOnce(
-      new NamedError('PostgrestError', 'insert violates row-level security'),
-    );
+    // Supabase errors are plain objects, not Error instances - this fixture
+    // pins the shape production actually throws, not `NamedError`'s.
+    vi.mocked(logRun).mockRejectedValueOnce({
+      message: 'insert violates row-level security',
+      code: '42501',
+    });
     render(<PlanScreen />);
     const done = await screen.findByRole('button', { name: /mark one run of abyss by mage/i });
     fireEvent.click(done);

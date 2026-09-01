@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { errorMessage } from '../errorMessage';
 import { currentGameAccountId, listCharacters, type CharacterRow } from '../data/accounts';
 import { listDungeons, type DungeonRow } from '../data/dungeons';
 import { listGrid, setGridCell, type GridRow } from '../data/grid';
@@ -27,7 +28,7 @@ export default function GridScreen() {
       setGrid(new Map(rows.map((r) => [cellKey(r.character_id, r.dungeon_id), r])));
       setError(null);
     } catch (err: unknown) {
-      setError(String(err));
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -46,7 +47,7 @@ export default function GridScreen() {
       await setGridCell(characterId, dungeonId, patch);
       setError(null);
     } catch (err: unknown) {
-      setError(String(err));
+      setError(errorMessage(err));
     }
     await refresh();
   }
@@ -66,7 +67,9 @@ export default function GridScreen() {
     return (
       <section>
         <h2>Grid</h2>
-        <p className="muted">No active dungeons in the catalogue yet.</p>
+        <p className="muted">
+          No active dungeons in the catalogue yet — an admin has to add dungeons first.
+        </p>
       </section>
     );
   }

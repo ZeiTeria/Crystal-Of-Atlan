@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { errorMessage } from '../errorMessage';
 import {
   createCharacter,
   currentGameAccountId,
@@ -14,13 +15,14 @@ export default function CharactersScreen() {
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async (id: string) => {
     try {
       setCharacters(await listCharacters(id));
       setError(null);
     } catch (err: unknown) {
-      setError(String(err));
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -36,7 +38,7 @@ export default function CharactersScreen() {
       })
       .catch((err: unknown) => {
         if (mounted) {
-          setError(String(err));
+          setError(errorMessage(err));
           setLoading(false);
         }
       });
@@ -48,14 +50,22 @@ export default function CharactersScreen() {
   async function add() {
     const name = draft.trim();
     if (name === '' || !accountId) return;
+    // Raised before any await: `disabled={busy}` only takes effect once React
+    // re-renders, which happens synchronously before the next click can be
+    // dispatched — but only if this is set before the first await, not after.
+    setBusy(true);
     try {
-      await createCharacter(accountId, name);
-      setDraft('');
-      setError(null);
-    } catch (err: unknown) {
-      setError(String(err));
+      try {
+        await createCharacter(accountId, name);
+        setDraft('');
+        setError(null);
+      } catch (err: unknown) {
+        setError(errorMessage(err));
+      }
+      await refresh(accountId);
+    } finally {
+      setBusy(false);
     }
-    await refresh(accountId);
   }
 
   async function rename(character: CharacterRow, next: string) {
@@ -65,7 +75,7 @@ export default function CharactersScreen() {
       await renameCharacter(character.id, name);
       setError(null);
     } catch (err: unknown) {
-      setError(String(err));
+      setError(errorMessage(err));
     }
     await refresh(accountId);
   }
@@ -80,7 +90,7 @@ export default function CharactersScreen() {
       await deleteCharacter(character.id);
       setError(null);
     } catch (err: unknown) {
-      setError(String(err));
+      setError(errorMessage(err));
     }
     await refresh(accountId);
   }
@@ -129,7 +139,11 @@ export default function CharactersScreen() {
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Character name"
         />
-        <button className="button" onClick={() => void add()}>
+        <button
+          className="button"
+          disabled={busy || draft.trim() === ''}
+          onClick={() => void add()}
+        >
           Add character
         </button>
       </div>
