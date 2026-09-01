@@ -79,6 +79,35 @@ describe('PlanScreen', () => {
     expect(screen.getByText('Abyss')).toBeDefined();
   });
 
+  it('counts down to the coming reset, not the one after it', async () => {
+    // An hour before the Monday 06:00 Asia/Singapore reset - the window where
+    // deriving the boundary by looking a week-and-a-bit ahead read 7 days late.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-09-06T21:00:00Z'));
+    try {
+      vi.mocked(loadPlanInput).mockResolvedValue(
+        anInput({
+          settings: {
+            goldCap: 1_000_000,
+            goldResetWeekday: 1,
+            resetHour: 6,
+            timeZone: 'Asia/Singapore',
+          },
+        }),
+      );
+      render(<PlanScreen />);
+      // The parts are separate text nodes, so match on the element's own text.
+      // Under the old derivation this same instant read "7d ...".
+      await vi.waitFor(() =>
+        expect(
+          screen.getAllByText((_, el) => /^0d 0h 59m \d\ds$/.test(el?.textContent ?? '')),
+        ).not.toHaveLength(0),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('logs a run with the gold that run was worth, then re-solves', async () => {
     render(<PlanScreen />);
     const done = await screen.findByRole('button', { name: /log one run of abyss by mage/i });

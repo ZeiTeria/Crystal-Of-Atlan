@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lastReset, zonedWeekday } from './resetWindow';
+import { lastReset, nextReset, zonedWeekday } from './resetWindow';
 
 const WIB = 'Asia/Jakarta';       // no DST — exact expectations are safe here
 const NY = 'America/New_York';    // has DST — used for the property checks
@@ -131,6 +131,64 @@ describe('lastReset', () => {
           // never lands in that window on the right weekday, so a tighter bound
           // would pass by accident and break under denser sampling.
           expect(now.getTime() - got.getTime()).toBeLessThan(8 * 86_400_000);
+        }
+      }
+    },
+  );
+});
+
+describe('nextReset', () => {
+  it('finds the coming Monday 04:00 WIB', () => {
+    const now = new Date('2026-09-02T03:00:00Z'); // Wed 10:00 WIB
+    expect(nextReset(1, 4, WIB, now).toISOString())
+      .toBe('2026-09-06T21:00:00.000Z');          // Mon 2026-09-07 04:00 WIB
+  });
+
+  it('stays under a day out in the final hours before the reset', () => {
+    // The bug this pins: deriving the next boundary as `lastReset(now + 8d)`
+    // reads a full week late once `now` is within 24h of the reset, because
+    // `now + 8d` has already passed the boundary after the one being looked
+    // for. Here now is 1h before the Monday 04:00 WIB reset.
+    const now = new Date('2026-09-06T20:00:00Z');
+    const next = nextReset(1, 4, WIB, now);
+    expect(next.toISOString()).toBe('2026-09-06T21:00:00.000Z');
+    expect(next.getTime() - now.getTime()).toBe(3_600_000);
+  });
+
+  it('is a full week on when now is exactly the reset instant', () => {
+    const boundary = new Date('2026-08-30T21:00:00.000Z');
+    expect(nextReset(1, 4, WIB, boundary).toISOString())
+      .toBe('2026-09-06T21:00:00.000Z');
+  });
+
+  it('holds the wall-clock hour across a daylight-saving change', () => {
+    // US clocks go back on 2026-11-01, between this Monday and the next.
+    const now = new Date('2026-10-27T12:00:00Z'); // Tue, after the Mon reset
+    const next = nextReset(1, 4, NY, now);
+    expect(zonedWeekday(next, NY)).toBe(1);
+    expect(partsIn(next, NY)).toEqual({ hour: 4, minute: 0 });
+    // 7 calendar days, which is 7d + 1h of real time across the fall back.
+    expect(next.getTime() - lastReset(1, 4, NY, now).getTime())
+      .toBe(7 * 86_400_000 + 3_600_000);
+  });
+
+  it.each([WIB, NY, 'UTC', 'Europe/London'])(
+    'is always strictly ahead of now, on the target weekday and hour in %s',
+    (zone) => {
+      const base = Date.UTC(2026, 0, 1);
+      for (let i = 0; i < 400; i++) {
+        for (const weekday of [1, 4, 7]) {
+          const now = new Date(base + i * 86_400_000 + (i * 3_600_000) % 86_400_000);
+          const got = nextReset(weekday, 4, zone, now);
+
+          expect(zonedWeekday(got, zone)).toBe(weekday);
+          expect(partsIn(got, zone)).toEqual({ hour: 4, minute: 0 });
+          // Strictly ahead: a countdown that can read zero or negative is the
+          // whole failure this function exists to prevent.
+          expect(got.getTime()).toBeGreaterThan(now.getTime());
+          // Never a week late. 8 days rather than 7 for the same reason the
+          // lastReset sweep uses it: a fall-back week is 7d + 1h long.
+          expect(got.getTime() - now.getTime()).toBeLessThanOrEqual(8 * 86_400_000);
         }
       }
     },

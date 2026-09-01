@@ -13,17 +13,24 @@ import {
 import { solveOptimal } from '../engine/solver';
 import type { PlanInput, PlanResult } from '../engine/types';
 import { describeConflict, describeReason, gold, type Names } from './planText';
-import { lastReset } from '../engine/resetWindow';
+import { nextReset } from '../engine/resetWindow';
 
-function Countdown({ nextReset }: { nextReset: Date }) {
-  const [now, setNow] = useState(new Date());
+/**
+ * Time left until the gold cap resets. The boundary is recomputed from the
+ * ticking clock rather than passed in, so the display rolls straight over to
+ * the following week the moment one reset passes.
+ */
+function Countdown({ settings }: { settings: PlanInput['settings'] }) {
+  const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const diff = nextReset.getTime() - now.getTime();
-  if (diff <= 0) return <span>Resetting...</span>;
+  // Strictly ahead of `now` by construction, so this can never read zero.
+  const diff =
+    nextReset(settings.goldResetWeekday, settings.resetHour, settings.timeZone, now).getTime()
+    - now.getTime();
 
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
@@ -127,20 +134,12 @@ export default function PlanScreen() {
     );
   }
 
-  // next reset is just the most recent reset relative to a date 8 days from now
-  const nextResetDate = lastReset(
-    input.settings.goldResetWeekday,
-    input.settings.resetHour,
-    input.settings.timeZone,
-    new Date(Date.now() + 8 * 24 * 60 * 60 * 1000)
-  );
-
   return (
     <section>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <h2>Plan</h2>
         <span className="muted" style={{ fontSize: '0.9em' }}>
-          Resets in: <strong><Countdown nextReset={nextResetDate} /></strong>
+          Resets in: <strong><Countdown settings={input.settings} /></strong>
         </span>
       </div>
       {error && <div className="error-message">Error: {error}</div>}
@@ -159,7 +158,7 @@ export default function PlanScreen() {
         <>
           {solved.relaxed && (
             <p>
-              <strong>No choices to make</strong> - every character can simply run its maximum.
+              <strong>No choices to make</strong> — every character can simply run its maximum.
             </p>
           )}
 

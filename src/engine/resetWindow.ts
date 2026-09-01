@@ -154,3 +154,29 @@ export function lastReset(
 
   return result;
 }
+
+/**
+ * The next occurrence of `weekday` at `hour`:00 in `timeZone`, strictly after
+ * `now` - the boundary the current week is counting down to.
+ *
+ * Derived from `lastReset` by stepping seven CALENDAR days, not seven times
+ * 24 hours: across a daylight-saving change the real interval is 7d +/- 1h, and
+ * adding a fixed 7 * DAY_MS would drift the boundary off the reset hour.
+ *
+ * Do not try to get this by asking `lastReset` about a date a week or so out.
+ * `lastReset` answers "the most recent boundary at or before", so any offset
+ * big enough to clear the coming boundary from every starting point is also
+ * big enough to overshoot it once `now` sits close to that boundary - which is
+ * exactly when a countdown is being read.
+ */
+export function nextReset(
+  weekday: number, hour: number, timeZone: string, now: Date,
+): Date {
+  const last = lastReset(weekday, hour, timeZone, now);
+  const p = partsIn(last, timeZone);
+  const proxy = new Date(Date.UTC(p.year, p.month - 1, p.day) + 7 * DAY_MS);
+
+  return zonedWallClockToInstant(
+    proxy.getUTCFullYear(), proxy.getUTCMonth() + 1, proxy.getUTCDate(), hour, timeZone,
+  );
+}
