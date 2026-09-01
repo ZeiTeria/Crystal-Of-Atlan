@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { errorMessage } from '../errorMessage';
+import { useMutation } from '../hooks/useMutation';
 import { currentGameAccountId, listCharacters } from '../data/accounts';
 import { listDungeons } from '../data/dungeons';
 import { deleteRun, listRecentRuns, type RunRow } from '../data/runs';
@@ -9,51 +9,40 @@ export default function HistoryScreen() {
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [characterNames, setCharacterNames] = useState<Map<string, string>>(new Map());
   const [dungeonNames, setDungeonNames] = useState<Map<string, string>>(new Map());
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      const accountId = await currentGameAccountId();
-      const [characters, dungeons] = await Promise.all([
-        listCharacters(accountId),
-        listDungeons(),
-      ]);
-      setCharacterNames(new Map(characters.map((c) => [c.id, c.name])));
-      setDungeonNames(new Map(dungeons.map((d) => [d.id, d.name])));
-      setRuns(await listRecentRuns(characters.map((c) => c.id)));
-      setError(null);
-    } catch (err: unknown) {
-      setError(errorMessage(err));
-    } finally {
-      setLoading(false);
-    }
+  const refreshFn = useCallback(async () => {
+    const accountId = await currentGameAccountId();
+    const [characters, dungeons] = await Promise.all([
+      listCharacters(accountId),
+      listDungeons(),
+    ]);
+    setCharacterNames(new Map(characters.map((c) => [c.id, c.name])));
+    setDungeonNames(new Map(dungeons.map((d) => [d.id, d.name])));
+    setRuns(await listRecentRuns(characters.map((c) => c.id)));
   }, []);
 
+  const { busy, error, mutate, refresh } = useMutation(refreshFn);
+
   useEffect(() => {
-    void refresh();
+    void refresh().finally(() => setLoading(false));
   }, [refresh]);
 
   async function undo(run: RunRow) {
-    // Raised before any await: `disabled={busy}` only takes effect once React
-    // re-renders, which happens synchronously before the next click can be
-    // dispatched — but only if this is set before the first await, not after.
-    setBusy(true);
-    try {
-      try {
-        await deleteRun(run.id);
-        setError(null);
-      } catch (err: unknown) {
-        setError(errorMessage(err));
-      }
-      await refresh();
-    } finally {
-      setBusy(false);
-    }
+    await mutate(async () => {
+      await deleteRun(run.id);
+    });
   }
 
   if (loading) return <p>Loading history...</p>;
+
+  const groupedRuns = new Map<string, RunRow[]>();
+  for (const run of runs) {
+    const date = new Date(run.ran_at).toLocaleDateString();
+    const group = groupedRuns.get(date) ?? [];
+    group.push(run);
+    groupedRuns.set(date, group);
+  }
 
   return (
     <section>
@@ -61,30 +50,35 @@ export default function HistoryScreen() {
       {error && <div className="error-message">Error: {error}</div>}
       {runs.length === 0 && <p className="muted">No runs logged yet.</p>}
 
-      <table>
-        <tbody>
-          {runs.map((run) => (
-            <tr key={run.id}>
-              <td>{new Date(run.ran_at).toLocaleString()}</td>
-              <td>{characterNames.get(run.character_id) ?? run.character_id}</td>
-              <td>{dungeonNames.get(run.dungeon_id) ?? run.dungeon_id}</td>
-              <td>{gold(run.gold_earned)}</td>
-              <td>
-                <div className="row-actions">
-                  <button
-                    className="button button-outline"
-                    disabled={busy}
-                    aria-label={`Undo ${dungeonNames.get(run.dungeon_id) ?? 'run'}`}
-                    onClick={() => void undo(run)}
-                  >
-                    Undo
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {Array.from(groupedRuns.entries()).map(([date, dayRuns]) => (
+        <div key={date}>
+          <h3>{date}</h3>
+          <table style={{ marginBottom: '24px' }}>
+            <tbody>
+              {dayRuns.map((run) => (
+                <tr key={run.id}>
+                  <td>{new Date(run.ran_at).toLocaleTimeString()}</td>
+                  <td>{characterNames.get(run.character_id) ?? run.character_id}</td>
+                  <td>{dungeonNames.get(run.dungeon_id) ?? run.dungeon_id}</td>
+                  <td>{gold(run.gold_earned)}</td>
+                  <td>
+                    <div className="row-actions">
+                      <button
+                        className="button button-outline"
+                        disabled={busy}
+                        aria-label={`Undo ${dungeonNames.get(run.dungeon_id) ?? 'run'}`}
+                        onClick={() => void undo(run)}
+                      >
+                        Undo
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
     </section>
   );
 }

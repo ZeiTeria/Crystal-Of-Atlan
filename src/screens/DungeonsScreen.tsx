@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { errorMessage } from '../errorMessage';
+import { useMutation } from '../hooks/useMutation';
 import {
   createDungeon,
   deleteDungeon,
@@ -8,6 +8,8 @@ import {
   type DungeonRow,
   type NewDungeon,
 } from '../data/dungeons';
+
+import type { Tier } from '../engine/types';
 
 const WEEKDAYS = [
   { value: 1, label: 'Monday' },
@@ -19,17 +21,21 @@ const WEEKDAYS = [
   { value: 7, label: 'Sunday' },
 ];
 
+const TIERS: Tier[] = ['none', 'solo', 'story', 'elite', 'legend'];
+
 const BLANK: NewDungeon = {
   name: '',
   account_attempts: 18,
   character_attempts: 3,
   reset_weekday: 1,
-  quest_coverage: false,
+  quest_coverage: true,
   gold_solo: 0,
   gold_story: 0,
   gold_elite: 0,
   gold_legend: 0,
   is_active: true,
+  default_tier: 'elite',
+  default_min_runs: 1,
 };
 
 // Each column carries its own patch builder. A computed key over a union of
@@ -45,54 +51,31 @@ const GOLD_COLUMNS = [
 export default function DungeonsScreen() {
   const [dungeons, setDungeons] = useState<DungeonRow[]>([]);
   const [draft, setDraft] = useState<NewDungeon>(BLANK);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      setDungeons(await listDungeons());
-      setError(null);
-    } catch (err: unknown) {
-      setError(errorMessage(err));
-    } finally {
-      setLoading(false);
-    }
+  const refreshFn = useCallback(async () => {
+    setDungeons(await listDungeons());
   }, []);
 
+  const { busy, error, mutate, refresh } = useMutation(refreshFn);
+
   useEffect(() => {
-    void refresh();
+    void refresh().finally(() => setLoading(false));
   }, [refresh]);
 
   /** Edits are written on blur, so a half-typed number never reaches the database. */
   async function save(id: string, patch: Partial<NewDungeon>) {
-    try {
+    await mutate(async () => {
       await updateDungeon(id, patch);
-      setError(null);
-    } catch (err: unknown) {
-      setError(errorMessage(err));
-    }
-    await refresh();
+    });
   }
 
   async function add() {
     if (draft.name.trim() === '') return;
-    // Raised before any await: `disabled={busy}` only takes effect once React
-    // re-renders, which happens synchronously before the next click can be
-    // dispatched — but only if this is set before the first await, not after.
-    setBusy(true);
-    try {
-      try {
-        await createDungeon({ ...draft, name: draft.name.trim() });
-        setDraft(BLANK);
-        setError(null);
-      } catch (err: unknown) {
-        setError(errorMessage(err));
-      }
-      await refresh();
-    } finally {
-      setBusy(false);
-    }
+    await mutate(async () => {
+      await createDungeon({ ...draft, name: draft.name.trim() });
+      setDraft(BLANK);
+    });
   }
 
   async function remove(dungeon: DungeonRow) {
@@ -102,13 +85,31 @@ export default function DungeonsScreen() {
       )
     )
       return;
-    try {
+    await mutate(async () => {
       await deleteDungeon(dungeon.id);
-      setError(null);
-    } catch (err: unknown) {
-      setError(errorMessage(err));
-    }
-    await refresh();
+    });
+  }
+
+  async function moveDungeon(index: number, direction: -1 | 1) {
+    const swapIndex = index + direction;
+    if (swapIndex < 0 || swapIndex >= dungeons.length) return;
+
+    // Supabase has no bulk update out-of-the-box in the JS client without RPC.
+    // However, updating two rows is fine.
+    // If we want to guarantee order, we could rewrite the entire array's sort_order:
+    const newOrders = dungeons.map((d, i) => ({ id: d.id, sort_order: (i + 1) * 10 }));
+    
+    // Swap the two targeted rows
+    const temp = newOrders[index]!.sort_order;
+    newOrders[index]!.sort_order = newOrders[swapIndex]!.sort_order;
+    newOrders[swapIndex]!.sort_order = temp;
+
+    await mutate(async () => {
+      // Just fire them all off.
+      await Promise.all(
+        newOrders.map((d) => updateDungeon(d.id, { sort_order: d.sort_order }))
+      );
+    });
   }
 
   if (loading) return <p>Loading catalogue...</p>;
@@ -132,11 +133,13 @@ export default function DungeonsScreen() {
               <th key={c.key}>{c.label}</th>
             ))}
             <th>Active</th>
+            <th>Default Tier</th>
+            <th>Default Min</th>
             <th />
           </tr>
         </thead>
         <tbody>
-          {dungeons.map((d) => (
+          {dungeons.map((d, index) => (
             <tr key={d.id}>
               <td>
                 <input
@@ -204,7 +207,48 @@ export default function DungeonsScreen() {
                 />
               </td>
               <td>
+                <select
+                  aria-label={`${d.name} default tier`}
+                  value={d.default_tier}
+                  onChange={(e) => void save(d.id, { default_tier: e.target.value as Tier })}
+                >
+                  {TIERS.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </td>
+              <td>
+                <input
+                  type="number"
+                  aria-label={`${d.name} default min runs`}
+                  value={d.default_min_runs}
+                  min={0}
+                  max={1}
+                  onChange={(e) => void save(d.id, { default_min_runs: Number(e.target.value) })}
+                />
+              </td>
+              <td>
                 <div className="row-actions">
+                  <button
+                    className="button button-outline"
+                    aria-label={`Move ${d.name} up`}
+                    disabled={busy || index === 0}
+                    onClick={() => void moveDungeon(index, -1)}
+                    style={{ padding: '4px 8px' }}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    className="button button-outline"
+                    aria-label={`Move ${d.name} down`}
+                    disabled={busy || index === dungeons.length - 1}
+                    onClick={() => void moveDungeon(index, 1)}
+                    style={{ padding: '4px 8px' }}
+                  >
+                    ↓
+                  </button>
                   <button
                     className="button button-outline"
                     aria-label={`Delete ${d.name}`}
@@ -229,6 +273,25 @@ export default function DungeonsScreen() {
           value={draft.name}
           onChange={(e) => setDraft({ ...draft, name: e.target.value })}
           placeholder="Dungeon name"
+        />
+        <select
+          aria-label="New dungeon default tier"
+          value={draft.default_tier}
+          onChange={(e) => setDraft({ ...draft, default_tier: e.target.value as Tier })}
+        >
+          {TIERS.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          aria-label="New dungeon default min runs"
+          value={draft.default_min_runs}
+          min={0}
+          max={1}
+          onChange={(e) => setDraft({ ...draft, default_min_runs: Number(e.target.value) })}
         />
         <button
           className="button"

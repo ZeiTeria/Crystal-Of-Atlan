@@ -32,7 +32,7 @@ function deferred<T>() {
 beforeEach(() => {
   vi.mocked(currentGameAccountId).mockResolvedValue('acc');
   vi.mocked(listCharacters).mockResolvedValue([
-    { id: 'c1', game_account_id: 'acc', name: 'Mage', class: null, sort_order: 0 },
+    { id: 'c1', game_account_id: 'acc', name: 'Mage', class: null, sort_order: 0, is_active: true },
   ]);
   vi.mocked(listDungeons).mockResolvedValue([
     {
@@ -48,6 +48,8 @@ beforeEach(() => {
       gold_legend: 4,
       sort_order: 0,
       is_active: true,
+      default_tier: 'elite' as const,
+      default_min_runs: 1,
     },
   ]);
   vi.mocked(listRecentRuns).mockResolvedValue([
