@@ -3,6 +3,8 @@ import { errorMessage } from './errorMessage';
 import { configError } from './lib/supabase';
 import { getSession, signInWithDiscord, signOut, onAuthChange } from './lib/auth';
 import { loadProfile, type Profile } from './data/profile';
+import Badge from './ui/Badge';
+import Button from './ui/Button';
 import PlanScreen from './screens/PlanScreen';
 import GridScreen from './screens/GridScreen';
 import HistoryScreen from './screens/HistoryScreen';
@@ -83,9 +85,9 @@ export default function App() {
       <div className="app-container">
         <h1>Crystal Of Atlan</h1>
         {error && <div className="error-message">Error: {error}</div>}
-        <button className="button" onClick={() => void signInWithDiscord()}>
+        <Button onClick={() => void signInWithDiscord()}>
           Sign in with Discord
-        </button>
+        </Button>
       </div>
     );
   }
@@ -98,10 +100,10 @@ export default function App() {
         <h1>Crystal Of Atlan</h1>
         <div className="profile-info">
           <span className="username">{profile?.discord_username ?? session.user.email}</span>
-          {profile?.is_admin && <span className="admin-badge">Admin</span>}
-          <button className="button button-outline" onClick={() => void signOut()}>
+          {profile?.is_admin && <Badge>Admin</Badge>}
+          <Button variant="outline" onClick={() => void signOut()}>
             Sign out
-          </button>
+          </Button>
         </div>
       </header>
 

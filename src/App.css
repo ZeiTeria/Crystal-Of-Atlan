@@ -51,32 +51,9 @@ h1 {
   font-size: 0.9rem;
 }
 
-.button {
-  background-color: var(--btn-bg);
-  color: #ffffff;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  width: 100%;
-}
 
-.button:hover {
-  background-color: var(--btn-hover);
-}
 
-.button-outline {
-  background-color: transparent;
-  border: 1px solid var(--btn-outline-border);
-  color: var(--btn-outline-text);
-}
 
-.button-outline:hover {
-  background-color: var(--btn-outline-hover);
-}
 
 .profile-container {
   display: flex;
@@ -97,15 +74,6 @@ h1 {
   font-weight: 500;
 }
 
-.admin-badge {
-  background-color: var(--badge-bg);
-  color: var(--badge-text);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  text-transform: uppercase;
-}
 
 .footer-text {
   margin-top: 32px;
@@ -127,9 +95,6 @@ h1 {
   flex-wrap: wrap;
 }
 
-.app-header .button {
-  width: auto;
-}
 
 .tabs {
   display: flex;
@@ -198,11 +163,6 @@ input.error-input {
   gap: 8px;
 }
 
-.row-actions .button {
-  width: auto;
-  padding: 4px 10px;
-  font-size: 0.85rem;
-}
 
 .muted {
   color: var(--text-muted);

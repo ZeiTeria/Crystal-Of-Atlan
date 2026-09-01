@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '../hooks/useMutation';
+import Button from '../ui/Button';
 import { currentGameAccountId, listCharacters } from '../data/accounts';
 import { listDungeons } from '../data/dungeons';
 import { deleteRun, listRecentRuns, type RunRow } from '../data/runs';
@@ -63,14 +64,13 @@ export default function HistoryScreen() {
                   <td>{gold(run.gold_earned)}</td>
                   <td>
                     <div className="row-actions">
-                      <button
-                        className="button button-outline"
+                      <Button variant="outline"
                         disabled={busy}
                         aria-label={`Undo ${dungeonNames.get(run.dungeon_id) ?? 'run'}`}
                         onClick={() => void undo(run)}
                       >
                         Undo
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>

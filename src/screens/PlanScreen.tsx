@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '../hooks/useMutation';
+import Button from '../ui/Button';
 import { currentGameAccountId } from '../data/accounts';
 import { loadPlanInput } from '../data/loadPlanInput';
 import { logRun, logRuns } from '../data/runs';
@@ -100,9 +101,9 @@ export default function PlanScreen() {
       <>
         <p>{error ? `Error: ${error}` : 'Solving...'}</p>
         {error && (
-          <button className="button" disabled={busy} onClick={() => void solve()}>
+          <Button disabled={busy} onClick={() => void solve()}>
             Retry
-          </button>
+          </Button>
         )}
       </>
     );
@@ -212,18 +213,16 @@ export default function PlanScreen() {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
                             <strong style={{ fontSize: '1.1em' }}>{assignment.runs}x</strong>
                             <div style={{ display: 'flex', gap: '4px' }}>
-                              <button
-                                className="button"
+                              <Button
                                 disabled={busy}
                                 aria-label={`Log one run of ${d.name} by ${c.name}`}
                                 onClick={() => void markDone(c.id, d.id, assignment.goldPerRun)}
                                 style={{ padding: '2px 8px', fontSize: '12px' }}
                               >
                                 Log 1
-                              </button>
+                              </Button>
                               {assignment.runs > 1 && (
-                                <button
-                                  className="button button-outline"
+                                <Button variant="outline"
                                   disabled={busy}
                                   aria-label={`Log all ${assignment.runs} runs of ${d.name} by ${c.name}`}
                                   onClick={() =>
@@ -232,7 +231,7 @@ export default function PlanScreen() {
                                   style={{ padding: '2px 8px', fontSize: '12px' }}
                                 >
                                   All
-                                </button>
+                                </Button>
                               )}
                             </div>
                             <span className="muted" style={{ fontSize: '12px' }}>

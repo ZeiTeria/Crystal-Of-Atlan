@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '../hooks/useMutation';
+import Button from '../ui/Button';
 import {
   currentGameAccountId,
   listCharacters,
@@ -167,14 +168,13 @@ export default function GridScreen() {
                     style={{ width: '120px' }}
                     disabled={c.is_active === false}
                   />
-                  <button
-                    className="button button-outline"
+                  <Button variant="outline"
                     aria-label={`Delete ${c.name}`}
                     onClick={() => void remove(c)}
                     style={{ padding: '4px 8px' }}
                   >
                     ×
-                  </button>
+                  </Button>
                 </div>
               </th>
               {dungeons.map((d) => {
@@ -235,14 +235,13 @@ export default function GridScreen() {
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Character name"
         />
-        <button
-          className="button"
+        <Button
           disabled={busy || draft.trim() === ''}
           onClick={() => void addCharacter()}
           style={{ width: 'auto' }}
         >
           Add character
-        </button>
+        </Button>
       </div>
     </section>
   );

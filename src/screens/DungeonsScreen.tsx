@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '../hooks/useMutation';
+import Button from '../ui/Button';
 import {
   createDungeon,
   deleteDungeon,
@@ -231,31 +232,28 @@ export default function DungeonsScreen() {
               </td>
               <td>
                 <div className="row-actions">
-                  <button
-                    className="button button-outline"
+                  <Button variant="outline"
                     aria-label={`Move ${d.name} up`}
                     disabled={busy || index === 0}
                     onClick={() => void moveDungeon(index, -1)}
                     style={{ padding: '4px 8px' }}
                   >
                     ↑
-                  </button>
-                  <button
-                    className="button button-outline"
+                  </Button>
+                  <Button variant="outline"
                     aria-label={`Move ${d.name} down`}
                     disabled={busy || index === dungeons.length - 1}
                     onClick={() => void moveDungeon(index, 1)}
                     style={{ padding: '4px 8px' }}
                   >
                     ↓
-                  </button>
-                  <button
-                    className="button button-outline"
+                  </Button>
+                  <Button variant="outline"
                     aria-label={`Delete ${d.name}`}
                     onClick={() => void remove(d)}
                   >
                     Delete
-                  </button>
+                  </Button>
                 </div>
               </td>
             </tr>
@@ -293,13 +291,12 @@ export default function DungeonsScreen() {
           max={1}
           onChange={(e) => setDraft({ ...draft, default_min_runs: Number(e.target.value) })}
         />
-        <button
-          className="button"
+        <Button
           disabled={busy || draft.name.trim() === ''}
           onClick={() => void add()}
         >
           Add dungeon
-        </button>
+        </Button>
       </div>
     </section>
   );
