@@ -30,6 +30,7 @@ const dungeon = {
   default_min_runs: 1,
   sort_order: 10,
   group_name: null,
+  goldEstimated: [],
 };
 
 function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
@@ -293,5 +294,26 @@ describe('PlanScreen on a phone', () => {
     stubMatchMedia(true);
     render(<PlanScreen />);
     expect(await screen.findByRole('tab', { name: 'Mage' })).toBeDefined();
+  });
+});
+
+describe('PlanScreen gold that is standing in', () => {
+  it('marks a dungeon whose gold was borrowed, and says which tiers need data', async () => {
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({
+        dungeons: [{ ...dungeon, goldEstimated: ['solo', 'legend'] }],
+      }),
+    );
+    render(<PlanScreen />);
+    const marked = await screen.findAllByTitle(/needs data/i);
+    expect(marked.length).toBeGreaterThan(0);
+    expect(marked[0]?.getAttribute('title')).toMatch(/solo, legend/);
+    expect(marked[0]?.getAttribute('title')).toMatch(/dungeons tab/i);
+  });
+
+  it('marks nothing when every tier has a real figure', async () => {
+    render(<PlanScreen />);
+    await screen.findAllByText('Mage');
+    expect(screen.queryAllByTitle(/needs data/i)).toHaveLength(0);
   });
 });

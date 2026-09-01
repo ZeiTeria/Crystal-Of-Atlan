@@ -351,3 +351,15 @@
     font-size: var(--step-0);
   }
 }
+
+/*
+ * A gold figure standing in for one the catalogue does not have yet. Marked
+ * rather than hidden: the plan is still the best available answer, it just
+ * should not be trusted to the last coin. The reason is a title, so it costs
+ * no column and the figure still reads normally.
+ */
+.needsdata {
+  color: var(--warn);
+  border-bottom: 1px dotted var(--warn);
+  cursor: help;
+}

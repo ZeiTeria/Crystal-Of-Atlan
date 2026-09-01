@@ -1,6 +1,7 @@
 import { derivePlanInput, type Run, type Settings } from '../engine/counters';
 import { lastReset } from '../engine/resetWindow';
 import type { Character, Dungeon, GridEntry, PlanInput } from '../engine/types';
+import { fillGoldGaps } from '../engine/gold';
 import type { Database } from '../lib/database.types';
 import { supabase } from '../lib/supabase';
 
@@ -46,12 +47,18 @@ export function buildPlanInput(rows: PlanRows, now: Date): PlanInput {
       characterAttempts: d.character_attempts,
       resetWeekday: d.reset_weekday,
       questCoverage: d.quest_coverage,
-      gold: {
-        solo: d.gold_solo,
-        story: d.gold_story,
-        elite: d.gold_elite,
-        legend: d.gold_legend,
-      },
+      ...(() => {
+        // Missing figures borrow from the tiers that have one, so a half-filled
+        // catalogue still plans sensibly. Which ones were guessed is carried
+        // through so the screens can flag them.
+        const { gold, estimated } = fillGoldGaps({
+          solo: d.gold_solo,
+          story: d.gold_story,
+          elite: d.gold_elite,
+          legend: d.gold_legend,
+        });
+        return { gold, goldEstimated: estimated };
+      })(),
       default_tier: d.default_tier,
       default_min_runs: d.default_min_runs,
       sort_order: d.sort_order,

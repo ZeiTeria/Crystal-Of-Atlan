@@ -22,6 +22,7 @@ export function aDungeon(id: string, overrides: Partial<Dungeon> = {}): Dungeon 
     default_min_runs: 1,
     sort_order: 0,
     group_name: null,
+    goldEstimated: [],
     ...overrides,
   };
 }

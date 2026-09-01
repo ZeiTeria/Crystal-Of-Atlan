@@ -50,6 +50,21 @@ function Countdown({ settings }: { settings: PlanInput['settings'] }) {
   );
 }
 
+/**
+ * A note for a dungeon whose gold is partly guessed, or null when every tier
+ * has a real figure. Shown as a title so the reason is one hover away rather
+ * than taking a column, and the figure itself still reads normally.
+ */
+function estimateNote(dungeon: { name: string; goldEstimated: string[] }): string | null {
+  if (dungeon.goldEstimated.length === 0) return null;
+  const tiers = dungeon.goldEstimated.join(', ');
+  return (
+    `Needs data: ${dungeon.name} has no gold figure for ${tiers}. ` +
+    `Another tier's figure is standing in, so this plan is an estimate. ` +
+    `Fill it in on the Dungeons tab.`
+  );
+}
+
 interface Solved {
   input: PlanInput;
   result: PlanResult;
@@ -222,8 +237,12 @@ export default function PlanScreen() {
                         <div className="prow" key={a.dungeonId}>
                           <div className="info">
                             <span className="dn">{d?.name ?? a.dungeonId}</span>
-                            <span className="sub num">
+                            <span
+                              className={d && estimateNote(d) ? 'sub num needsdata' : 'sub num'}
+                              title={(d && estimateNote(d)) || undefined}
+                            >
                               {gold(a.goldPerRun)} each &middot; {gold(a.goldTotal)} total
+                              {d && estimateNote(d) ? ' ?' : ''}
                             </span>
                           </div>
                           <div className="act">
@@ -274,6 +293,12 @@ export default function PlanScreen() {
                   {columns.map((d) => (
                     <th key={d.id} scope="col">
                       {d.name}
+                      {estimateNote(d) && (
+                        <span className="needsdata" title={estimateNote(d) ?? undefined}>
+                          {' '}
+                          ?
+                        </span>
+                      )}
                     </th>
                   ))}
                 </tr>
@@ -317,8 +342,14 @@ export default function PlanScreen() {
                                 </Button>
                               )}
                             </div>
-                            <span className="muted cellgold num">
+                            <span
+                              className={
+                                estimateNote(d) ? 'muted cellgold num needsdata' : 'muted cellgold num'
+                              }
+                              title={estimateNote(d) ?? undefined}
+                            >
                               {gold(assignment.goldTotal)}
+                              {estimateNote(d) ? ' ?' : ''}
                             </span>
                           </div>
                         </td>

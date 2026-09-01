@@ -164,6 +164,8 @@ describe('buildPlanInput', () => {
         // their columns, never read by the engine.
         sort_order: 0,
         group_name: null,
+        // Every tier has a figure in this fixture, so nothing was borrowed.
+        goldEstimated: [],
       },
     ]);
   });
