@@ -1,0 +1,23 @@
+.gem {
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
+  display: inline-block;
+  flex: none;
+}
+
+.gem-solo {
+  background: var(--tier-solo);
+}
+
+.gem-story {
+  background: var(--tier-story);
+}
+
+.gem-elite {
+  background: var(--tier-elite);
+}
+
+.gem-legend {
+  background: var(--tier-legend);
+}

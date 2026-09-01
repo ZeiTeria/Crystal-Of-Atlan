@@ -1,0 +1,24 @@
+.meter {
+  display: block;
+  height: 2px;
+  background: var(--line-strong);
+  position: relative;
+  margin-top: 3px;
+}
+
+.meter i {
+  position: absolute;
+  inset: 0 auto 0 0;
+}
+
+.meter-accent i {
+  background: var(--accent);
+}
+
+.meter-warn i {
+  background: var(--warn);
+}
+
+.meter-danger i {
+  background: var(--danger);
+}

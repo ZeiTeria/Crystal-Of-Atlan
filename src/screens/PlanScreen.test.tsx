@@ -6,12 +6,16 @@ import { loadPlanInput } from '../data/loadPlanInput';
 import { logRun } from '../data/runs';
 import { currentGameAccountId } from '../data/accounts';
 import type { PlanInput } from '../engine/types';
+import { stubMatchMedia } from '../ui/testing/matchMedia';
+import { resetDensity } from '../ui/density';
 
 vi.mock('../data/loadPlanInput', () => ({ loadPlanInput: vi.fn() }));
 vi.mock('../data/runs', () => ({ logRun: vi.fn(), logRuns: vi.fn() }));
 vi.mock('../data/accounts', () => ({ currentGameAccountId: vi.fn() }));
 
 afterEach(() => {
+  resetDensity();
+  vi.unstubAllGlobals();
   cleanup();
   vi.clearAllMocks();
 });
@@ -26,6 +30,11 @@ const dungeon = {
   gold: { solo: 10, story: 20, elite: 30, legend: 40 },
   default_tier: 'elite' as const,
   default_min_runs: 1,
+  sort_order: 10,
+  group_name: null,
+  short_name: null,
+  goldEstimated: [],
+  goldUnknown: false,
 };
 
 function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
@@ -76,7 +85,9 @@ describe('PlanScreen', () => {
   it('shows a row per assignment with its gold', async () => {
     render(<PlanScreen />);
     expect(await screen.findAllByText('Mage')).toBeDefined();
-    expect(screen.getByText('Abyss')).toBeDefined();
+    // Simplified is the default, so the column reads as its short label; the
+    // full name stays on the title.
+    expect(screen.getByRole('columnheader', { name: 'A' }).getAttribute('title')).toBe('Abyss');
   });
 
   it('counts down to the coming reset, not the one after it', async () => {
@@ -271,5 +282,114 @@ describe('PlanScreen', () => {
       await screen.findByText('Error: solver pass "attempts" returned status Infeasible'),
     ).toBeDefined();
     expect(screen.queryByText(/SolverNotOptimalError:/)).toBeNull();
+  });
+});
+
+describe('PlanScreen on a phone', () => {
+  it('lists only the assignments of the shown character, with a Log button', async () => {
+    stubMatchMedia(true);
+    render(<PlanScreen />);
+    const log = await screen.findByRole('button', { name: /log one run of abyss by mage/i });
+    fireEvent.click(log);
+    await waitFor(() => {
+      expect(vi.mocked(logRun)).toHaveBeenCalledWith('c1', 'd1', 30);
+    });
+  });
+
+  it('offers the character picker rather than a matrix', async () => {
+    stubMatchMedia(true);
+    render(<PlanScreen />);
+    expect(await screen.findByRole('tab', { name: 'Mage' })).toBeDefined();
+  });
+});
+
+describe('PlanScreen gold that is standing in', () => {
+  it('marks only the cell whose own difficulty has no figure', async () => {
+    // The character runs this dungeon at elite, and elite HAS a figure. A
+    // dungeon-level mark would flag this cell anyway, which trains the eye to
+    // ignore the mark entirely.
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({ dungeons: [{ ...dungeon, goldEstimated: ['solo', 'legend'] }] }),
+    );
+    render(<PlanScreen />);
+    await screen.findAllByText('Mage');
+    expect(screen.queryAllByRole('button', { name: /has no gold figure/i })).toHaveLength(0);
+  });
+
+  it('marks the cell when the difficulty it actually runs has no figure', async () => {
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({ dungeons: [{ ...dungeon, goldEstimated: ['elite'] }] }),
+    );
+    render(<PlanScreen />);
+    const dot = await screen.findByRole('button', { name: /has no gold figure for elite/i });
+    // The catalogue is admin-only, so a player is pointed at whoever can edit it
+    // rather than at a screen they cannot open.
+    expect(dot.getAttribute('aria-label')).toMatch(/@zteria/i);
+    // No native tooltip: it would say the same thing twice, in two places.
+    expect(dot.getAttribute('title')).toBe(null);
+  });
+
+  it('marks a dungeon with no figures at all, whatever the difficulty', async () => {
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
+    );
+    render(<PlanScreen />);
+    expect(await screen.findByRole('button', { name: /no gold figures at all/i })).toBeDefined();
+  });
+
+  it('opens an explanation on click, and closes it on Escape', async () => {
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
+    );
+    render(<PlanScreen />);
+    const dot = await screen.findByRole('button', { name: /no gold figures at all/i });
+
+    fireEvent.click(dot);
+    expect(screen.getByRole('dialog')).toBeDefined();
+    expect(screen.getByRole('dialog').textContent).toMatch(/@zteria/i);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBe(null));
+  });
+
+  it('marks nothing when every difficulty has a real figure', async () => {
+    render(<PlanScreen />);
+    await screen.findAllByText('Mage');
+    expect(screen.queryAllByRole('dialog')).toHaveLength(0);
+    expect(screen.queryAllByRole('button', { name: /gold/i })).toHaveLength(0);
+  });
+});
+
+describe('PlanScreen explanation on hover', () => {
+  it('opens on pointing at it, and closes again on leaving', async () => {
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
+    );
+    render(<PlanScreen />);
+    const dot = await screen.findByRole('button', { name: /no gold figures at all/i });
+    const wrap = dot.parentElement as HTMLElement;
+
+    fireEvent.mouseEnter(wrap);
+    expect(screen.getByRole('dialog')).toBeDefined();
+
+    fireEvent.mouseLeave(wrap);
+    expect(screen.queryByRole('dialog')).toBe(null);
+  });
+
+  it('stays open after a click, so it survives the pointer leaving', async () => {
+    // Which is what makes it usable on a touch screen, where there is no hover
+    // to keep it open in the first place.
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
+    );
+    render(<PlanScreen />);
+    const dot = await screen.findByRole('button', { name: /no gold figures at all/i });
+    const wrap = dot.parentElement as HTMLElement;
+
+    fireEvent.mouseEnter(wrap);
+    fireEvent.click(dot);
+    fireEvent.mouseLeave(wrap);
+
+    expect(screen.getByRole('dialog')).toBeDefined();
   });
 });

@@ -160,6 +160,8 @@ describe.skipIf(catalogueSkip)(
         is_active: true,
         default_tier: 'elite',
         default_min_runs: 1,
+        group_name: null,
+        short_name: null,
       });
       dungeonId = created.id;
       expect(created.reset_weekday).toBe(4);
@@ -224,6 +226,8 @@ describe.skipIf(ownerSkip)(
           is_active: true,
         default_tier: 'elite',
         default_min_runs: 1,
+        group_name: null,
+        short_name: null,
       });
         ownDungeonId = created.id;
         dungeon = created;
@@ -264,12 +268,20 @@ describe.skipIf(ownerSkip)(
     });
 
     it('upserts the same grid cell twice without a conflict', { timeout: NETWORK_TIMEOUT }, async () => {
-      await setGridCell(characterId, dungeon.id, { tier: 'elite' });
-      await setGridCell(characterId, dungeon.id, { min_runs: 2 });
-      const rows = await listGrid([characterId]);
-      const cell = rows.find((r) => r.dungeon_id === dungeon.id);
-      expect(cell?.tier).toBe('elite');
-      expect(cell?.min_runs).toBe(2);
+      // The FIRST write inserts. Both columns must land as given: an upsert
+      // omitting one inserts that column's schema default instead, which is how
+      // a tier change used to silently reset the minimum to 0, and a minimum
+      // change used to set the tier to 'none' - i.e. "cannot enter".
+      await setGridCell(characterId, dungeon.id, { tier: 'elite', min_runs: 1 });
+      const inserted = (await listGrid([characterId])).find((r) => r.dungeon_id === dungeon.id);
+      expect(inserted?.tier).toBe('elite');
+      expect(inserted?.min_runs).toBe(1);
+
+      // The second write conflicts and updates.
+      await setGridCell(characterId, dungeon.id, { tier: 'elite', min_runs: 2 });
+      const updated = (await listGrid([characterId])).find((r) => r.dungeon_id === dungeon.id);
+      expect(updated?.tier).toBe('elite');
+      expect(updated?.min_runs).toBe(2);
     });
 
     it('logs a run and feeds it back into the engine input', { timeout: NETWORK_TIMEOUT }, async () => {

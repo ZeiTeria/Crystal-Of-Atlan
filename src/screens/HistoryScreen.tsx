@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '../hooks/useMutation';
+import Button from '../ui/Button';
 import { currentGameAccountId, listCharacters } from '../data/accounts';
 import { listDungeons } from '../data/dungeons';
 import { deleteRun, listRecentRuns, type RunRow } from '../data/runs';
 import { gold } from './planText';
+import ErrorBanner from '../ui/ErrorBanner';
 
 export default function HistoryScreen() {
   const [runs, setRuns] = useState<RunRow[]>([]);
@@ -47,13 +49,13 @@ export default function HistoryScreen() {
   return (
     <section>
       <h2>History</h2>
-      {error && <div className="error-message">Error: {error}</div>}
+      <ErrorBanner message={error} />
       {runs.length === 0 && <p className="muted">No runs logged yet.</p>}
 
       {Array.from(groupedRuns.entries()).map(([date, dayRuns]) => (
-        <div key={date}>
+        <div key={date} className="stack">
           <h3>{date}</h3>
-          <table style={{ marginBottom: '24px' }}>
+          <table className="datatable">
             <tbody>
               {dayRuns.map((run) => (
                 <tr key={run.id}>
@@ -63,14 +65,13 @@ export default function HistoryScreen() {
                   <td>{gold(run.gold_earned)}</td>
                   <td>
                     <div className="row-actions">
-                      <button
-                        className="button button-outline"
+                      <Button variant="outline"
                         disabled={busy}
                         aria-label={`Undo ${dungeonNames.get(run.dungeon_id) ?? 'run'}`}
                         onClick={() => void undo(run)}
                       >
                         Undo
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>

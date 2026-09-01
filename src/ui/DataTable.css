@@ -1,0 +1,556 @@
+/*
+ * No border per cell. Row banding plus one rule under the header does the same
+ * separating job and lets the numbers breathe - the 1px box on every cell is
+ * what made this read as a spreadsheet.
+ */
+.datatable {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-size: var(--step-0);
+}
+
+.datatable th,
+.datatable td {
+  border: 0;
+  padding: var(--s2) var(--s3);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.datatable thead th {
+  border-bottom: 1px solid var(--line-strong);
+  padding-bottom: var(--s3);
+  vertical-align: bottom;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/*
+ * Banding and hover paint only the scrolling cells. Both tints are translucent
+ * rgba, and the sticky column must never be - see the sticky rules below.
+ *
+ * They are background-IMAGES, not a background shorthand. The tier tint is a
+ * background-COLOUR on the same cell, and a shorthand would reset it - which is
+ * exactly what used to happen: banding out-specified the tier rule and wiped
+ * the colour, so difficulty was visible on odd rows and invisible on even ones.
+ * As separate properties the two compose instead of competing.
+ */
+.datatable tbody tr:nth-child(even) td {
+  background-image: linear-gradient(var(--row-band), var(--row-band));
+}
+
+/*
+ * Hover is per CELL, not per row or column. In a 12x9 matrix a row-wide tint
+ * lights twelve dungeons you are not looking at, which is noise rather than a
+ * pointer; the cell under the cursor is the thing being read.
+ */
+/*
+ * `tr` is in this selector purely for specificity: without it the banding rule
+ * above out-weighs this one and a hovered cell on an even row would not light.
+ */
+.datatable tbody tr td:hover {
+  background-image: linear-gradient(var(--accent-wash), var(--accent-wash));
+}
+
+/*
+ * SUITE's default figures are proportional and uneven, so anywhere digits line
+ * up or tick they must ask for the font's tnum feature. See --font-numeric.
+ */
+.num {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
+.datatable td.num,
+.datatable th.num {
+  text-align: right;
+}
+
+.datatable-scroll {
+  overflow-x: auto;
+}
+
+/* A parked character's row: present, visibly inactive. */
+.is-parked {
+  opacity: 0.5;
+}
+
+/* Vertical rhythm for a screen's stacked sections. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.cellstack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  align-items: center;
+}
+
+.cellstack .runs {
+  font-weight: 900;
+  font-size: var(--step-2);
+  line-height: 1;
+}
+
+.center {
+  text-align: center;
+}
+
+/* The character-name field in the Grid's row header. */
+.name-field {
+  width: 120px;
+}
+
+/* Plan screen. */
+.plan-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s4);
+  flex-wrap: wrap;
+}
+
+.plan-countdown {
+  font-size: var(--step-0);
+}
+
+
+.plan-scroll {
+  margin-bottom: var(--s5);
+}
+
+.plan-matrix {
+  min-width: max-content;
+}
+
+.plan-who {
+  /* Width comes from --sticky-col so it cannot drift from scroll-padding. */
+  white-space: nowrap;
+}
+
+.cellgold {
+  font-size: 0.625rem;
+}
+
+/* Group band above the column headers. */
+.datatable .groupband th {
+  border-bottom: 0;
+  padding-bottom: var(--s1);
+  font-size: 0.5625rem;
+  letter-spacing: 0.16em;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/*
+ * The rule under a family is drawn inset rather than as a border, so two
+ * families side by side read as two rules with a gap - a full-width border on
+ * each ran them together into one line spanning both, which said the opposite
+ * of what the band is for.
+ */
+.datatable .groupband th.grouped {
+  position: relative;
+  color: var(--accent);
+  padding-bottom: 4px;
+}
+
+.datatable .groupband th.grouped::after {
+  content: '';
+  position: absolute;
+  left: var(--s2);
+  right: var(--s2);
+  bottom: 0;
+  border-bottom: 1px solid var(--accent-edge);
+}
+
+/*
+ * Sticky labels. Without these the row and column names scroll away and the
+ * matrix becomes 108 anonymous numbers. The row header needs its own
+ * background, since the tr banding paints underneath it and would show through.
+ */
+/*
+ * Sticky labels, and the reason they are painted the way they are.
+ *
+ * A sticky cell has the scrolling content passing UNDERNEATH it, so its
+ * background has to be fully opaque or the two are visible through each other.
+ * --row-band and --accent-wash are both translucent rgba, so they cannot be
+ * used here as a background-color. They are layered as a background-IMAGE over
+ * an opaque background-color instead, which composites the same tint onto solid
+ * ground rather than onto whatever happens to be sliding past.
+ */
+.datatable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--surface);
+}
+
+.datatable tbody th[scope='row'] {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: var(--surface);
+}
+
+/* The row header sits above the horizontally scrolling cells. */
+.datatable thead th:first-child {
+  left: 0;
+  z-index: 3;
+}
+
+.datatable tbody tr:nth-child(even) th[scope='row'] {
+  background-image: linear-gradient(var(--row-band), var(--row-band));
+}
+
+/* The row header still lights, so a hovered cell can be traced back to a name. */
+.datatable tbody tr:hover th[scope='row'] {
+  background-image: linear-gradient(var(--accent-wash), var(--accent-wash));
+}
+
+/*
+ * 108 cells each shouting two buttons is a wall. They appear on the CELL being
+ * pointed at or keyboard-focused - per row still lit nine cells' worth of
+ * buttons at once, which is most of the wall back again - and always on touch,
+ * where hover does not exist and hiding them would make the plan unusable.
+ *
+ * visibility rather than display: the cell keeps its size, so rows do not jump
+ * as the pointer moves across the matrix.
+ */
+.rowbtns {
+  visibility: hidden;
+}
+
+.datatable tbody td:hover .rowbtns,
+.datatable tbody td:focus-within .rowbtns {
+  visibility: visible;
+}
+
+@media (hover: none) {
+  .rowbtns {
+    visibility: visible;
+  }
+}
+
+/*
+ * The drag grip. `touch-action: none` is the load-bearing line: without it a
+ * drag on a phone fights the page's own scroll gesture. It is set on the grip
+ * ALONE, so grabbing anywhere else on the row still scrolls normally - which is
+ * the whole reason reordering is by handle rather than by whole row.
+ */
+.grip {
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 32px;
+  border-radius: var(--r-control);
+  color: var(--text-faint);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.grip:hover {
+  color: var(--text);
+  background: var(--accent-wash);
+}
+
+.grip[aria-pressed='true'] {
+  color: var(--accent-ink);
+  background: var(--accent);
+  cursor: grabbing;
+}
+
+/* The row being dragged or lifted, so it is obvious which one is moving. */
+.datatable tbody tr.sorting td,
+.datatable tbody tr.sorting th {
+  background: var(--accent-wash);
+}
+
+/*
+ * Phone layouts. These are a different component tree, not a restyled table -
+ * nine columns cannot be made to work at 390px - so the rules here style that
+ * tree rather than overriding the matrix.
+ */
+.pcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  padding: var(--s3);
+}
+
+.prow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--s3);
+  padding-bottom: var(--s3);
+  border-bottom: 1px solid var(--line);
+}
+
+.prow:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.prow .info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.prow .dn {
+  font-weight: 900;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.prow .sub {
+  font-size: 0.625rem;
+  color: var(--text-dim);
+}
+
+.prow .act {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.prow .big {
+  font-weight: 900;
+  font-size: var(--step-2);
+  line-height: 1;
+  min-width: 24px;
+  text-align: right;
+}
+
+/* Thumb-sized targets: this is used next to the game, one-handed. */
+.prow .btn {
+  min-height: 40px;
+}
+
+.gridcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.gridcard .grouphead {
+  font-weight: 900;
+  font-size: 0.5625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--line);
+}
+
+.gridcard .grouphead:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.gridrow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.gridrow:last-child {
+  border-bottom: 0;
+}
+
+.gridrow .dn2 {
+  font-weight: 900;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.gridrow select,
+.gridrow input {
+  min-height: 40px;
+}
+
+/* Below the breakpoint the wide tables that remain must not force the page
+   sideways; they scroll inside their own container instead. */
+@media (max-width: 720px) {
+  .app-container {
+    padding: var(--s4) var(--s3);
+  }
+
+  .datatable {
+    font-size: var(--step-0);
+  }
+}
+
+/*
+ * A gold figure standing in for one the catalogue does not have yet. Marked
+ * rather than hidden: the plan is still the best available answer, it just
+ * should not be trusted to the last coin. The reason is a title, so it costs
+ * no column and the figure still reads normally.
+ */
+.needsdata {
+  color: var(--warn);
+  border-bottom: 1px dotted var(--warn);
+  cursor: help;
+}
+
+/*
+ * Horizontal scrolling for the two matrices.
+ *
+ * Snapping is on the column headers, so a sideways scroll comes to rest with a
+ * dungeon's column aligned rather than sliced in half. scroll-padding-left
+ * matters as much as the snap itself: without it the snapped column lands
+ * UNDER the sticky character column and is invisible. Its value is the sticky
+ * column's width.
+ */
+.matrix-scroll {
+  /*
+   * The sticky column's width, declared once. It drives both how wide that
+   * column is and how far a snapped column must clear it - the two are the same
+   * number, so they are the same token. Each screen overrides it, because the
+   * Grid's row header carries a grip, a checkbox and a name field while the
+   * Plan's carries a name and a meter.
+   */
+  --sticky-col: 172px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: var(--sticky-col);
+}
+
+.matrix tbody th[scope='row'],
+.matrix thead tr:last-child th:first-child {
+  width: var(--sticky-col);
+  min-width: var(--sticky-col);
+}
+
+.plan-scroll {
+  --sticky-col: 168px;
+}
+
+/* The Grid's row header holds a grip, a checkbox, a name field and a delete. */
+.grid-scroll {
+  --sticky-col: 236px;
+}
+
+.matrix thead tr:last-child th {
+  scroll-snap-align: start;
+}
+
+/* The character column is where the scroll starts, not something to snap past. */
+.matrix thead tr:last-child th:first-child {
+  scroll-snap-align: none;
+}
+
+.cellgold-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+/*
+ * Tier as a cell tint, so difficulty reads across the whole matrix at a glance
+ * rather than one gem at a time.
+ *
+ * Kept faint on purpose. These sit behind the run counts and the banding, and
+ * this is a table of numbers first - a saturated fill per cell would make the
+ * figures the second thing you see. `color-mix` puts the tier colour into the
+ * surface rather than over it, so the tint stays on-theme in both palettes.
+ */
+.tiercell.tier-solo {
+  background-color: color-mix(in srgb, var(--tier-solo) 8%, transparent);
+}
+
+.tiercell.tier-story {
+  background-color: color-mix(in srgb, var(--tier-story) 10%, transparent);
+}
+
+.tiercell.tier-elite {
+  background-color: color-mix(in srgb, var(--tier-elite) 11%, transparent);
+}
+
+.tiercell.tier-legend {
+  background-color: color-mix(in srgb, var(--tier-legend) 13%, transparent);
+}
+
+/* `none` means the character cannot enter: no tint, and visibly recessed. */
+.tiercell.tier-none {
+  opacity: 0.55;
+}
+
+/*
+ * Simplified: short labels and a tight table. This is the default, because nine
+ * full dungeon names across twelve characters does not fit a screen - the
+ * abbreviations exist so that it can.
+ */
+.matrix-simple {
+  font-size: 0.75rem;
+}
+
+.matrix-simple th,
+.matrix-simple td {
+  padding: var(--s1) var(--s2);
+}
+
+.matrix-simple thead tr:last-child th {
+  letter-spacing: 0.08em;
+}
+
+.matrix-simple .cellgold {
+  display: none;
+}
+
+.matrix-simple .runs {
+  font-size: var(--step-1);
+}
+
+.matrix-simple .meter {
+  margin-top: 2px;
+}
+
+.density-row {
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: var(--step-0);
+}
+
+/* The Plan's row header: a character's name and what it has earned this week. */
+.who-name {
+  display: block;
+}
+
+.who-gold {
+  display: block;
+  font-weight: 500;
+  font-size: 0.625rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.matrix-simple .who-gold {
+  font-size: 0.5625rem;
+}

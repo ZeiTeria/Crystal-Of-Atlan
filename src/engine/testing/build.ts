@@ -20,6 +20,11 @@ export function aDungeon(id: string, overrides: Partial<Dungeon> = {}): Dungeon 
     gold: { solo: 10, story: 20, elite: 30, legend: 40 },
     default_tier: 'elite',
     default_min_runs: 1,
+    sort_order: 0,
+    group_name: null,
+    short_name: null,
+    goldEstimated: [],
+    goldUnknown: false,
     ...overrides,
   };
 }

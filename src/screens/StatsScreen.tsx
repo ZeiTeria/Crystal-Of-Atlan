@@ -5,6 +5,7 @@ import { listAllRuns } from '../data/runs';
 import { loadPlanInput } from '../data/loadPlanInput';
 import { lastReset } from '../engine/resetWindow';
 import { gold } from './planText';
+import ErrorBanner from '../ui/ErrorBanner';
 
 export default function StatsScreen() {
   const [loading, setLoading] = useState(true);
@@ -48,16 +49,16 @@ export default function StatsScreen() {
   return (
     <section>
       <h2>Historical Stats</h2>
-      {error && <div className="error-message">Error: {error}</div>}
+      <ErrorBanner message={error} />
       
       {weeks.length === 0 ? (
         <p className="muted">No runs logged yet to show stats.</p>
       ) : (
-        <table>
+        <table className="datatable">
           <thead>
             <tr>
-              <th style={{ textAlign: 'left' }}>Week of</th>
-              <th style={{ textAlign: 'right' }}>Total Gold Earned</th>
+              <th>Week of</th>
+              <th className="num">Total Gold Earned</th>
             </tr>
           </thead>
           <tbody>
@@ -66,7 +67,7 @@ export default function StatsScreen() {
               return (
                 <tr key={weekTime}>
                   <td>{date}</td>
-                  <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                  <td className="num">
                     <strong>{gold(goldTotal)}</strong>
                   </td>
                 </tr>

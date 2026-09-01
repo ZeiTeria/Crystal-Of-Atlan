@@ -22,6 +22,27 @@ export interface Dungeon {
   default_tier: Tier;
   /** The fallback min runs a character has if they don't have an explicit entry in the grid. */
   default_min_runs: number;
+  /**
+   * Display only. The engine never reads either of these - the screens order
+   * their columns by sort_order and band them by group_name, and a plan is
+   * identical whatever they hold.
+   */
+  sort_order: number;
+  group_name: string | null;
+  /** Short label for the simplified matrix. Display only, like the two above. */
+  short_name: string | null;
+  /**
+   * Tiers whose gold was borrowed from another tier because the catalogue has
+   * no figure for them yet. Display only - the solver simply uses `gold`, which
+   * already holds the substituted values. See engine/gold.ts.
+   */
+  goldEstimated: PaidTier[];
+  /**
+   * True when the dungeon has no gold figure for any tier at all. Distinct from
+   * goldEstimated: there is nothing to borrow, so the figures are absent rather
+   * than approximate.
+   */
+  goldUnknown: boolean;
 }
 
 export interface Character {

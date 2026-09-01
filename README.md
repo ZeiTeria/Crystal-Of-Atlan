@@ -29,6 +29,18 @@ Security is the actual protection.
 Pushing to `main` builds and deploys to GitHub Pages automatically
 (`.github/workflows/deploy.yml`).
 
+## Type
+
+The UI is set in [SUITE](https://github.com/sun-typeface/SUITE) by SUNN, used
+under the SIL Open Font License 1.1 — the same typeface the official Crystal of
+Atlan site uses. The files in `src/assets/fonts/` are unmodified; `OFL.txt`
+beside them is the licence.
+
+Its default figures are proportional and uneven ("1" advances 408 units against
+"0" at 708 in Medium), so anywhere digits line up or tick, the CSS must set
+`font-variant-numeric: tabular-nums` — the font carries a `tnum` feature, which
+is what makes that work.
+
 ## Layout
 
 ```

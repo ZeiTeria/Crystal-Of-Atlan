@@ -1,0 +1,53 @@
+.btn {
+  font: inherit;
+  font-weight: 900;
+  font-size: var(--step-0);
+  letter-spacing: 0.01em;
+  padding: var(--s2) var(--s4);
+  border-radius: var(--r-control);
+  border: 1px solid transparent;
+  cursor: pointer;
+  line-height: 1.5;
+  width: auto;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn-solid {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.btn-solid:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--accent-wash);
+}
+
+.btn-quiet {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--text-dim);
+}
+
+.btn-quiet:hover:not(:disabled) {
+  border-color: var(--text-dim);
+  color: var(--text);
+}

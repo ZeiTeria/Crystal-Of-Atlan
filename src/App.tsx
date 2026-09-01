@@ -3,6 +3,10 @@ import { errorMessage } from './errorMessage';
 import { configError } from './lib/supabase';
 import { getSession, signInWithDiscord, signOut, onAuthChange } from './lib/auth';
 import { loadProfile, type Profile } from './data/profile';
+import Badge from './ui/Badge';
+import Button from './ui/Button';
+import Tabs from './ui/Tabs';
+import ThemeToggle from './ui/ThemeToggle';
 import PlanScreen from './screens/PlanScreen';
 import GridScreen from './screens/GridScreen';
 import HistoryScreen from './screens/HistoryScreen';
@@ -10,6 +14,7 @@ import StatsScreen from './screens/StatsScreen';
 import DungeonsScreen from './screens/DungeonsScreen';
 import type { Session } from '@supabase/supabase-js';
 import './App.css';
+import ErrorBanner from './ui/ErrorBanner';
 
 export type View = 'plan' | 'grid' | 'history' | 'stats' | 'dungeons';
 
@@ -71,7 +76,7 @@ export default function App() {
     return (
       <div className="app-container">
         <h1>Crystal Of Atlan</h1>
-        <div className="error-message">Error: {configError}</div>
+        <ErrorBanner message={configError} />
       </div>
     );
   }
@@ -82,10 +87,10 @@ export default function App() {
     return (
       <div className="app-container">
         <h1>Crystal Of Atlan</h1>
-        {error && <div className="error-message">Error: {error}</div>}
-        <button className="button" onClick={() => void signInWithDiscord()}>
+        <ErrorBanner message={error} />
+        <Button onClick={() => void signInWithDiscord()}>
           Sign in with Discord
-        </button>
+        </Button>
       </div>
     );
   }
@@ -98,26 +103,21 @@ export default function App() {
         <h1>Crystal Of Atlan</h1>
         <div className="profile-info">
           <span className="username">{profile?.discord_username ?? session.user.email}</span>
-          {profile?.is_admin && <span className="admin-badge">Admin</span>}
-          <button className="button button-outline" onClick={() => void signOut()}>
+          {profile?.is_admin && <Badge>Admin</Badge>}
+          <ThemeToggle />
+          <Button variant="outline" onClick={() => void signOut()}>
             Sign out
-          </button>
+          </Button>
         </div>
       </header>
 
-      <nav className="tabs">
-        {tabs.map((tab) => (
-          <button
-            key={tab.view}
-            className={tab.view === view ? 'tab tab-active' : 'tab'}
-            onClick={() => setView(tab.view)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      <Tabs
+        items={tabs.map((t) => ({ value: t.view, label: t.label }))}
+        value={view}
+        onChange={setView}
+      />
 
-      {error && <div className="error-message">Error: {error}</div>}
+      <ErrorBanner message={error} />
 
       {view === 'plan' && <PlanScreen />}
       {view === 'grid' && <GridScreen />}

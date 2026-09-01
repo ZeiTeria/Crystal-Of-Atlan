@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '../hooks/useMutation';
+import Button from '../ui/Button';
+import { suggestAbbreviation } from './abbreviate';
+import { sortOrderPatches } from '../ui/reorder';
+import { useSortableList } from '../ui/useSortableList';
 import {
   createDungeon,
   deleteDungeon,
@@ -10,6 +14,7 @@ import {
 } from '../data/dungeons';
 
 import type { Tier } from '../engine/types';
+import ErrorBanner from '../ui/ErrorBanner';
 
 const WEEKDAYS = [
   { value: 1, label: 'Monday' },
@@ -25,6 +30,8 @@ const TIERS: Tier[] = ['none', 'solo', 'story', 'elite', 'legend'];
 
 const BLANK: NewDungeon = {
   name: '',
+  group_name: null,
+  short_name: null,
   account_attempts: 18,
   character_attempts: 3,
   reset_weekday: 1,
@@ -63,6 +70,13 @@ export default function DungeonsScreen() {
     void refresh().finally(() => setLoading(false));
   }, [refresh]);
 
+  const { order, activeId, handleProps } = useSortableList({
+    ids: dungeons.map((d) => d.id),
+    onReorder: (ids) => void commitOrder(ids),
+  });
+  const byId = new Map(dungeons.map((d) => [d.id, d]));
+  const ordered = order.map((id) => byId.get(id)).filter((d) => d !== undefined);
+
   /** Edits are written on blur, so a half-typed number never reaches the database. */
   async function save(id: string, patch: Partial<NewDungeon>) {
     await mutate(async () => {
@@ -90,24 +104,19 @@ export default function DungeonsScreen() {
     });
   }
 
-  async function moveDungeon(index: number, direction: -1 | 1) {
-    const swapIndex = index + direction;
-    if (swapIndex < 0 || swapIndex >= dungeons.length) return;
-
-    // Supabase has no bulk update out-of-the-box in the JS client without RPC.
-    // However, updating two rows is fine.
-    // If we want to guarantee order, we could rewrite the entire array's sort_order:
-    const newOrders = dungeons.map((d, i) => ({ id: d.id, sort_order: (i + 1) * 10 }));
-    
-    // Swap the two targeted rows
-    const temp = newOrders[index]!.sort_order;
-    newOrders[index]!.sort_order = newOrders[swapIndex]!.sort_order;
-    newOrders[swapIndex]!.sort_order = temp;
-
+  /**
+   * Rewrites every row's sort_order rather than swapping a pair: a swap leaves
+   * the rest of the list unevenly spaced and the gaps eventually close.
+   *
+   * Not transactional - Supabase's JS client has no multi-row update without an
+   * RPC - so an interrupted reorder can leave the list half-renumbered. That is
+   * recoverable by reordering again, which is why it is acceptable here; it
+   * would not be for anything that has to balance.
+   */
+  async function commitOrder(orderedIds: string[]) {
     await mutate(async () => {
-      // Just fire them all off.
       await Promise.all(
-        newOrders.map((d) => updateDungeon(d.id, { sort_order: d.sort_order }))
+        sortOrderPatches(orderedIds).map((p) => updateDungeon(p.id, { sort_order: p.sort_order })),
       );
     });
   }
@@ -117,14 +126,16 @@ export default function DungeonsScreen() {
   return (
     <section>
       <h2>Dungeons</h2>
-      {error && <div className="error-message">Error: {error}</div>}
+      <ErrorBanner message={error} />
 
       {dungeons.length === 0 && <p className="muted">No dungeons in the catalogue yet.</p>}
 
-      <table>
+      <table className="datatable">
         <thead>
           <tr>
             <th>Name</th>
+            <th>Group</th>
+            <th>Short</th>
             <th>Account/wk</th>
             <th>Character/wk</th>
             <th>Resets</th>
@@ -139,8 +150,12 @@ export default function DungeonsScreen() {
           </tr>
         </thead>
         <tbody>
-          {dungeons.map((d, index) => (
-            <tr key={d.id}>
+          {ordered.map((d) => (
+            <tr
+              key={d.id}
+              data-sortable-id={d.id}
+              className={activeId === d.id ? 'sorting' : undefined}
+            >
               <td>
                 <input
                   aria-label={`${d.name} name`}
@@ -148,6 +163,38 @@ export default function DungeonsScreen() {
                   onBlur={(e) => {
                     const name = e.target.value.trim();
                     if (name !== '' && name !== d.name) void save(d.id, { name });
+                  }}
+                />
+              </td>
+              <td>
+                <input
+                  aria-label={`${d.name} short label`}
+                  defaultValue={d.short_name ?? ''}
+                  size={5}
+                  placeholder={suggestAbbreviation(d.name, d.group_name)}
+                  onBlur={(e) => {
+                    // Empty means "use the suggestion", so it stores null rather
+                    // than an empty string - a deliberate label is never
+                    // overwritten, and an absent one is never frozen.
+                    const next = e.target.value.trim();
+                    const value = next === '' ? null : next;
+                    if (value !== d.short_name) void save(d.id, { short_name: value });
+                  }}
+                />
+              </td>
+              <td>
+                <input
+                  aria-label={`${d.name} group`}
+                  defaultValue={d.group_name ?? ''}
+                  list="dungeon-groups"
+                  placeholder="none"
+                  onBlur={(e) => {
+                    // An emptied field stores null, never '': an empty-string
+                    // family would be treated as real and banded together with
+                    // every other ungrouped dungeon.
+                    const next = e.target.value.trim();
+                    const value = next === '' ? null : next;
+                    if (value !== d.group_name) void save(d.id, { group_name: value });
                   }}
                 />
               </td>
@@ -194,6 +241,9 @@ export default function DungeonsScreen() {
                     type="number"
                     aria-label={`${d.name} ${c.label} gold`}
                     defaultValue={d[c.key]}
+                    // 36 figures get typed into fields already holding a 0;
+                    // without this every one needs the 0 cleared first.
+                    onFocus={(e) => e.target.select()}
                     onBlur={(e) => void save(d.id, c.patch(Number(e.target.value)))}
                   />
                 </td>
@@ -225,43 +275,31 @@ export default function DungeonsScreen() {
                   aria-label={`${d.name} default min runs`}
                   value={d.default_min_runs}
                   min={0}
-                  max={1}
+                  max={d.character_attempts}
                   onChange={(e) => void save(d.id, { default_min_runs: Number(e.target.value) })}
                 />
               </td>
               <td>
                 <div className="row-actions">
-                  <button
-                    className="button button-outline"
-                    aria-label={`Move ${d.name} up`}
-                    disabled={busy || index === 0}
-                    onClick={() => void moveDungeon(index, -1)}
-                    style={{ padding: '4px 8px' }}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    className="button button-outline"
-                    aria-label={`Move ${d.name} down`}
-                    disabled={busy || index === dungeons.length - 1}
-                    onClick={() => void moveDungeon(index, 1)}
-                    style={{ padding: '4px 8px' }}
-                  >
-                    ↓
-                  </button>
-                  <button
-                    className="button button-outline"
+                  <span {...handleProps(d.id, `Reorder ${d.name}`)}>⠿</span>
+                  <Button variant="outline"
                     aria-label={`Delete ${d.name}`}
                     onClick={() => void remove(d)}
                   >
                     Delete
-                  </button>
+                  </Button>
                 </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      <datalist id="dungeon-groups">
+        {[...new Set(dungeons.map((d) => d.group_name).filter((g) => g !== null))].map((g) => (
+          <option key={g} value={g} />
+        ))}
+      </datalist>
 
       <h3>Add a dungeon</h3>
       <p className="muted">
@@ -290,16 +328,15 @@ export default function DungeonsScreen() {
           aria-label="New dungeon default min runs"
           value={draft.default_min_runs}
           min={0}
-          max={1}
+          max={draft.character_attempts}
           onChange={(e) => setDraft({ ...draft, default_min_runs: Number(e.target.value) })}
         />
-        <button
-          className="button"
+        <Button
           disabled={busy || draft.name.trim() === ''}
           onClick={() => void add()}
         >
           Add dungeon
-        </button>
+        </Button>
       </div>
     </section>
   );
