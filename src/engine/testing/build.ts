@@ -23,6 +23,7 @@ export function aDungeon(id: string, overrides: Partial<Dungeon> = {}): Dungeon 
     sort_order: 0,
     group_name: null,
     goldEstimated: [],
+    goldUnknown: false,
     ...overrides,
   };
 }

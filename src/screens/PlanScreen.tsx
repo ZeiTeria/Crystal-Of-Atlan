@@ -12,8 +12,9 @@ import {
   type Reason,
 } from '../engine/ceilings';
 import { solveOptimal } from '../engine/solver';
-import type { PlanInput, PlanResult } from '../engine/types';
+import type { PaidTier, PlanInput, PlanResult, Tier } from '../engine/types';
 import { describeConflict, describeReason, gold, type Names } from './planText';
+import InfoDot from '../ui/InfoDot';
 import { nextReset } from '../engine/resetWindow';
 import Meter from '../ui/Meter';
 import { groupSpans, matrixColumns } from './columns';
@@ -51,18 +52,23 @@ function Countdown({ settings }: { settings: PlanInput['settings'] }) {
 }
 
 /**
- * A note for a dungeon whose gold is partly guessed, or null when every tier
- * has a real figure. Shown as a title so the reason is one hover away rather
- * than taking a column, and the figure itself still reads normally.
+ * Why a cell's gold cannot be trusted, or null when it can.
+ *
+ * Deliberately per CELL and per TIER, not per dungeon: a dungeon can know
+ * exactly what elite pays and nothing about legend, and a character running it
+ * at elite has a figure that is simply correct. Flagging the whole dungeon
+ * marked those cells too, which trains the eye to ignore the mark.
  */
-function estimateNote(dungeon: { name: string; goldEstimated: string[] }): string | null {
-  if (dungeon.goldEstimated.length === 0) return null;
-  const tiers = dungeon.goldEstimated.join(', ');
-  return (
-    `Needs data: ${dungeon.name} has no gold figure for ${tiers}. ` +
-    `Another tier's figure is standing in, so this plan is an estimate. ` +
-    `Fill it in on the Dungeons tab.`
-  );
+function goldWarning(
+  dungeon: { name: string; goldEstimated: PaidTier[]; goldUnknown: boolean },
+  tier: Tier | undefined,
+): string | null {
+  if (dungeon.goldUnknown) {
+    return `${dungeon.name} has no gold figures at all, so this plan cannot weigh it against anything else. Enter its gold per difficulty on the Dungeons tab.`;
+  }
+  if (!tier || tier === 'none') return null;
+  if (!dungeon.goldEstimated.includes(tier)) return null;
+  return `${dungeon.name} has no gold figure for ${tier}. Another difficulty's figure is standing in, so this row is an estimate. Enter it on the Dungeons tab.`;
 }
 
 interface Solved {
@@ -161,6 +167,10 @@ export default function PlanScreen() {
   const columns = matrixColumns(input.dungeons);
   const spans = groupSpans(columns);
 
+  // The tier a character enters a dungeon at, which is what decides whether the
+  // gold figure behind a cell is real.
+  const tierOf = new Map(input.grid.map((g) => [`${g.characterId}:${g.dungeonId}`, g.tier]));
+
   // The phone shows one character at a time. Falls back to the first rather
   // than showing nothing when the selection names a character that has since
   // been deleted or parked.
@@ -237,12 +247,14 @@ export default function PlanScreen() {
                         <div className="prow" key={a.dungeonId}>
                           <div className="info">
                             <span className="dn">{d?.name ?? a.dungeonId}</span>
-                            <span
-                              className={d && estimateNote(d) ? 'sub num needsdata' : 'sub num'}
-                              title={(d && estimateNote(d)) || undefined}
-                            >
+                            <span className="sub num cellgold-line">
                               {gold(a.goldPerRun)} each &middot; {gold(a.goldTotal)} total
-                              {d && estimateNote(d) ? ' ?' : ''}
+                              {(() => {
+                                const why = d
+                                  ? goldWarning(d, tierOf.get(`${shownCharacter.id}:${d.id}`))
+                                  : null;
+                                return why ? <InfoDot label={why}>{why}</InfoDot> : null;
+                              })()}
                             </span>
                           </div>
                           <div className="act">
@@ -293,12 +305,6 @@ export default function PlanScreen() {
                   {columns.map((d) => (
                     <th key={d.id} scope="col">
                       {d.name}
-                      {estimateNote(d) && (
-                        <span className="needsdata" title={estimateNote(d) ?? undefined}>
-                          {' '}
-                          ?
-                        </span>
-                      )}
                     </th>
                   ))}
                 </tr>
@@ -342,14 +348,14 @@ export default function PlanScreen() {
                                 </Button>
                               )}
                             </div>
-                            <span
-                              className={
-                                estimateNote(d) ? 'muted cellgold num needsdata' : 'muted cellgold num'
-                              }
-                              title={estimateNote(d) ?? undefined}
-                            >
-                              {gold(assignment.goldTotal)}
-                              {estimateNote(d) ? ' ?' : ''}
+                            <span className="cellgold-line">
+                              <span className="muted cellgold num">
+                                {gold(assignment.goldTotal)}
+                              </span>
+                              {(() => {
+                                const why = goldWarning(d, tierOf.get(`${c.id}:${d.id}`));
+                                return why ? <InfoDot label={why}>{why}</InfoDot> : null;
+                              })()}
                             </span>
                           </div>
                         </td>

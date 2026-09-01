@@ -22,11 +22,17 @@ import { PAID_TIERS, type PaidTier } from './types';
 export function fillGoldGaps(gold: Record<PaidTier, number>): {
   gold: Record<PaidTier, number>;
   estimated: PaidTier[];
+  /**
+   * True when the dungeon has no figure for ANY tier. Distinct from
+   * `estimated`, which lists tiers standing on a neighbour's figure: here there
+   * is no neighbour, so the zeros are simply absent data and every tier of the
+   * dungeon is unknown.
+   */
+  unknown: boolean;
 } {
   const known = PAID_TIERS.filter((t) => gold[t] > 0);
-  if (known.length === 0 || known.length === PAID_TIERS.length) {
-    return { gold, estimated: [] };
-  }
+  if (known.length === 0) return { gold, estimated: [], unknown: true };
+  if (known.length === PAID_TIERS.length) return { gold, estimated: [], unknown: false };
 
   const filled = { ...gold };
   const estimated: PaidTier[] = [];
@@ -48,5 +54,5 @@ export function fillGoldGaps(gold: Record<PaidTier, number>): {
     estimated.push(tier);
   }
 
-  return { gold: filled, estimated };
+  return { gold: filled, estimated, unknown: false };
 }

@@ -35,6 +35,12 @@ export interface Dungeon {
    * already holds the substituted values. See engine/gold.ts.
    */
   goldEstimated: PaidTier[];
+  /**
+   * True when the dungeon has no gold figure for any tier at all. Distinct from
+   * goldEstimated: there is nothing to borrow, so the figures are absent rather
+   * than approximate.
+   */
+  goldUnknown: boolean;
 }
 
 export interface Character {

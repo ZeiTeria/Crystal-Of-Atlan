@@ -51,13 +51,13 @@ export function buildPlanInput(rows: PlanRows, now: Date): PlanInput {
         // Missing figures borrow from the tiers that have one, so a half-filled
         // catalogue still plans sensibly. Which ones were guessed is carried
         // through so the screens can flag them.
-        const { gold, estimated } = fillGoldGaps({
+        const { gold, estimated, unknown } = fillGoldGaps({
           solo: d.gold_solo,
           story: d.gold_story,
           elite: d.gold_elite,
           legend: d.gold_legend,
         });
-        return { gold, goldEstimated: estimated };
+        return { gold, goldEstimated: estimated, goldUnknown: unknown };
       })(),
       default_tier: d.default_tier,
       default_min_runs: d.default_min_runs,

@@ -31,6 +31,7 @@ const dungeon = {
   sort_order: 10,
   group_name: null,
   goldEstimated: [],
+  goldUnknown: false,
 };
 
 function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
@@ -298,22 +299,53 @@ describe('PlanScreen on a phone', () => {
 });
 
 describe('PlanScreen gold that is standing in', () => {
-  it('marks a dungeon whose gold was borrowed, and says which tiers need data', async () => {
+  it('marks only the cell whose own difficulty has no figure', async () => {
+    // The character runs this dungeon at elite, and elite HAS a figure. A
+    // dungeon-level mark would flag this cell anyway, which trains the eye to
+    // ignore the mark entirely.
     vi.mocked(loadPlanInput).mockResolvedValue(
-      anInput({
-        dungeons: [{ ...dungeon, goldEstimated: ['solo', 'legend'] }],
-      }),
+      anInput({ dungeons: [{ ...dungeon, goldEstimated: ['solo', 'legend'] }] }),
     );
     render(<PlanScreen />);
-    const marked = await screen.findAllByTitle(/needs data/i);
-    expect(marked.length).toBeGreaterThan(0);
-    expect(marked[0]?.getAttribute('title')).toMatch(/solo, legend/);
-    expect(marked[0]?.getAttribute('title')).toMatch(/dungeons tab/i);
+    await screen.findAllByText('Mage');
+    expect(screen.queryAllByRole('button', { name: /has no gold figure/i })).toHaveLength(0);
   });
 
-  it('marks nothing when every tier has a real figure', async () => {
+  it('marks the cell when the difficulty it actually runs has no figure', async () => {
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({ dungeons: [{ ...dungeon, goldEstimated: ['elite'] }] }),
+    );
+    render(<PlanScreen />);
+    const dot = await screen.findByRole('button', { name: /has no gold figure for elite/i });
+    expect(dot.getAttribute('title')).toMatch(/dungeons tab/i);
+  });
+
+  it('marks a dungeon with no figures at all, whatever the difficulty', async () => {
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
+    );
+    render(<PlanScreen />);
+    expect(await screen.findByRole('button', { name: /no gold figures at all/i })).toBeDefined();
+  });
+
+  it('opens an explanation on click, and closes it on Escape', async () => {
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
+    );
+    render(<PlanScreen />);
+    const dot = await screen.findByRole('button', { name: /no gold figures at all/i });
+
+    fireEvent.click(dot);
+    expect(screen.getByRole('dialog')).toBeDefined();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBe(null));
+  });
+
+  it('marks nothing when every difficulty has a real figure', async () => {
     render(<PlanScreen />);
     await screen.findAllByText('Mage');
-    expect(screen.queryAllByTitle(/needs data/i)).toHaveLength(0);
+    expect(screen.queryAllByRole('dialog')).toHaveLength(0);
+    expect(screen.queryAllByRole('button', { name: /gold/i })).toHaveLength(0);
   });
 });

@@ -166,6 +166,7 @@ describe('buildPlanInput', () => {
         group_name: null,
         // Every tier has a figure in this fixture, so nothing was borrowed.
         goldEstimated: [],
+        goldUnknown: false,
       },
     ]);
   });

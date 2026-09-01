@@ -37,7 +37,12 @@
   background: var(--row-band);
 }
 
-.datatable tbody tr:hover td {
+/*
+ * Hover is per CELL, not per row or column. In a 12x9 matrix a row-wide tint
+ * lights twelve dungeons you are not looking at, which is noise rather than a
+ * pointer; the cell under the cursor is the thing being read.
+ */
+.datatable tbody td:hover {
   background: var(--accent-wash);
 }
 
@@ -185,6 +190,7 @@
   background-image: linear-gradient(var(--row-band), var(--row-band));
 }
 
+/* The row header still lights, so a hovered cell can be traced back to a name. */
 .datatable tbody tr:hover th[scope='row'] {
   background-image: linear-gradient(var(--accent-wash), var(--accent-wash));
 }
@@ -438,49 +444,8 @@
   scroll-snap-align: none;
 }
 
-/*
- * Crosshair hover: the row AND the column under the pointer.
- *
- * Reading a 12x9 matrix means tracking a cell back to a character on the left
- * and a dungeon along the top; lighting only the row leaves the second half of
- * that job undone.
- *
- * Column highlighting has no direct selector, so it is done with :has() - one
- * rule per column index. Sixteen covers a catalogue well past the nine dungeons
- * in use; beyond that the extra columns simply do not highlight, which degrades
- * quietly rather than breaking.
- */
-.matrix:has(tbody td:nth-child(2):hover) tbody td:nth-child(2),
-.matrix:has(tbody td:nth-child(2):hover) thead tr:last-child th:nth-child(2),
-.matrix:has(tbody td:nth-child(3):hover) tbody td:nth-child(3),
-.matrix:has(tbody td:nth-child(3):hover) thead tr:last-child th:nth-child(3),
-.matrix:has(tbody td:nth-child(4):hover) tbody td:nth-child(4),
-.matrix:has(tbody td:nth-child(4):hover) thead tr:last-child th:nth-child(4),
-.matrix:has(tbody td:nth-child(5):hover) tbody td:nth-child(5),
-.matrix:has(tbody td:nth-child(5):hover) thead tr:last-child th:nth-child(5),
-.matrix:has(tbody td:nth-child(6):hover) tbody td:nth-child(6),
-.matrix:has(tbody td:nth-child(6):hover) thead tr:last-child th:nth-child(6),
-.matrix:has(tbody td:nth-child(7):hover) tbody td:nth-child(7),
-.matrix:has(tbody td:nth-child(7):hover) thead tr:last-child th:nth-child(7),
-.matrix:has(tbody td:nth-child(8):hover) tbody td:nth-child(8),
-.matrix:has(tbody td:nth-child(8):hover) thead tr:last-child th:nth-child(8),
-.matrix:has(tbody td:nth-child(9):hover) tbody td:nth-child(9),
-.matrix:has(tbody td:nth-child(9):hover) thead tr:last-child th:nth-child(9),
-.matrix:has(tbody td:nth-child(10):hover) tbody td:nth-child(10),
-.matrix:has(tbody td:nth-child(10):hover) thead tr:last-child th:nth-child(10),
-.matrix:has(tbody td:nth-child(11):hover) tbody td:nth-child(11),
-.matrix:has(tbody td:nth-child(11):hover) thead tr:last-child th:nth-child(11),
-.matrix:has(tbody td:nth-child(12):hover) tbody td:nth-child(12),
-.matrix:has(tbody td:nth-child(12):hover) thead tr:last-child th:nth-child(12),
-.matrix:has(tbody td:nth-child(13):hover) tbody td:nth-child(13),
-.matrix:has(tbody td:nth-child(13):hover) thead tr:last-child th:nth-child(13),
-.matrix:has(tbody td:nth-child(14):hover) tbody td:nth-child(14),
-.matrix:has(tbody td:nth-child(14):hover) thead tr:last-child th:nth-child(14),
-.matrix:has(tbody td:nth-child(15):hover) tbody td:nth-child(15),
-.matrix:has(tbody td:nth-child(15):hover) thead tr:last-child th:nth-child(15),
-.matrix:has(tbody td:nth-child(16):hover) tbody td:nth-child(16),
-.matrix:has(tbody td:nth-child(16):hover) thead tr:last-child th:nth-child(16),
-.matrix:has(tbody td:nth-child(17):hover) tbody td:nth-child(17),
-.matrix:has(tbody td:nth-child(17):hover) thead tr:last-child th:nth-child(17) {
-  background-color: var(--accent-wash);
+.cellgold-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
 }

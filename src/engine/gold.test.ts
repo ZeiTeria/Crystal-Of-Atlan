@@ -67,3 +67,18 @@ describe('fillGoldGaps', () => {
     }
   });
 });
+
+describe('fillGoldGaps unknown flag', () => {
+  it('is true only when no tier has a figure', () => {
+    expect(fillGoldGaps(g(0, 0, 0, 0)).unknown).toBe(true);
+    expect(fillGoldGaps(g(0, 0, 30, 0)).unknown).toBe(false);
+    expect(fillGoldGaps(g(10, 20, 30, 40)).unknown).toBe(false);
+  });
+
+  it('reports nothing as estimated when everything is unknown', () => {
+    // Nothing was borrowed, because there was nothing to borrow from. The
+    // zeros are absent data, not approximations, and the two must not be
+    // conflated - one warrants "this is a guess", the other "there is no data".
+    expect(fillGoldGaps(g(0, 0, 0, 0)).estimated).toEqual([]);
+  });
+});
