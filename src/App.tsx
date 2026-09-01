@@ -5,6 +5,8 @@ import { getSession, signInWithDiscord, signOut, onAuthChange } from './lib/auth
 import { loadProfile, type Profile } from './data/profile';
 import Badge from './ui/Badge';
 import Button from './ui/Button';
+import Tabs from './ui/Tabs';
+import ThemeToggle from './ui/ThemeToggle';
 import PlanScreen from './screens/PlanScreen';
 import GridScreen from './screens/GridScreen';
 import HistoryScreen from './screens/HistoryScreen';
@@ -102,23 +104,18 @@ export default function App() {
         <div className="profile-info">
           <span className="username">{profile?.discord_username ?? session.user.email}</span>
           {profile?.is_admin && <Badge>Admin</Badge>}
+          <ThemeToggle />
           <Button variant="outline" onClick={() => void signOut()}>
             Sign out
           </Button>
         </div>
       </header>
 
-      <nav className="tabs">
-        {tabs.map((tab) => (
-          <button
-            key={tab.view}
-            className={tab.view === view ? 'tab tab-active' : 'tab'}
-            onClick={() => setView(tab.view)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      <Tabs
+        items={tabs.map((t) => ({ value: t.view, label: t.label }))}
+        value={view}
+        onChange={setView}
+      />
 
       <ErrorBanner message={error} />
 
