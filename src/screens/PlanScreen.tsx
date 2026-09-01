@@ -40,7 +40,7 @@ function Countdown({ settings }: { settings: PlanInput['settings'] }) {
   const seconds = Math.floor((diff / 1000) % 60);
 
   return (
-    <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+    <span className="num">
       {days}d {hours}h {minutes.toString().padStart(2, '0')}m {seconds.toString().padStart(2, '0')}s
     </span>
   );
@@ -138,9 +138,9 @@ export default function PlanScreen() {
 
   return (
     <section>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+      <div className="plan-head">
         <h2>Plan</h2>
-        <span className="muted" style={{ fontSize: '0.9em' }}>
+        <span className="muted plan-countdown">
           Resets in: <strong><Countdown settings={input.settings} /></strong>
         </span>
       </div>
@@ -165,7 +165,7 @@ export default function PlanScreen() {
           )}
 
           <h3>Weekly Gold Progress</h3>
-          <ul style={{ marginBottom: '24px' }}>
+          <ul className="goldlist">
             {input.characters.map((c) => {
               const cap = input.settings.goldCap;
               const headroom = input.goldHeadroom[c.id] ?? cap;
@@ -180,11 +180,11 @@ export default function PlanScreen() {
             })}
           </ul>
 
-          <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
-            <table style={{ minWidth: 'max-content' }}>
+          <div className="datatable-scroll plan-scroll">
+            <table className="datatable plan-matrix">
               <thead>
                 <tr>
-                  <th scope="col" style={{ width: '150px' }}>
+                  <th scope="col" className="plan-who">
                     Character
                   </th>
                   {input.dungeons.map((d) => (
@@ -204,21 +204,20 @@ export default function PlanScreen() {
                       );
                       if (!assignment) {
                         return (
-                          <td key={d.id} className="muted" style={{ textAlign: 'center' }}>
+                          <td key={d.id} className="muted center">
                             -
                           </td>
                         );
                       }
                       return (
                         <td key={d.id}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-                            <strong style={{ fontSize: '1.1em' }}>{assignment.runs}x</strong>
-                            <div style={{ display: 'flex', gap: '4px' }}>
+                          <div className="cellstack">
+                            <strong className="runs num">{assignment.runs}x</strong>
+                            <div className="row-actions">
                               <Button
                                 disabled={busy}
                                 aria-label={`Log one run of ${d.name} by ${c.name}`}
                                 onClick={() => void markDone(c.id, d.id, assignment.goldPerRun)}
-                                style={{ padding: '2px 8px', fontSize: '12px' }}
                               >
                                 Log 1
                               </Button>
@@ -229,13 +228,12 @@ export default function PlanScreen() {
                                   onClick={() =>
                                     void markAllDone(c.id, d.id, assignment.goldPerRun, assignment.runs)
                                   }
-                                  style={{ padding: '2px 8px', fontSize: '12px' }}
                                 >
                                   All
                                 </Button>
                               )}
                             </div>
-                            <span className="muted" style={{ fontSize: '12px' }}>
+                            <span className="muted cellgold num">
                               {gold(assignment.goldTotal)}
                             </span>
                           </div>

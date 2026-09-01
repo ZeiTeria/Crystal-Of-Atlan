@@ -53,9 +53,9 @@ export default function HistoryScreen() {
       {runs.length === 0 && <p className="muted">No runs logged yet.</p>}
 
       {Array.from(groupedRuns.entries()).map(([date, dayRuns]) => (
-        <div key={date}>
+        <div key={date} className="stack">
           <h3>{date}</h3>
-          <table style={{ marginBottom: '24px' }}>
+          <table className="datatable">
             <tbody>
               {dayRuns.map((run) => (
                 <tr key={run.id}>

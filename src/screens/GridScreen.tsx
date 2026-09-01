@@ -131,7 +131,7 @@ export default function GridScreen() {
       </p>
       <ErrorBanner message={error} />
 
-      <table>
+      <table className="datatable">
         <thead>
           <tr>
             <th>Character</th>
@@ -153,9 +153,9 @@ export default function GridScreen() {
         </thead>
         <tbody>
           {characters.map((c) => (
-            <tr key={c.id} style={{ opacity: c.is_active !== false ? 1 : 0.5 }}>
+            <tr key={c.id} className={c.is_active === false ? 'is-parked' : undefined}>
               <th scope="row">
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div className="row-actions">
                   <input
                     type="checkbox"
                     checked={c.is_active !== false}
@@ -166,13 +166,12 @@ export default function GridScreen() {
                     aria-label={`${c.name} name`}
                     defaultValue={c.name}
                     onBlur={(e) => void rename(c, e.target.value)}
-                    style={{ width: '120px' }}
+                    className="name-field"
                     disabled={c.is_active === false}
                   />
                   <Button variant="outline"
                     aria-label={`Delete ${c.name}`}
                     onClick={() => void remove(c)}
-                    style={{ padding: '4px 8px' }}
                   >
                     ×
                   </Button>
@@ -239,7 +238,6 @@ export default function GridScreen() {
         <Button
           disabled={busy || draft.trim() === ''}
           onClick={() => void addCharacter()}
-          style={{ width: 'auto' }}
         >
           Add character
         </Button>

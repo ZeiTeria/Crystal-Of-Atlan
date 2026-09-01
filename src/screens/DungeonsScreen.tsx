@@ -123,7 +123,7 @@ export default function DungeonsScreen() {
 
       {dungeons.length === 0 && <p className="muted">No dungeons in the catalogue yet.</p>}
 
-      <table>
+      <table className="datatable">
         <thead>
           <tr>
             <th>Name</th>
@@ -237,7 +237,6 @@ export default function DungeonsScreen() {
                     aria-label={`Move ${d.name} up`}
                     disabled={busy || index === 0}
                     onClick={() => void moveDungeon(index, -1)}
-                    style={{ padding: '4px 8px' }}
                   >
                     ↑
                   </Button>
@@ -245,7 +244,6 @@ export default function DungeonsScreen() {
                     aria-label={`Move ${d.name} down`}
                     disabled={busy || index === dungeons.length - 1}
                     onClick={() => void moveDungeon(index, 1)}
-                    style={{ padding: '4px 8px' }}
                   >
                     ↓
                   </Button>
