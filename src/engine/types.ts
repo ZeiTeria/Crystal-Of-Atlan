@@ -18,6 +18,10 @@ export interface Dungeon {
   questCoverage: boolean;
   /** Gold for a single run at each difficulty. Whole gold, no decimals. */
   gold: Record<PaidTier, number>;
+  /** The fallback tier a character has if they don't have an explicit entry in the grid. */
+  default_tier: Tier;
+  /** The fallback min runs a character has if they don't have an explicit entry in the grid. */
+  default_min_runs: number;
 }
 
 export interface Character {
@@ -47,6 +51,13 @@ export interface PlanInput {
   characterAttemptsLeft: Record<string, Record<string, number>>;
   /** characterId -> gold still earnable before hitting the weekly cap. */
   goldHeadroom: Record<string, number>;
+  /** The settings used to derive this input (for display purposes). */
+  settings: {
+    goldCap: number;
+    goldResetWeekday: number;
+    resetHour: number;
+    timeZone: string;
+  };
 }
 
 export interface PlanAssignment {

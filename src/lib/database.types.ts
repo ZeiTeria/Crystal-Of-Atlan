@@ -82,6 +82,7 @@ export interface Database {
           name: string;
           class: string | null;
           sort_order: number;
+          is_active: boolean;
         };
         Insert: {
           id?: string;
@@ -89,6 +90,7 @@ export interface Database {
           name: string;
           class?: string | null;
           sort_order?: number;
+          is_active?: boolean;
         };
         Update: {
           id?: string;
@@ -96,6 +98,7 @@ export interface Database {
           name?: string;
           class?: string | null;
           sort_order?: number;
+          is_active?: boolean;
         };
         Relationships: [];
       };
@@ -113,6 +116,8 @@ export interface Database {
           gold_legend: number;
           sort_order: number;
           is_active: boolean;
+          default_tier: 'none' | 'solo' | 'story' | 'elite' | 'legend';
+          default_min_runs: number;
         };
         Insert: {
           id?: string;
@@ -127,6 +132,8 @@ export interface Database {
           gold_legend?: number;
           sort_order?: number;
           is_active?: boolean;
+          default_tier?: 'none' | 'solo' | 'story' | 'elite' | 'legend';
+          default_min_runs?: number;
         };
         Update: {
           id?: string;
@@ -141,6 +148,8 @@ export interface Database {
           gold_legend?: number;
           sort_order?: number;
           is_active?: boolean;
+          default_tier?: 'none' | 'solo' | 'story' | 'elite' | 'legend';
+          default_min_runs?: number;
         };
         Relationships: [];
       };

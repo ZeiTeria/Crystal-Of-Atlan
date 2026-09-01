@@ -1,0 +1,1 @@
+ALTER TABLE public.dungeons ADD COLUMN default_tier public.tier NOT NULL DEFAULT 'elite'::public.tier;

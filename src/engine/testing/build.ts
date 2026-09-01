@@ -18,6 +18,8 @@ export function aDungeon(id: string, overrides: Partial<Dungeon> = {}): Dungeon 
     resetWeekday: 1,
     questCoverage: false,
     gold: { solo: 10, story: 20, elite: 30, legend: 40 },
+    default_tier: 'elite',
+    default_min_runs: 1,
     ...overrides,
   };
 }
@@ -49,5 +51,18 @@ export function anInput(parts: {
   const goldHeadroom = parts.goldHeadroom
     ?? Object.fromEntries(characters.map((c) => [c.id, goldCap]));
 
-  return { characters, dungeons, grid, accountAttemptsLeft, characterAttemptsLeft, goldHeadroom };
+  return {
+    characters,
+    dungeons,
+    grid,
+    accountAttemptsLeft,
+    characterAttemptsLeft,
+    goldHeadroom,
+    settings: {
+      goldCap,
+      goldResetWeekday: 1,
+      resetHour: 6,
+      timeZone: 'UTC',
+    },
+  };
 }

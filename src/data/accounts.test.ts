@@ -62,13 +62,14 @@ describe('currentGameAccountId', () => {
     fakeSupabase.from
       .mockImplementationOnce(() => selectChain([])) // nobody has an account yet
       .mockImplementationOnce(() => insertChain('newer-id')) // this caller's own insert
+      .mockImplementationOnce(() => ({ insert: vi.fn(() => Promise.resolve({ error: null })) })) // characters insert
       .mockImplementationOnce(() => selectChain([{ id: 'older-id' }])); // re-read: the other caller's insert landed first
     fakeSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
 
     const id = await currentGameAccountId();
 
     expect(id).toBe('older-id');
-    expect(fakeSupabase.from).toHaveBeenCalledTimes(3);
+    expect(fakeSupabase.from).toHaveBeenCalledTimes(4);
   });
 
   it('throws when no user is signed in and no account exists', async () => {

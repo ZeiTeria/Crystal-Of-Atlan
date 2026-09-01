@@ -31,7 +31,9 @@ function toSettings(row: Row<'app_settings'>): Settings {
  * not this module's.
  */
 export function buildPlanInput(rows: PlanRows, now: Date): PlanInput {
-  const characters: Character[] = rows.characters.map((c) => ({ id: c.id, name: c.name }));
+  const characters: Character[] = rows.characters
+    .filter((c) => c.is_active !== false)
+    .map((c) => ({ id: c.id, name: c.name }));
 
   // An inactive dungeon is retired from planning, so it must not appear in the
   // catalogue, the grid, or any counter derived from them.
@@ -50,24 +52,35 @@ export function buildPlanInput(rows: PlanRows, now: Date): PlanInput {
         elite: d.gold_elite,
         legend: d.gold_legend,
       },
+      default_tier: d.default_tier,
+      default_min_runs: d.default_min_runs,
     }));
 
-  const characterIds = new Set(characters.map((c) => c.id));
-  const dungeonIds = new Set(dungeons.map((d) => d.id));
-
-  // tier `none` is "not unlocked", not "unlocked at zero gold": the pair cannot
-  // be run at all, so it is dropped rather than carried as a zero-value option.
-  const grid: GridEntry[] = rows.grid
-    .filter(
-      (g) =>
-        g.tier !== 'none' && characterIds.has(g.character_id) && dungeonIds.has(g.dungeon_id),
-    )
-    .map((g) => ({
-      characterId: g.character_id,
-      dungeonId: g.dungeon_id,
+  // Merge explicit grid rows over the dungeons' default tiers.
+  const explicitGrid = new Map<string, Pick<GridEntry, 'tier' | 'minRuns'>>();
+  for (const g of rows.grid) {
+    explicitGrid.set(`${g.character_id}|${g.dungeon_id}`, {
       tier: g.tier,
       minRuns: g.min_runs,
-    }));
+    });
+  }
+
+  const grid: GridEntry[] = [];
+  for (const character of characters) {
+    for (const dungeon of dungeons) {
+      const explicit = explicitGrid.get(`${character.id}|${dungeon.id}`);
+      const tier = explicit?.tier ?? dungeon.default_tier;
+      // tier `none` means not unlocked; the pair is dropped entirely
+      if (tier !== 'none') {
+        grid.push({
+          characterId: character.id,
+          dungeonId: dungeon.id,
+          tier,
+          minRuns: explicit?.minRuns ?? dungeon.default_min_runs,
+        });
+      }
+    }
+  }
 
   const runs: Run[] = rows.runs.map((r) => ({
     characterId: r.character_id,
@@ -76,12 +89,13 @@ export function buildPlanInput(rows: PlanRows, now: Date): PlanInput {
     goldEarned: r.gold_earned,
   }));
 
+  const settings = toSettings(rows.settings);
   return derivePlanInput({
     characters,
     dungeons,
     grid,
     runs,
-    settings: toSettings(rows.settings),
+    settings,
     now,
   });
 }

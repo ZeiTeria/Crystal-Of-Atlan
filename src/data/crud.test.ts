@@ -158,6 +158,8 @@ describe.skipIf(catalogueSkip)(
         gold_elite: 30,
         gold_legend: 40,
         is_active: true,
+        default_tier: 'elite',
+        default_min_runs: 1,
       });
       dungeonId = created.id;
       expect(created.reset_weekday).toBe(4);
@@ -220,7 +222,9 @@ describe.skipIf(ownerSkip)(
           gold_elite: 30,
           gold_legend: 40,
           is_active: true,
-        });
+        default_tier: 'elite',
+        default_min_runs: 1,
+      });
         ownDungeonId = created.id;
         dungeon = created;
       } else {

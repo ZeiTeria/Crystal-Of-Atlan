@@ -18,7 +18,7 @@ const SETTINGS: Row<'app_settings'> = {
 };
 
 function aCharacterRow(id: string): Row<'characters'> {
-  return { id, game_account_id: 'acc', name: id.toUpperCase(), class: null, sort_order: 0 };
+  return { id, game_account_id: 'acc', name: id.toUpperCase(), class: null, sort_order: 0, is_active: true };
 }
 
 function aDungeonRow(id: string, overrides: Partial<Row<'dungeons'>> = {}): Row<'dungeons'> {
@@ -35,6 +35,8 @@ function aDungeonRow(id: string, overrides: Partial<Row<'dungeons'>> = {}): Row<
     gold_legend: 40,
     sort_order: 0,
     is_active: true,
+    default_tier: 'elite',
+    default_min_runs: 1,
     ...overrides,
   };
 }
@@ -155,6 +157,8 @@ describe('buildPlanInput', () => {
         resetWeekday: 4,
         questCoverage: true,
         gold: { solo: 1, story: 2, elite: 3, legend: 4 },
+        default_tier: 'elite',
+        default_min_runs: 1,
       },
     ]);
   });
@@ -206,8 +210,8 @@ describe('buildPlanInput', () => {
     const input = buildPlanInput(
       rows({
         characters: [aCharacterRow('c1'), aCharacterRow('c2')],
-        dungeons: [aDungeonRow('d1')],
-        grid: [aGridRow('c1', 'd1')],
+        dungeons: [aDungeonRow('d1', { default_tier: 'none' })],
+        grid: [{ character_id: 'c1', dungeon_id: 'd1', tier: 'legend', min_runs: 0 }],
       }),
       NOW,
     );

@@ -1,3 +1,4 @@
+import type { Tier } from '../engine/types';
 import type { Database } from '../lib/database.types';
 import { supabase } from '../lib/supabase';
 
@@ -15,6 +16,8 @@ export interface NewDungeon {
   gold_elite: number;
   gold_legend: number;
   is_active: boolean;
+  default_tier: Tier;
+  default_min_runs: number;
 }
 
 export async function listDungeons(): Promise<DungeonRow[]> {
@@ -33,7 +36,7 @@ export async function createDungeon(input: NewDungeon): Promise<DungeonRow> {
   return data;
 }
 
-export async function updateDungeon(id: string, patch: Partial<NewDungeon>): Promise<void> {
+export async function updateDungeon(id: string, patch: Partial<DungeonRow>): Promise<void> {
   const { error } = await supabase.from('dungeons').update(patch).eq('id', id);
   if (error) throw error;
 }

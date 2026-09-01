@@ -38,8 +38,18 @@ export async function currentGameAccountId(): Promise<string> {
     .single();
   if (created.error) throw created.error;
 
+  const newId = created.data.id;
+  await supabase.from('characters').insert([
+    { game_account_id: newId, name: 'Character 1', sort_order: 1 },
+    { game_account_id: newId, name: 'Character 2', sort_order: 2 },
+    { game_account_id: newId, name: 'Character 3', sort_order: 3 },
+    { game_account_id: newId, name: 'Character 4', sort_order: 4 },
+    { game_account_id: newId, name: 'Character 5', sort_order: 5 },
+    { game_account_id: newId, name: 'Character 6', sort_order: 6 },
+  ]);
+
   /*
-   * Re-read the oldest row instead of returning `created.data.id` here. This
+   * Re-read the oldest row instead of returning `newId` here. This
    * function reads-then-creates, and two callers can both pass the empty
    * select above before either insert lands: React `<StrictMode>`
    * double-invokes the mount effect in dev, and two browser tabs do it in
@@ -88,6 +98,11 @@ export async function createCharacter(
 
 export async function renameCharacter(id: string, name: string): Promise<void> {
   const { error } = await supabase.from('characters').update({ name }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function toggleCharacterActive(id: string, is_active: boolean): Promise<void> {
+  const { error } = await supabase.from('characters').update({ is_active }).eq('id', id);
   if (error) throw error;
 }
 

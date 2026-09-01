@@ -91,5 +91,18 @@ export function derivePlanInput(args: {
     characters.map((c) => [c.id, Math.max(0, settings.goldCap - (goldUsed[c.id] ?? 0))]),
   );
 
-  return { characters, dungeons, grid, accountAttemptsLeft, characterAttemptsLeft, goldHeadroom };
+  return {
+    characters,
+    dungeons,
+    grid,
+    accountAttemptsLeft,
+    characterAttemptsLeft,
+    goldHeadroom,
+    settings: {
+      goldCap: settings.goldCap,
+      goldResetWeekday: settings.goldResetWeekday,
+      resetHour: settings.resetHour,
+      timeZone: settings.timeZone,
+    },
+  };
 }
