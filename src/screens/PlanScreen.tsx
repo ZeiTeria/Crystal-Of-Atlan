@@ -61,17 +61,21 @@ function Countdown({ settings }: { settings: PlanInput['settings'] }) {
  * exactly what elite pays and nothing about legend, and a character running it
  * at elite has a figure that is simply correct. Flagging the whole dungeon
  * marked those cells too, which trains the eye to ignore the mark.
+ *
+ * It points at @zteria rather than the Dungeons tab because the catalogue is
+ * admin-only: telling a player to edit a screen they cannot open is worse than
+ * saying nothing.
  */
 function goldWarning(
   dungeon: { name: string; goldEstimated: PaidTier[]; goldUnknown: boolean },
   tier: Tier | undefined,
 ): string | null {
   if (dungeon.goldUnknown) {
-    return `${dungeon.name} has no gold figures at all, so this plan cannot weigh it against anything else. Enter its gold per difficulty on the Dungeons tab.`;
+    return `${dungeon.name} has no gold figures at all, so this plan cannot weigh it against anything else. Contact @zteria on Discord to get it filled in.`;
   }
   if (!tier || tier === 'none') return null;
   if (!dungeon.goldEstimated.includes(tier)) return null;
-  return `${dungeon.name} has no gold figure for ${tier}. Another difficulty's figure is standing in, so this row is an estimate. Enter it on the Dungeons tab.`;
+  return `${dungeon.name} has no gold figure for ${tier}. Another difficulty's figure is standing in, so this row is an estimate. Contact @zteria on Discord to get it filled in.`;
 }
 
 interface Solved {
@@ -214,24 +218,6 @@ export default function PlanScreen() {
             <span className="muted">Newest dungeon first, matching the Grid.</span>
           </div>
 
-          <h3>Weekly Gold Progress</h3>
-          <ul className="goldlist">
-            {input.characters.map((c) => {
-              const cap = input.settings.goldCap;
-              const headroom = input.goldHeadroom[c.id] ?? cap;
-              const earned = cap - headroom;
-              const isCapped = earned >= cap;
-              return (
-                <li key={c.id}>
-                  <strong>{c.name}</strong>: <span className="num">{gold(earned)}</span> /{' '}
-                  <span className="num">{gold(cap)}</span>{' '}
-                  {isCapped && <span className="warning-text">(Capped!)</span>}
-                  <Meter value={earned} max={cap} tone={isCapped ? 'warn' : 'accent'} />
-                </li>
-              );
-            })}
-          </ul>
-
           {isPhone ? (
             <>
               <CharacterPicker
@@ -321,7 +307,26 @@ export default function PlanScreen() {
               <tbody>
                 {input.characters.map((c) => (
                   <tr key={c.id}>
-                    <th scope="row">{c.name}</th>
+                    <th scope="row">
+                      <span className="who-name">{c.name}</span>
+                      {(() => {
+                        // Gold sits with the name rather than in a list above the
+                        // table: it is a property of the character, and the row
+                        // header is the one place already carrying those.
+                        const cap = input.settings.goldCap;
+                        const earned = cap - (input.goldHeadroom[c.id] ?? cap);
+                        const capped = earned >= cap;
+                        return (
+                          <>
+                            <span className={capped ? 'who-gold num warning-text' : 'who-gold num'}>
+                              {gold(earned)} / {gold(cap)}
+                              {capped ? ' · capped' : ''}
+                            </span>
+                            <Meter value={earned} max={cap} tone={capped ? 'warn' : 'accent'} />
+                          </>
+                        );
+                      })()}
+                    </th>
                     {columns.map((d) => {
                       const assignment = result.assignments.find(
                         (a) => a.characterId === c.id && a.dungeonId === d.id,

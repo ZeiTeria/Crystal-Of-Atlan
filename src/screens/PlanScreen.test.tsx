@@ -322,7 +322,11 @@ describe('PlanScreen gold that is standing in', () => {
     );
     render(<PlanScreen />);
     const dot = await screen.findByRole('button', { name: /has no gold figure for elite/i });
-    expect(dot.getAttribute('title')).toMatch(/dungeons tab/i);
+    // The catalogue is admin-only, so a player is pointed at whoever can edit it
+    // rather than at a screen they cannot open.
+    expect(dot.getAttribute('aria-label')).toMatch(/@zteria/i);
+    // No native tooltip: it would say the same thing twice, in two places.
+    expect(dot.getAttribute('title')).toBe(null);
   });
 
   it('marks a dungeon with no figures at all, whatever the difficulty', async () => {
@@ -342,6 +346,7 @@ describe('PlanScreen gold that is standing in', () => {
 
     fireEvent.click(dot);
     expect(screen.getByRole('dialog')).toBeDefined();
+    expect(screen.getByRole('dialog').textContent).toMatch(/@zteria/i);
 
     fireEvent.keyDown(document, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).toBe(null));
@@ -352,5 +357,39 @@ describe('PlanScreen gold that is standing in', () => {
     await screen.findAllByText('Mage');
     expect(screen.queryAllByRole('dialog')).toHaveLength(0);
     expect(screen.queryAllByRole('button', { name: /gold/i })).toHaveLength(0);
+  });
+});
+
+describe('PlanScreen explanation on hover', () => {
+  it('opens on pointing at it, and closes again on leaving', async () => {
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
+    );
+    render(<PlanScreen />);
+    const dot = await screen.findByRole('button', { name: /no gold figures at all/i });
+    const wrap = dot.parentElement as HTMLElement;
+
+    fireEvent.mouseEnter(wrap);
+    expect(screen.getByRole('dialog')).toBeDefined();
+
+    fireEvent.mouseLeave(wrap);
+    expect(screen.queryByRole('dialog')).toBe(null);
+  });
+
+  it('stays open after a click, so it survives the pointer leaving', async () => {
+    // Which is what makes it usable on a touch screen, where there is no hover
+    // to keep it open in the first place.
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
+    );
+    render(<PlanScreen />);
+    const dot = await screen.findByRole('button', { name: /no gold figures at all/i });
+    const wrap = dot.parentElement as HTMLElement;
+
+    fireEvent.mouseEnter(wrap);
+    fireEvent.click(dot);
+    fireEvent.mouseLeave(wrap);
+
+    expect(screen.getByRole('dialog')).toBeDefined();
   });
 });
