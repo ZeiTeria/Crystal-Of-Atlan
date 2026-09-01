@@ -253,7 +253,8 @@ export default function GridScreen() {
           )}
         </>
       ) : (
-      <table className="datatable">
+      <div className="datatable-scroll matrix-scroll grid-scroll">
+      <table className="datatable matrix">
         <thead>
           <tr className="groupband">
             <th />
@@ -376,6 +377,7 @@ export default function GridScreen() {
           ))}
         </tbody>
       </table>
+      </div>
       )}
 
       <h3>Add a character</h3>

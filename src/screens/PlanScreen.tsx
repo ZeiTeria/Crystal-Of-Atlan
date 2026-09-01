@@ -275,8 +275,8 @@ export default function PlanScreen() {
               )}
             </>
           ) : (
-          <div className="datatable-scroll plan-scroll">
-            <table className="datatable plan-matrix">
+          <div className="datatable-scroll plan-scroll matrix-scroll">
+            <table className="datatable matrix plan-matrix">
               <thead>
                 <tr className="groupband">
                   <th />
