@@ -1,5 +1,6 @@
 import type { Database } from '../lib/database.types';
 import { supabase } from '../lib/supabase';
+import { nextSortOrder } from './sortOrder';
 
 export type CharacterRow = Database['public']['Tables']['characters']['Row'];
 
@@ -39,14 +40,15 @@ export async function currentGameAccountId(): Promise<string> {
   if (created.error) throw created.error;
 
   const newId = created.data.id;
-  await supabase.from('characters').insert([
-    { game_account_id: newId, name: 'Character 1', sort_order: 1 },
-    { game_account_id: newId, name: 'Character 2', sort_order: 2 },
-    { game_account_id: newId, name: 'Character 3', sort_order: 3 },
-    { game_account_id: newId, name: 'Character 4', sort_order: 4 },
-    { game_account_id: newId, name: 'Character 5', sort_order: 5 },
-    { game_account_id: newId, name: 'Character 6', sort_order: 6 },
-  ]);
+  // Slots 10 apart, matching nextSortOrder and the reorder's (i + 1) * 10, so
+  // seeded and later-added characters share one spacing scheme.
+  await supabase.from('characters').insert(
+    [1, 2, 3, 4, 5, 6].map((n) => ({
+      game_account_id: newId,
+      name: `Character ${n}`,
+      sort_order: n * 10,
+    })),
+  );
 
   /*
    * Re-read the oldest row instead of returning `newId` here. This
@@ -77,8 +79,10 @@ export async function listCharacters(gameAccountId: string): Promise<CharacterRo
     .from('characters')
     .select('*')
     .eq('game_account_id', gameAccountId)
-    .order('sort_order')
-    .order('name');
+    // sort_order only. A name tiebreak here is what made characters come out
+    // alphabetical whenever their slots collided which - before nextSortOrder -
+    // was always, since the column defaults to 0 and nothing set it.
+    .order('sort_order');
   if (error) throw error;
   return data;
 }
@@ -87,9 +91,10 @@ export async function createCharacter(
   gameAccountId: string,
   name: string,
 ): Promise<CharacterRow> {
+  const existing = await listCharacters(gameAccountId);
   const { data, error } = await supabase
     .from('characters')
-    .insert({ game_account_id: gameAccountId, name })
+    .insert({ game_account_id: gameAccountId, name, sort_order: nextSortOrder(existing) })
     .select()
     .single();
   if (error) throw error;

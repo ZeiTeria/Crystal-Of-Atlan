@@ -1,6 +1,7 @@
 import type { Tier } from '../engine/types';
 import type { Database } from '../lib/database.types';
 import { supabase } from '../lib/supabase';
+import { nextSortOrder } from './sortOrder';
 
 export type DungeonRow = Database['public']['Tables']['dungeons']['Row'];
 
@@ -31,7 +32,14 @@ export async function listDungeons(): Promise<DungeonRow[]> {
 }
 
 export async function createDungeon(input: NewDungeon): Promise<DungeonRow> {
-  const { data, error } = await supabase.from('dungeons').insert(input).select().single();
+  // Read the current slots first: the column defaults to 0, so without this a
+  // new dungeon sorts above every existing one instead of appending.
+  const existing = await listDungeons();
+  const { data, error } = await supabase
+    .from('dungeons')
+    .insert({ ...input, sort_order: nextSortOrder(existing) })
+    .select()
+    .single();
   if (error) throw error;
   return data;
 }
