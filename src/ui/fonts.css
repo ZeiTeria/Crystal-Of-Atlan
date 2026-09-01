@@ -1,0 +1,21 @@
+/*
+ * SUITE by SUNN, SIL Open Font License 1.1 - the typeface the official
+ * Crystal of Atlan site uses. Shipped UNMODIFIED: it carries a Reserved Font
+ * Name, so a Latin subset would be a modified version that may not use the
+ * name. 275 KB, cached after the first load, and no external request.
+ */
+@font-face {
+  font-family: 'SUITE';
+  src: url('../assets/fonts/SUITE-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SUITE';
+  src: url('../assets/fonts/SUITE-Heavy.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
