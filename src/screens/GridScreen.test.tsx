@@ -4,13 +4,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import GridScreen from './GridScreen';
 import { listGrid, setGridCell } from '../data/grid';
 import { listDungeons } from '../data/dungeons';
-import { currentGameAccountId, listCharacters } from '../data/accounts';
+import {
+  createCharacter,
+  currentGameAccountId,
+  deleteCharacter,
+  listCharacters,
+  renameCharacter,
+  toggleCharacterActive,
+  type CharacterRow,
+} from '../data/accounts';
 
 vi.mock('../data/grid', () => ({ listGrid: vi.fn(), setGridCell: vi.fn() }));
 vi.mock('../data/dungeons', () => ({ listDungeons: vi.fn() }));
 vi.mock('../data/accounts', () => ({
   currentGameAccountId: vi.fn(),
   listCharacters: vi.fn(),
+  createCharacter: vi.fn(),
+  renameCharacter: vi.fn(),
+  deleteCharacter: vi.fn(),
+  toggleCharacterActive: vi.fn(),
 }));
 
 afterEach(() => {
@@ -45,7 +57,20 @@ beforeEach(() => {
     { character_id: 'c1', dungeon_id: 'd1', tier: 'elite', min_runs: 2 },
   ]);
   vi.mocked(setGridCell).mockResolvedValue(undefined);
+  vi.mocked(createCharacter).mockResolvedValue({ ...character, id: 'c2', name: 'Rogue' });
+  vi.mocked(renameCharacter).mockResolvedValue(undefined);
+  vi.mocked(deleteCharacter).mockResolvedValue(undefined);
+  vi.mocked(toggleCharacterActive).mockResolvedValue(undefined);
 });
+
+/** A promise the test controls the settlement of, to catch a mid-flight state. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
 
 describe('GridScreen', () => {
   it('shows the stored tier and minimum for a pair', async () => {
@@ -82,9 +107,137 @@ describe('GridScreen', () => {
     });
   });
 
+  it('does not write a half-typed number', async () => {
+    // Typing "10" passes through "1". Writing on every keystroke saves that 1
+    // and then re-renders the cell from the refreshed value, which takes the
+    // focus out of the field the user is still typing into - so the 0 never
+    // arrives and the minimum silently ends up as 1.
+    render(<GridScreen />);
+    const min = await screen.findByLabelText('Mage minimum runs in Abyss');
+    fireEvent.change(min, { target: { value: '1' } });
+    fireEvent.change(min, { target: { value: '10' } });
+    expect(vi.mocked(setGridCell)).not.toHaveBeenCalled();
+
+    fireEvent.blur(min);
+    await waitFor(() => {
+      expect(vi.mocked(setGridCell)).toHaveBeenCalledExactlyOnceWith('c1', 'd1', { min_runs: 10 });
+    });
+  });
+
   it('says what to do when there is nothing to fill in', async () => {
     vi.mocked(listCharacters).mockResolvedValue([]);
     render(<GridScreen />);
     expect(await screen.findByText(/add a character/i)).toBeDefined();
+  });
+});
+
+// Ported from the deleted CharactersScreen suite: adding, renaming, deleting
+// and parking a character all live in the Grid's row headers now, and none of
+// it was covered after the move.
+describe('GridScreen character management', () => {
+  it('adds a character to the current account', async () => {
+    render(<GridScreen />);
+    await screen.findByDisplayValue('Mage');
+    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: 'Rogue' } });
+    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
+    await waitFor(() => {
+      expect(vi.mocked(createCharacter)).toHaveBeenCalledWith('acc', 'Rogue');
+    });
+  });
+
+  it('trims whitespace and refuses an empty name', async () => {
+    render(<GridScreen />);
+    await screen.findByDisplayValue('Mage');
+    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
+    expect(vi.mocked(createCharacter)).not.toHaveBeenCalled();
+  });
+
+  it('disables Add while the trimmed draft is empty', async () => {
+    render(<GridScreen />);
+    await screen.findByDisplayValue('Mage');
+    const addButton = screen.getByRole('button', { name: /add character/i }) as HTMLButtonElement;
+    expect(addButton.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: '   ' } });
+    expect(addButton.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: 'Rogue' } });
+    expect(addButton.disabled).toBe(false);
+  });
+
+  it('disables Add immediately and creates only once when clicked twice before the create settles', async () => {
+    const gate = deferred<CharacterRow>();
+    vi.mocked(createCharacter).mockReturnValue(gate.promise);
+    render(<GridScreen />);
+    await screen.findByDisplayValue('Mage');
+    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: 'Rogue' } });
+    const addButton = screen.getByRole('button', { name: /add character/i }) as HTMLButtonElement;
+
+    fireEvent.click(addButton);
+    expect(addButton.disabled).toBe(true);
+    fireEvent.click(addButton); // a disabled button must not fire a second createCharacter
+
+    gate.resolve({ ...character, id: 'c2', name: 'Rogue' });
+    await waitFor(() => {
+      expect(vi.mocked(createCharacter)).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('renames on blur', async () => {
+    render(<GridScreen />);
+    const field = await screen.findByDisplayValue('Mage');
+    fireEvent.change(field, { target: { value: 'Archmage' } });
+    fireEvent.blur(field);
+    await waitFor(() => {
+      expect(vi.mocked(renameCharacter)).toHaveBeenCalledWith('c1', 'Archmage');
+    });
+  });
+
+  it('does not rename when the name comes back unchanged', async () => {
+    render(<GridScreen />);
+    const field = await screen.findByDisplayValue('Mage');
+    fireEvent.blur(field);
+    expect(vi.mocked(renameCharacter)).not.toHaveBeenCalled();
+  });
+
+  it('warns that deleting a character takes its runs with it', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<GridScreen />);
+    await screen.findByDisplayValue('Mage');
+    fireEvent.click(screen.getByRole('button', { name: /delete mage/i }));
+    expect(confirmSpy.mock.calls[0]?.[0]).toMatch(/runs/i);
+    await waitFor(() => {
+      expect(vi.mocked(deleteCharacter)).toHaveBeenCalledWith('c1');
+    });
+    confirmSpy.mockRestore();
+  });
+
+  it('keeps the character when the delete is not confirmed', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<GridScreen />);
+    await screen.findByDisplayValue('Mage');
+    fireEvent.click(screen.getByRole('button', { name: /delete mage/i }));
+    expect(vi.mocked(deleteCharacter)).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('parks a character without deleting it', async () => {
+    render(<GridScreen />);
+    const include = await screen.findByLabelText('Include Mage in plan');
+    fireEvent.click(include);
+    await waitFor(() => {
+      expect(vi.mocked(toggleCharacterActive)).toHaveBeenCalledWith('c1', false);
+    });
+    expect(vi.mocked(deleteCharacter)).not.toHaveBeenCalled();
+  });
+
+  it("locks a parked character's row rather than hiding it", async () => {
+    vi.mocked(listCharacters).mockResolvedValue([{ ...character, is_active: false }]);
+    render(<GridScreen />);
+    const tier = (await screen.findByLabelText('Mage tier in Abyss')) as HTMLSelectElement;
+    expect(tier.disabled).toBe(true);
+    const min = screen.getByLabelText('Mage minimum runs in Abyss') as HTMLInputElement;
+    expect(min.disabled).toBe(true);
   });
 });

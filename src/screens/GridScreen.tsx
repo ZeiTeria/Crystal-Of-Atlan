@@ -124,7 +124,7 @@ export default function GridScreen() {
       <h2>Grid</h2>
       <p className="muted">
         Tier is what that character has unlocked; <strong>none</strong> means it cannot enter.
-        Minimum runs is a hard floor - the planner refuses a plan that cannot meet it, rather
+        Minimum runs is a hard floor — the planner refuses a plan that cannot meet it, rather
         than quietly dropping it.
       </p>
       {error && <div className="error-message">Error: {error}</div>}
@@ -209,7 +209,11 @@ export default function GridScreen() {
                       max={maxAllowed}
                       aria-label={`${c.name} minimum runs in ${d.name}`}
                       defaultValue={minRuns}
-                      onChange={(e) => {
+                      // On blur, not on change: a write here refreshes the
+                      // grid, which remounts this input on its `key` and takes
+                      // the focus with it, so writing per keystroke loses every
+                      // digit after the first.
+                      onBlur={(e) => {
                         const next = Number(e.target.value);
                         if (next !== minRuns) void write(c.id, d.id, { min_runs: next });
                       }}
