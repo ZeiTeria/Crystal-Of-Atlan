@@ -11,6 +11,7 @@ import {
   listCharacters,
   renameCharacter,
   toggleCharacterActive,
+  setCharacterOrder,
   type CharacterRow,
 } from '../data/accounts';
 
@@ -23,6 +24,7 @@ vi.mock('../data/accounts', () => ({
   renameCharacter: vi.fn(),
   deleteCharacter: vi.fn(),
   toggleCharacterActive: vi.fn(),
+  setCharacterOrder: vi.fn(),
 }));
 
 afterEach(() => {
@@ -63,6 +65,7 @@ beforeEach(() => {
   vi.mocked(renameCharacter).mockResolvedValue(undefined);
   vi.mocked(deleteCharacter).mockResolvedValue(undefined);
   vi.mocked(toggleCharacterActive).mockResolvedValue(undefined);
+  vi.mocked(setCharacterOrder).mockResolvedValue(undefined);
 });
 
 /** A promise the test controls the settlement of, to catch a mid-flight state. */
@@ -380,5 +383,38 @@ describe('GridScreen copy from another character', () => {
     render(<GridScreen />);
     await screen.findByLabelText('Mage tier in Abyss');
     expect(screen.queryByLabelText('Copy grid onto Mage from')).toBe(null);
+  });
+});
+
+describe('GridScreen character reordering', () => {
+  const rogue = { ...character, id: 'c2', name: 'Rogue', sort_order: 20 };
+
+  it('writes the whole list 10 apart after a keyboard reorder', async () => {
+    vi.mocked(listCharacters).mockResolvedValue([character, rogue]);
+    render(<GridScreen />);
+    const grip = await screen.findByRole('button', { name: /reorder mage/i });
+
+    fireEvent.keyDown(grip, { key: ' ' });
+    fireEvent.keyDown(grip, { key: 'ArrowDown' });
+    fireEvent.keyDown(grip, { key: ' ' });
+
+    await waitFor(() => {
+      expect(vi.mocked(setCharacterOrder)).toHaveBeenCalledWith([
+        { id: 'c2', sort_order: 10 },
+        { id: 'c1', sort_order: 20 },
+      ]);
+    });
+  });
+
+  it('writes nothing when a reorder is cancelled', async () => {
+    vi.mocked(listCharacters).mockResolvedValue([character, rogue]);
+    render(<GridScreen />);
+    const grip = await screen.findByRole('button', { name: /reorder mage/i });
+
+    fireEvent.keyDown(grip, { key: ' ' });
+    fireEvent.keyDown(grip, { key: 'ArrowDown' });
+    fireEvent.keyDown(grip, { key: 'Escape' });
+
+    expect(vi.mocked(setCharacterOrder)).not.toHaveBeenCalled();
   });
 });

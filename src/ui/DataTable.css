@@ -184,3 +184,41 @@
     visibility: visible;
   }
 }
+
+/*
+ * The drag grip. `touch-action: none` is the load-bearing line: without it a
+ * drag on a phone fights the page's own scroll gesture. It is set on the grip
+ * ALONE, so grabbing anywhere else on the row still scrolls normally - which is
+ * the whole reason reordering is by handle rather than by whole row.
+ */
+.grip {
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 32px;
+  border-radius: var(--r-control);
+  color: var(--text-faint);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.grip:hover {
+  color: var(--text);
+  background: var(--accent-wash);
+}
+
+.grip[aria-pressed='true'] {
+  color: var(--accent-ink);
+  background: var(--accent);
+  cursor: grabbing;
+}
+
+/* The row being dragged or lifted, so it is obvious which one is moving. */
+.datatable tbody tr.sorting td,
+.datatable tbody tr.sorting th {
+  background: var(--accent-wash);
+}

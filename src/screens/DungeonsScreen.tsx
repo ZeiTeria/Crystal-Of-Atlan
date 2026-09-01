@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '../hooks/useMutation';
 import Button from '../ui/Button';
+import { sortOrderPatches } from '../ui/reorder';
+import { useSortableList } from '../ui/useSortableList';
 import {
   createDungeon,
   deleteDungeon,
@@ -66,6 +68,13 @@ export default function DungeonsScreen() {
     void refresh().finally(() => setLoading(false));
   }, [refresh]);
 
+  const { order, activeId, handleProps } = useSortableList({
+    ids: dungeons.map((d) => d.id),
+    onReorder: (ids) => void commitOrder(ids),
+  });
+  const byId = new Map(dungeons.map((d) => [d.id, d]));
+  const ordered = order.map((id) => byId.get(id)).filter((d) => d !== undefined);
+
   /** Edits are written on blur, so a half-typed number never reaches the database. */
   async function save(id: string, patch: Partial<NewDungeon>) {
     await mutate(async () => {
@@ -93,24 +102,19 @@ export default function DungeonsScreen() {
     });
   }
 
-  async function moveDungeon(index: number, direction: -1 | 1) {
-    const swapIndex = index + direction;
-    if (swapIndex < 0 || swapIndex >= dungeons.length) return;
-
-    // Supabase has no bulk update out-of-the-box in the JS client without RPC.
-    // However, updating two rows is fine.
-    // If we want to guarantee order, we could rewrite the entire array's sort_order:
-    const newOrders = dungeons.map((d, i) => ({ id: d.id, sort_order: (i + 1) * 10 }));
-    
-    // Swap the two targeted rows
-    const temp = newOrders[index]!.sort_order;
-    newOrders[index]!.sort_order = newOrders[swapIndex]!.sort_order;
-    newOrders[swapIndex]!.sort_order = temp;
-
+  /**
+   * Rewrites every row's sort_order rather than swapping a pair: a swap leaves
+   * the rest of the list unevenly spaced and the gaps eventually close.
+   *
+   * Not transactional - Supabase's JS client has no multi-row update without an
+   * RPC - so an interrupted reorder can leave the list half-renumbered. That is
+   * recoverable by reordering again, which is why it is acceptable here; it
+   * would not be for anything that has to balance.
+   */
+  async function commitOrder(orderedIds: string[]) {
     await mutate(async () => {
-      // Just fire them all off.
       await Promise.all(
-        newOrders.map((d) => updateDungeon(d.id, { sort_order: d.sort_order }))
+        sortOrderPatches(orderedIds).map((p) => updateDungeon(p.id, { sort_order: p.sort_order })),
       );
     });
   }
@@ -143,8 +147,12 @@ export default function DungeonsScreen() {
           </tr>
         </thead>
         <tbody>
-          {dungeons.map((d, index) => (
-            <tr key={d.id}>
+          {ordered.map((d) => (
+            <tr
+              key={d.id}
+              data-sortable-id={d.id}
+              className={activeId === d.id ? 'sorting' : undefined}
+            >
               <td>
                 <input
                   aria-label={`${d.name} name`}
@@ -254,20 +262,7 @@ export default function DungeonsScreen() {
               </td>
               <td>
                 <div className="row-actions">
-                  <Button variant="outline"
-                    aria-label={`Move ${d.name} up`}
-                    disabled={busy || index === 0}
-                    onClick={() => void moveDungeon(index, -1)}
-                  >
-                    ↑
-                  </Button>
-                  <Button variant="outline"
-                    aria-label={`Move ${d.name} down`}
-                    disabled={busy || index === dungeons.length - 1}
-                    onClick={() => void moveDungeon(index, 1)}
-                  >
-                    ↓
-                  </Button>
+                  <span {...handleProps(d.id, `Reorder ${d.name}`)}>⠿</span>
                   <Button variant="outline"
                     aria-label={`Delete ${d.name}`}
                     onClick={() => void remove(d)}

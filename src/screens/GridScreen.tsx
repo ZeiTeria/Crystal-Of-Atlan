@@ -3,6 +3,8 @@ import { useMutation } from '../hooks/useMutation';
 import Meter from '../ui/Meter';
 import TierGem from '../ui/TierGem';
 import { groupSpans, matrixColumns } from './columns';
+import { sortOrderPatches } from '../ui/reorder';
+import { useSortableList } from '../ui/useSortableList';
 import Button from '../ui/Button';
 import {
   currentGameAccountId,
@@ -11,6 +13,7 @@ import {
   deleteCharacter,
   renameCharacter,
   toggleCharacterActive,
+  setCharacterOrder,
   type CharacterRow,
 } from '../data/accounts';
 import { listDungeons, type DungeonRow } from '../data/dungeons';
@@ -47,6 +50,19 @@ export default function GridScreen() {
   useEffect(() => {
     void refresh().finally(() => setLoading(false));
   }, [refresh]);
+
+  async function commitCharacterOrder(orderedIds: string[]) {
+    await mutate(async () => {
+      await setCharacterOrder(sortOrderPatches(orderedIds));
+    });
+  }
+
+  const { order, activeId, handleProps } = useSortableList({
+    ids: characters.map((c) => c.id),
+    onReorder: (ids) => void commitCharacterOrder(ids),
+  });
+  const byId = new Map(characters.map((c) => [c.id, c]));
+  const orderedCharacters = order.map((id) => byId.get(id)).filter((c) => c !== undefined);
 
   async function addCharacter() {
     const name = draft.trim();
@@ -215,10 +231,19 @@ export default function GridScreen() {
           </tr>
         </thead>
         <tbody>
-          {characters.map((c) => (
-            <tr key={c.id} className={c.is_active === false ? 'is-parked' : undefined}>
+          {orderedCharacters.map((c) => (
+            <tr
+              key={c.id}
+              data-sortable-id={c.id}
+              className={
+                [c.is_active === false ? 'is-parked' : '', activeId === c.id ? 'sorting' : '']
+                  .filter(Boolean)
+                  .join(' ') || undefined
+              }
+            >
               <th scope="row">
                 <div className="row-actions">
+                  <span {...handleProps(c.id, `Reorder ${c.name}`)}>⠿</span>
                   <input
                     type="checkbox"
                     checked={c.is_active !== false}

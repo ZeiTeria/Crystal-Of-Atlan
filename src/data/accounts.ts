@@ -116,3 +116,22 @@ export async function deleteCharacter(id: string): Promise<void> {
   const { error } = await supabase.from('characters').delete().eq('id', id);
   if (error) throw error;
 }
+
+/**
+ * Rewrites every character's sort_order after a reorder. Not transactional -
+ * the JS client has no multi-row update without an RPC - so an interruption can
+ * leave the list half-renumbered, which is recoverable by reordering again.
+ */
+export async function setCharacterOrder(
+  patches: { id: string; sort_order: number }[],
+): Promise<void> {
+  await Promise.all(
+    patches.map(async (p) => {
+      const { error } = await supabase
+        .from('characters')
+        .update({ sort_order: p.sort_order })
+        .eq('id', p.id);
+      if (error) throw error;
+    }),
+  );
+}
