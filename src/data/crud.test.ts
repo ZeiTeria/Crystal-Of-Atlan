@@ -53,7 +53,7 @@ const OWNER_DUNGEON_NAME = 'crud-test-owner-dungeon';
 const CHARACTER_NAME = 'crud-test-character';
 
 const ADMIN_REMEDY =
-  "update public.profiles set is_admin = true\nwhere id = (select id from auth.users where email = 'rls-test-a@example.com');";
+  `update public.profiles set is_admin = true\nwhere id = (select id from auth.users where email = '${email}');`;
 
 /*
  * Signed in once for the whole file, before either `describe` is collected -
@@ -155,6 +155,7 @@ describe.skipIf(ownerSkip)(
     let ownDungeonId: string | undefined;
 
     let accountId: string;
+    let ownAccountId: string | undefined;
     let characterId: string;
 
     beforeAll(async () => {
@@ -186,7 +187,20 @@ describe.skipIf(ownerSkip)(
         dungeon = catalogueDungeon as DungeonRow;
       }
 
+      // `currentGameAccountId` returns the *oldest* existing account for this
+      // user and only creates one when none exists yet - same shape as the
+      // dungeon above. Vitest runs test files concurrently by default (no
+      // `fileParallelism`/`pool` override in this project), and `rls.test.ts`
+      // inserts its own account under this same test user, so this file must
+      // not assume the account it gets back is one it is free to delete: it
+      // may be borrowing a row that suite is still using. Check before
+      // calling, not after, so the check itself cannot race the call.
+      const priorAccounts = await supabase.from('game_accounts').select('id').limit(1);
+      if (priorAccounts.error) throw priorAccounts.error;
+      const accountExistedBefore = priorAccounts.data.length > 0;
+
       accountId = await currentGameAccountId();
+      if (!accountExistedBefore) ownAccountId = accountId;
       for (const c of await listCharacters(accountId)) {
         if (c.name === CHARACTER_NAME) await deleteCharacter(c.id);
       }
@@ -195,10 +209,11 @@ describe.skipIf(ownerSkip)(
     afterAll(async () => {
       // Deleting the character cascades its grid rows and runs.
       if (characterId) await deleteCharacter(characterId);
-      if (accountId) await supabase.from('game_accounts').delete().eq('id', accountId);
-      // Cleanup must stay honest about which case ran: a created dungeon
-      // must not leak, while a borrowed one is somebody else's (or the
-      // catalogue block's) data and must survive untouched.
+      // Cleanup must stay honest about which case ran: an account (or
+      // dungeon) this block created must not leak, while one it borrowed is
+      // somebody else's data - possibly still in use by a concurrently
+      // running suite - and must survive untouched.
+      if (ownAccountId) await supabase.from('game_accounts').delete().eq('id', ownAccountId);
       if (ownDungeonId) await deleteDungeon(ownDungeonId);
     }, NETWORK_TIMEOUT);
 
