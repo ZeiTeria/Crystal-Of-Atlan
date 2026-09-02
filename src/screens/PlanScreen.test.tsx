@@ -139,6 +139,40 @@ describe('PlanScreen', () => {
     }
   });
 
+  it('picks one character out of every card when you point at it', async () => {
+    vi.mocked(loadPlanInput).mockResolvedValue(
+      anInput({
+        characters: [
+          { id: 'c1', name: 'Mage', class: 'Magister' },
+          { id: 'c2', name: 'Rogue', class: 'Fighter' },
+        ],
+        grid: [
+          { characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0 },
+          { characterId: 'c2', dungeonId: 'd1', tier: 'elite', minRuns: 0 },
+        ],
+        characterAttemptsLeft: { c1: { d1: 3 }, c2: { d1: 3 } },
+        goldHeadroom: { c1: 1_000_000, c2: 1_000_000 },
+      }),
+    );
+    render(<PlanScreen />);
+    // The name is on the roster tile and again in the who-row; this is the tile.
+    await screen.findAllByText('Mage');
+    const tile = screen
+      .getAllByText('Mage')
+      .map((n) => n.closest('.roster-tile'))
+      .find((n) => n !== null) as HTMLElement;
+
+    fireEvent.mouseEnter(tile);
+    const dimmed = document.querySelectorAll('.slot.filled.dim');
+    expect(dimmed.length).toBeGreaterThan(0);
+    for (const slot of dimmed) {
+      expect(slot.getAttribute('data-character')).toBe('c2');
+    }
+
+    fireEvent.mouseLeave(tile);
+    expect(document.querySelectorAll('.slot.filled.dim')).toHaveLength(0);
+  });
+
   it('counts down to the coming reset, not the one after it', async () => {
     // An hour before the Monday 06:00 Asia/Singapore reset - the window where
     // deriving the boundary by looking a week-and-a-bit ahead read 7 days late.

@@ -4,7 +4,21 @@
   display: inline-flex;
 }
 
+/*
+ * Only the OPEN one is lifted, and the whole anchor is lifted rather than the
+ * popup inside it: z-index within the anchor orders it against its own
+ * children, so an open explanation painted under everything that came after it
+ * in the document. Lifting every anchor instead just moved the problem - the
+ * next row's "?" then sat on top of the popup, being later and equal.
+ */
+.infodot-wrap:has([aria-expanded='true']) {
+  z-index: 30;
+}
+
 .infodot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font: inherit;
   font-weight: 900;
   font-size: 0.625rem;
@@ -12,6 +26,7 @@
   width: 16px;
   height: 16px;
   padding: 0;
+  flex: none;
   border-radius: 50%;
   border: 1px solid var(--warn);
   background: transparent;

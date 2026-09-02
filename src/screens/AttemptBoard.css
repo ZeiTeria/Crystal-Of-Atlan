@@ -361,3 +361,21 @@
     gap: 18px;
   }
 }
+
+/* Pointing at a character on the strip picks its attempts out of every card.
+   Everything else recedes rather than disappearing: the shape of the week has
+   to stay readable, or the highlight is just a different board. */
+.roster-tile,
+.card-slots .slot,
+.who-row {
+  transition: opacity 180ms ease, background-color 180ms ease;
+}
+.roster-tile.dim {
+  opacity: .5;
+}
+.board-grid.is-picking .slot.filled.dim {
+  opacity: .18;
+}
+.who-row.dim {
+  opacity: .25;
+}

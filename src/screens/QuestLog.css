@@ -27,10 +27,33 @@
 }
 
 .roster-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 11px 22px;
   cursor: pointer;
   transition: .18s;
   opacity: 0.85;
+}
+
+.roster-item .roster-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Only worth showing on the row you are pointing at - twelve grips down the
+   side of the roster is a column of noise. */
+.roster-item .grip {
+  opacity: 0;
+  transition: opacity .15s;
+}
+.roster-item:hover .grip,
+.roster-item .grip:focus-visible {
+  opacity: 1;
+}
+
+.roster-item.is-parked {
+  opacity: 0.5;
 }
 
 .roster-item:hover {
@@ -117,6 +140,24 @@
   font-weight: 800;
   font-size: 28px;
   line-height: 1;
+  width: 100%;
+  padding: 2px 4px;
+  margin-left: -4px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  color: inherit;
+  font-family: inherit;
+}
+
+.qh-name:hover {
+  border-bottom-color: var(--line-strong);
+}
+
+.qh-name:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
 }
 
 .qh-sub {
@@ -189,7 +230,18 @@
   gap: 22px;
 }
 
-.dungeon-row.dimmed {
+/*
+ * A row the plan does not use recedes - but the fade is applied to its PARTS,
+ * never to the row. `opacity` composites the whole subtree, which took the "?"
+ * explanation down with it: an open popup came out translucent with the rows
+ * behind it showing straight through. A warning should not fade anyway.
+ */
+.dungeon-row.dimmed .d-name,
+.dungeon-row.dimmed .d-sub,
+.dungeon-row.dimmed .d-tier,
+.dungeon-row.dimmed .d-stepper,
+.dungeon-row.dimmed .d-gold,
+.dungeon-row.dimmed .gem {
   opacity: 0.55;
 }
 
@@ -344,4 +396,48 @@
 }
 .roster-add:hover {
   color: var(--accent-light);
+}
+
+/* The gem, the name and its "?" are one line, not three things touching. */
+.d-icon-col {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The tier reads as a word in its own colour; the select is only the mechanism
+   underneath it, so none of the browser's dropdown furniture shows. */
+.d-tier select {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  font: inherit;
+  font-weight: 800;
+  font-size: 11px;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+.d-tier select:disabled {
+  cursor: default;
+}
+.d-tier select:focus-visible {
+  outline: 1px solid var(--line-focus);
+}
+
+/* Park and delete sit under the gold meter, quiet until wanted. */
+.qh-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+.qh-park {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
 }

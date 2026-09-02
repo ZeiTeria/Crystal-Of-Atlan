@@ -40,6 +40,10 @@ export default function AttemptBoard({
 }: AttemptBoardProps) {
   const isPhone = useMediaQuery(PHONE);
   const [shownId, setShownId] = useState<string | null>(null);
+  // Pointing at a character picks its attempts out of every card at once,
+  // which is the only way to read "what does THIS one actually do this week"
+  // off a board sorted by dungeon.
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const { characters, accountAttemptsLeft, settings } = input;
   // Same order as the Grid and the Dungeons tab: newest dungeon first.
@@ -70,7 +74,7 @@ export default function AttemptBoard({
 
   return (
     <div className="attempt-board">
-      <div className="board-summary-strip">
+      <div className={hoveredId ? 'board-summary-strip is-picking' : 'board-summary-strip'}>
         <div className="summary-left">
           <span className="summary-label">Attempts used</span>
           <span className="summary-numbers">
@@ -99,7 +103,13 @@ export default function AttemptBoard({
             const earned = cap - (input.goldHeadroom[c.id] ?? cap);
             const capped = earned >= cap;
             return (
-              <div key={c.id} className="roster-tile">
+              <div
+                key={c.id}
+                className={hoveredId && hoveredId !== c.id ? 'roster-tile dim' : 'roster-tile'}
+                style={hoveredId === c.id ? { backgroundColor: `${hue}14` } : undefined}
+                onMouseEnter={() => setHoveredId(c.id)}
+                onMouseLeave={() => setHoveredId(null)}
+              >
                 <div className="tile-top">
                   <Portrait name={c.name} hue={hue} dim={runs === 0} />
                   <div className="tile-name-col">
@@ -166,7 +176,7 @@ export default function AttemptBoard({
         />
       )}
 
-      <div className="board-grid">
+      <div className={hoveredId ? 'board-grid is-picking' : 'board-grid'}>
         {dungeons.map((d) => {
           const mine = assignments.filter((a) => a.dungeonId === d.id);
           const used = mine.reduce((sum, a) => sum + a.runs, 0);
@@ -201,10 +211,12 @@ export default function AttemptBoard({
               <div className="card-slots">
                 {mine.flatMap((a) => {
                   const tier = tierOf.get(`${a.characterId}:${d.id}`) ?? d.default_tier;
+                  const faded = hoveredId !== null && hoveredId !== a.characterId;
                   return Array.from({ length: a.runs }, (_, i) => (
                     <span
                       key={`${a.characterId}-${i}`}
-                      className="slot filled"
+                      className={faded ? 'slot filled dim' : 'slot filled'}
+                      data-character={a.characterId}
                       title={`${names.character(a.characterId)} at ${tier}`}
                       style={{ backgroundColor: `var(--tier-${tier})` }}
                     />
@@ -223,7 +235,14 @@ export default function AttemptBoard({
                     const tier = tierOf.get(`${a.characterId}:${d.id}`) ?? d.default_tier;
                     const cellWarning = dungeonWarning ? null : goldWarning(d, tier);
                     return (
-                      <div key={a.characterId} className="who-row">
+                      <div
+                        key={a.characterId}
+                        className={
+                          hoveredId !== null && hoveredId !== a.characterId
+                            ? 'who-row dim'
+                            : 'who-row'
+                        }
+                      >
                         <DiamondDot hue={getClassHue(character?.class, character?.name)} />
                         <span className="who-name">{names.character(a.characterId)}</span>
                         <span className="who-tier" style={{ color: `var(--tier-${tier})` }}>

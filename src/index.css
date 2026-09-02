@@ -25,7 +25,6 @@
   border-radius: 0;
   font: inherit;
   color: inherit;
-  text-align: inherit;
   cursor: pointer;
 }
 :where(button:disabled) {

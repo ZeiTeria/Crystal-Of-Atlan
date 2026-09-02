@@ -42,6 +42,34 @@
   --r-control: 0px;
   --r-panel: 0px;
 
+  /*
+   * Spacing and type scale, and the few surface/ink pairs that the rest of the
+   * CSS was already written against. The redesign replaced the palette and took
+   * these with it, which left 65 `var(--...)` references across the app
+   * resolving to nothing - a `gap` of zero, a `padding` of zero, and body text
+   * falling back off the scale entirely, since index.css sizes the whole
+   * document with --step-1. Values follow the new palette, not the old one.
+   */
+  --step-0: 0.8125rem;
+  --step-1: 0.9375rem;
+  --step-2: 1.125rem;
+
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+
+  /* One step above the page, below --surface-2: the quest log's own ground. */
+  --surface-1: #0C0E12;
+  --line-faint: rgba(255, 255, 255, 0.04);
+  --row-band: rgba(255, 255, 255, 0.022);
+  /* Text ON a filled accent or warn block, not the accent colour itself. */
+  --accent-ink: #ffffff;
+  --warn-ink: #07080A;
+  /* Width of the frozen first column in the wide tables. */
+  --sticky-col: 160px;
+
   color-scheme: dark;
 }
 
