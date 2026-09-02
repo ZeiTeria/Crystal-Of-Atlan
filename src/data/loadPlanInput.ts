@@ -34,7 +34,7 @@ function toSettings(row: Row<'app_settings'>): Settings {
 export function buildPlanInput(rows: PlanRows, now: Date): PlanInput {
   const characters: Character[] = rows.characters
     .filter((c) => c.is_active !== false)
-    .map((c) => ({ id: c.id, name: c.name }));
+    .map((c) => ({ id: c.id, name: c.name, class: c.class }));
 
   // An inactive dungeon is retired from planning, so it must not appear in the
   // catalogue, the grid, or any counter derived from them.

@@ -1,0 +1,332 @@
+.quest-log-container {
+  display: flex;
+  background: var(--surface-1);
+  border: 1px solid var(--line-strong);
+  height: 760px;
+  overflow: hidden;
+}
+
+.quest-sidebar {
+  width: 264px;
+  border-right: 1px solid var(--line-strong);
+  display: flex;
+  flex-direction: column;
+}
+
+.roster-header {
+  padding: 8px 22px;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: .22em;
+  color: var(--text-faint);
+}
+
+.roster-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.roster-item {
+  padding: 11px 22px;
+  cursor: pointer;
+  transition: .18s;
+  opacity: 0.85;
+}
+
+.roster-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.roster-item.selected {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 3px 0 0 var(--hue);
+  opacity: 1;
+}
+
+.roster-item-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.roster-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.roster-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.roster-name {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.roster-runs {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.roster-item-meter-bg {
+  height: 3px;
+  background: var(--line-strong);
+  width: 100%;
+}
+
+.roster-item-meter-fill {
+  height: 100%;
+}
+
+
+/* MAIN */
+
+.quest-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.quest-header {
+  padding: 28px 36px 22px;
+  border-bottom: 1px solid var(--line-strong);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.quest-header-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.quest-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.qh-name {
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.qh-sub {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.quest-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.qh-gold-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.qh-gold-val {
+  font-weight: 800;
+  font-size: 26px;
+  color: var(--warn);
+  font-variant-numeric: tabular-nums;
+}
+
+.qh-gold-cap {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.qh-meter-bg {
+  width: 100%;
+  height: 4px;
+  background: var(--line-strong);
+}
+
+.qh-meter-fill {
+  height: 100%;
+}
+
+.quest-body {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 36px 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dungeon-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.group-heading {
+  padding: 22px 0 8px;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: .22em;
+}
+
+.dungeon-row {
+  display: flex;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  transition: .15s;
+  gap: 22px;
+}
+
+.dungeon-row.dimmed {
+  opacity: 0.55;
+}
+
+.dungeon-row-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.d-name {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.d-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.d-tier {
+  width: 64px;
+  font-weight: 800;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.d-stepper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.stepper-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: .15s;
+}
+
+.stepper-btn:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.stepper-val {
+  width: 36px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.d-gold {
+  width: 88px;
+  text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+
+@media (max-width: 768px) {
+  .quest-log-container {
+    flex-direction: column;
+    height: auto;
+    border: none;
+    background: transparent;
+  }
+  .quest-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 0;
+    overflow-x: auto;
+  }
+  .roster-header {
+    display: none;
+  }
+  .roster-list {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .roster-item {
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .roster-item-meter-bg {
+    display: none;
+  }
+  .quest-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px 0;
+    gap: 16px;
+  }
+  .quest-header-right {
+    align-items: flex-start;
+    width: 100%;
+  }
+  .quest-body {
+    padding: 10px 0;
+    overflow: visible;
+  }
+  .dungeon-row {
+    flex-wrap: wrap;
+  }
+  .d-stepper {
+    order: 4;
+    margin-top: 10px;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .d-gold {
+    order: 3;
+    text-align: right;
+  }
+}
+
+
+.tier-gem {
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+}
+.tier-gem.tier-legend { background: var(--tier-legend); }
+.tier-gem.tier-elite { background: var(--tier-elite); }
+.tier-gem.tier-story { background: var(--tier-story); }
+.tier-gem.tier-solo { background: var(--tier-solo); }
+.tier-gem.tier-none { background: transparent; }

@@ -1,0 +1,291 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.add-character-panel {
+  width: 100%;
+  max-width: 760px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+
+.ac-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ac-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ac-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ac-title {
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.ac-sub {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.ac-close {
+  font-size: 28px;
+  color: var(--text-faint);
+  cursor: pointer;
+  line-height: 1;
+  transition: .15s;
+}
+
+.ac-close:hover {
+  color: var(--text);
+}
+
+.ac-config-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  border-bottom: 1px solid var(--line);
+}
+
+.ac-border-right {
+  border-right: 1px solid var(--line);
+}
+
+.ac-input-group {
+  padding: 22px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ac-label {
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: .22em;
+  color: var(--text-dim);
+}
+
+.ac-text-input {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line-focus);
+  padding: 8px 0;
+  font-size: 16px;
+  outline: none;
+  width: 100%;
+  color: var(--text);
+  font-family: inherit;
+  transition: .15s;
+}
+
+.ac-text-input:focus {
+  border-bottom-color: var(--accent);
+}
+
+.ac-class-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ac-class-chip {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: .15s;
+  opacity: 0.55;
+  background: rgba(255,255,255,0.03);
+}
+
+.ac-class-chip:hover {
+  opacity: 0.8;
+}
+
+.ac-class-chip.selected {
+  opacity: 1;
+  color: var(--c-hue);
+  border-color: var(--c-hue);
+  background: rgba(255,255,255,0.08);
+  box-shadow: inset 3px 0 0 var(--c-hue);
+}
+
+.ac-tiers-section {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ac-tiers-header {
+  padding: 22px 28px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ac-helper {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.ac-tiers-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0 28px 8px;
+  overflow-y: auto;
+}
+
+.ac-tier-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line-faint);
+}
+
+.ac-group-tag {
+  width: 44px;
+  font-weight: 800;
+  font-size: 9px;
+  letter-spacing: .18em;
+}
+
+.ac-dungeon-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ac-segmented {
+  display: flex;
+  border: 1px solid var(--line-strong);
+}
+
+.ac-segment {
+  padding: 6px 11px;
+  font-size: 11px;
+  text-transform: capitalize;
+  cursor: pointer;
+  transition: .15s;
+  color: var(--text-faint);
+}
+
+.ac-segment:hover:not(.selected) {
+  color: var(--text-dim);
+  background: rgba(255,255,255,0.04);
+}
+
+.ac-segment.selected {
+  background: rgba(255,255,255,0.08);
+  font-weight: 800;
+}
+
+.ac-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 28px 24px;
+  border-top: 1px solid var(--line);
+}
+
+.ac-count {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.ac-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.ac-cancel {
+  font-size: 12px;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.ac-cancel:hover {
+  color: var(--text-dim);
+}
+
+.ac-submit {
+  padding: 11px 20px;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: .12em;
+  cursor: pointer;
+  transition: .15s;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-family: inherit;
+}
+
+.ac-submit:disabled {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+
+@media (max-width: 768px) {
+  .ac-config-row {
+    grid-template-columns: 1fr;
+  }
+  .ac-border-right {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .ac-footer {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  .ac-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .ac-cancel, .ac-submit {
+    width: 100%;
+    text-align: center;
+    padding: 14px 20px;
+  }
+  .ac-segmented {
+    flex-wrap: wrap;
+  }
+  .ac-tier-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .ac-dungeon-name {
+    flex: 1 1 100%;
+  }
+}

@@ -42,10 +42,12 @@ export async function currentGameAccountId(): Promise<string> {
   const newId = created.data.id;
   // Slots 10 apart, matching nextSortOrder and the reorder's (i + 1) * 10, so
   // seeded and later-added characters share one spacing scheme.
+  const seedClasses = ['Magister', 'Puppet Master', 'Swordsman', 'Musketeer', 'Alchemist', 'Fighter'];
   await supabase.from('characters').insert(
     [1, 2, 3, 4, 5, 6].map((n) => ({
       game_account_id: newId,
       name: `Character ${n}`,
+      class: seedClasses[n - 1],
       sort_order: n * 10,
     })),
   );
@@ -90,14 +92,41 @@ export async function listCharacters(gameAccountId: string): Promise<CharacterRo
 export async function createCharacter(
   gameAccountId: string,
   name: string,
+  classStr: string,
+  tiers: Record<string, 'none' | 'solo' | 'story' | 'elite' | 'legend'>
 ): Promise<CharacterRow> {
   const existing = await listCharacters(gameAccountId);
+  
+  // 1. Create the character
   const { data, error } = await supabase
     .from('characters')
-    .insert({ game_account_id: gameAccountId, name, sort_order: nextSortOrder(existing) })
+    .insert({ 
+      game_account_id: gameAccountId, 
+      name, 
+      class: classStr,
+      sort_order: nextSortOrder(existing) 
+    })
     .select()
     .single();
   if (error) throw error;
+  
+  // 2. Set the initial tiers
+  const gridInserts = Object.entries(tiers)
+    .filter(([_, tier]) => tier !== 'none') // Don't insert 'none' since it's the fallback if we don't have a row
+    .map(([dungeonId, tier]) => ({
+      character_id: data.id,
+      dungeon_id: dungeonId,
+      tier,
+      min_runs: 0
+    }));
+    
+  if (gridInserts.length > 0) {
+    const { error: gridError } = await supabase
+      .from('character_dungeon')
+      .insert(gridInserts);
+    if (gridError) throw gridError;
+  }
+  
   return data;
 }
 

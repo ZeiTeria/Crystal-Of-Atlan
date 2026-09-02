@@ -1,125 +1,53 @@
-/*
- * The single source of colour. Dark-first: :root carries the complete dark
- * palette, and light is redefined in BOTH the media query and the [data-theme]
- * block so an explicit choice beats the OS in either direction.
- *
- * Sampled from coa.nvsgames.com's own stylesheet. Two deliberate departures:
- * --accent lifts to #4a6ef5 on dark because the site's #335cf2 fails contrast
- * against #0f1013, and --warn darkens to #c99a00 on light because pale gold on
- * white is unreadable.
- */
 :root {
-  --bg: #0f1013;
-  --surface: #16181d;
-  --surface-2: #1c1f26;
+  --bg: #07080A;
+  --surface: #0A0B0E;
+  --surface-2: #1C1F26;
   --line: rgba(255, 255, 255, 0.07);
-  --line-strong: rgba(255, 255, 255, 0.18);
-  --text: #e8edf2;
-  --text-dim: #8b93a1;
-  --text-faint: #5d6572;
-  --accent: #4a6ef5;
-  --accent-hover: #6382f7;
-  --accent-ink: #ffffff;
-  --accent-wash: rgba(74, 110, 245, 0.14);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --line-focus: rgba(255, 255, 255, 0.18);
+  --text: #E8EDF2;
+  --text-dim: #8B93A1;
+  --text-faint: #5D6572;
+  --text-disabled: #3A414D;
+  
+  --accent: #4A6EF5;
+  --accent-light: #7FA6FF;
+  --accent-hover: #6874F5;
+  --accent-wash: rgba(74, 110, 245, 0.08);
   --accent-edge: rgba(74, 110, 245, 0.55);
-  --warn: #f9e57a;
-  --warn-ink: #2a2410;
-  --danger: #ff5c5e;
-  --row-band: rgba(255, 255, 255, 0.022);
+  
+  --warn: #F9E57A;
+  --warn-wash: rgba(249, 229, 122, 0.35);
+  
+  --success: #4ADE80;
+  --danger: #F26B6B;
+  
+  --discord: #5865F2;
+  --discord-hover: #6874F5;
 
-  --tier-solo: #6b7280;
-  --tier-story: #4ba3c3;
-  --tier-elite: #a06ef5;
-  --tier-legend: #f0b23c;
+  --group-abyss: #4A6EF5;
+  --group-raid: #A06EF5;
+  --group-trial: #4BA3C3;
+
+  --tier-none: #3A414D;
+  --tier-solo: #6B7280;
+  --tier-story: #4BA3C3;
+  --tier-elite: #A06EF5;
+  --tier-legend: #F0B23C;
 
   --font-body: 'SUITE', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-display: 'SUITE', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  /*
-   * Numbers stay in SUITE, but `font-variant-numeric: tabular-nums` is
-   * MANDATORY wherever digits line up or tick. Measured from the shipped
-   * files: SUITE's default figures are proportional and badly uneven - in
-   * Medium, "1" advances 408 units against "0" at 708 - so a countdown would
-   * visibly jitter every second without it. The font does carry a `tnum`
-   * feature, which is what makes requesting it work.
-   */
   --font-numeric: var(--font-body);
 
-  --step-0: 0.8125rem;
-  --step-1: 0.9375rem;
-  --step-2: 1.125rem;
-  --step-3: 1.5rem;
-  --step-4: 2.25rem;
-
-  --s1: 4px;
-  --s2: 8px;
-  --s3: 12px;
-  --s4: 16px;
-  --s5: 24px;
-  --s6: 32px;
-  --s7: 48px;
-  --s8: 72px;
-
-  /*
-   * The official site uses near-square corners (.02rem / .2rem). Copied
-   * literally they read as harsh, because we also stack uppercase Heavy labels
-   * and solid fills on top - any one of the three is fine, all three at once is
-   * blocky. Softened deliberately; the geometry stays tighter than a typical
-   * rounded UI, so it still reads as the same family.
-   */
-  --r-control: 6px;
-  --r-panel: 10px;
+  --r-control: 0px;
+  --r-panel: 0px;
 
   color-scheme: dark;
 }
 
+/* Light mode is removed as per design handoff */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
-    --bg: #f5f7fb;
-    --surface: #ffffff;
-    --surface-2: #ffffff;
-    --line: #e3e5e8;
-    --line-strong: #c9d0d6;
-    --text: #0f1013;
-    --text-dim: #737373;
-    --text-faint: #9aa1ab;
-    --accent: #335cf2;
-    --accent-hover: #446df2;
-    --accent-ink: #ffffff;
-    --accent-wash: rgba(51, 92, 242, 0.09);
-    --accent-edge: rgba(51, 92, 242, 0.42);
-    --warn: #c99a00;
-    --warn-ink: #ffffff;
-    --danger: #d93438;
-    --row-band: rgba(15, 16, 19, 0.022);
-    --tier-solo: #8b939e;
-    --tier-story: #2b8fb3;
-    --tier-elite: #7b45e0;
-    --tier-legend: #c67f10;
-    color-scheme: light;
+    /* Falling back to dark since no light mode is specified for the redesign */
   }
-}
-
-:root[data-theme='light'] {
-  --bg: #f5f7fb;
-  --surface: #ffffff;
-  --surface-2: #ffffff;
-  --line: #e3e5e8;
-  --line-strong: #c9d0d6;
-  --text: #0f1013;
-  --text-dim: #737373;
-  --text-faint: #9aa1ab;
-  --accent: #335cf2;
-  --accent-hover: #446df2;
-  --accent-ink: #ffffff;
-  --accent-wash: rgba(51, 92, 242, 0.09);
-  --accent-edge: rgba(51, 92, 242, 0.42);
-  --warn: #c99a00;
-  --warn-ink: #ffffff;
-  --danger: #d93438;
-  --row-band: rgba(15, 16, 19, 0.022);
-  --tier-solo: #8b939e;
-  --tier-story: #2b8fb3;
-  --tier-elite: #7b45e0;
-  --tier-legend: #c67f10;
-  color-scheme: light;
 }

@@ -48,6 +48,7 @@ export interface Dungeon {
 export interface Character {
   id: string;
   name: string;
+  class: string | null;
 }
 
 export interface GridEntry {

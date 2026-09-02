@@ -8,24 +8,25 @@ import Button from './ui/Button';
 import Tabs from './ui/Tabs';
 import ThemeToggle from './ui/ThemeToggle';
 import PlanScreen from './screens/PlanScreen';
-import GridScreen from './screens/GridScreen';
 import DungeonsScreen from './screens/DungeonsScreen';
 import type { Session } from '@supabase/supabase-js';
+import LandingScreen from './screens/LandingScreen';
+import { LogoMark } from './ui/Shared';
 import './App.css';
 import ErrorBanner from './ui/ErrorBanner';
 
-export type View = 'plan' | 'grid' | 'dungeons';
+export type View = 'board' | 'log' | 'grid' | 'dungeons';
 
 const TABS: { view: View; label: string; adminOnly?: boolean }[] = [
-  { view: 'plan', label: 'Plan' },
-  { view: 'grid', label: 'Characters & Grid' },
+  { view: 'board', label: 'Plan' },
+  { view: 'log', label: 'Character' },
   { view: 'dungeons', label: 'Dungeons', adminOnly: true },
 ];
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [view, setView] = useState<View>('plan');
+  const [view, setView] = useState<View>('board');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,44 +81,61 @@ export default function App() {
   if (loading) return <div className="app-container">Loading...</div>;
 
   if (!session) {
-    return (
-      <div className="app-container">
-        <h1>Crystal Of Atlan</h1>
-        <ErrorBanner message={error} />
-        <Button onClick={() => void signInWithDiscord()}>
-          Sign in with Discord
-        </Button>
-      </div>
-    );
+    return <LandingScreen error={error} />;
   }
 
   const tabs = TABS.filter((t) => !t.adminOnly || profile?.is_admin);
 
   return (
-    <div className="app-container app-wide">
+    <div className="app-layout">
       <header className="app-header">
-        <h1>Crystal Of Atlan</h1>
-        <div className="profile-info">
-          <span className="username">{profile?.discord_username ?? session.user.email}</span>
-          {profile?.is_admin && <Badge>Admin</Badge>}
-          <ThemeToggle />
-          <Button variant="outline" onClick={() => void signOut()}>
-            Sign out
-          </Button>
+        <div className="header-left">
+          <div className="brand">
+            <LogoMark />
+            <span className="brand-text">CRYSTAL OF ATLAN</span>
+          </div>
+          <div className="coa-tabs">
+            {tabs.map(t => (
+              <span 
+                key={t.view} 
+                className={`coa-tab ${view === t.view ? 'active' : ''}`}
+                onClick={() => setView(t.view)}
+              >
+                {t.label}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="header-right">
+          <div className="user-profile">
+            {session.user.user_metadata?.avatar_url ? (
+              <img src={session.user.user_metadata.avatar_url} alt="User Avatar" className="user-avatar" />
+            ) : null}
+            <span className="user-name">{session.user.user_metadata?.custom_claims?.global_name || profile?.discord_username || session.user.email}</span>
+            {profile?.is_admin && <span className="admin-tag">ADMIN</span>}
+          </div>
+          <span className="sign-out-btn" onClick={() => void signOut()}>Sign out</span>
         </div>
       </header>
 
-      <Tabs
-        items={tabs.map((t) => ({ value: t.view, label: t.label }))}
-        value={view}
-        onChange={setView}
-      />
-
       <ErrorBanner message={error} />
 
-      {view === 'plan' && <PlanScreen />}
-      {view === 'grid' && <GridScreen />}
-      {view === 'dungeons' && profile?.is_admin && <DungeonsScreen />}
+      <div className="app-content">
+        {(view === 'board' || view === 'log') && <PlanScreen activeView={view} />}
+        {view === 'dungeons' && profile?.is_admin && <DungeonsScreen />}
+      </div>
+      
+      <div className="mobile-tab-bar">
+        {tabs.map(t => (
+          <span 
+            key={t.view} 
+            className={`mobile-tab ${view === t.view ? 'active' : ''}`}
+            onClick={() => setView(t.view)}
+          >
+            {t.label}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

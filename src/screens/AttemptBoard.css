@@ -1,0 +1,309 @@
+.attempt-board {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+
+.board-summary-strip {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+}
+
+.summary-left {
+  width: 300px;
+  padding: 22px 32px;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.summary-label {
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--text-dim);
+}
+
+.summary-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.summary-numbers strong {
+  font-weight: 800;
+  font-size: 44px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-numbers span {
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.summary-note {
+  font-size: 12px;
+  color: var(--warn);
+}
+
+.empty-box {
+  display: inline-block;
+  width: 10px;
+  height: 6px;
+  border: 1px solid var(--warn);
+  vertical-align: middle;
+}
+
+.roster-tiles {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.roster-tile {
+  flex: 1;
+  padding: 18px 20px;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.roster-tile:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tile-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tile-name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tile-name-col strong {
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.tile-name-col span {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.tile-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.tile-gold-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+.tile-meter {
+  height: 4px;
+  background: var(--line);
+}
+
+.meter-fill {
+  height: 100%;
+}
+
+.add-character-btn {
+  width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-faint);
+  border-left: 1px dashed rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+.add-character-btn:hover {
+  color: var(--accent-light);
+}
+
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line);
+}
+
+.board-card {
+  background: var(--surface);
+  padding: 20px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 250px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.group-tag {
+  font-weight: 800;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.group-tag.abyss { color: var(--group-abyss); }
+.group-tag.raid { color: var(--group-raid); }
+.group-tag.trial { color: var(--group-trial); }
+
+.card-title strong {
+  font-weight: 800;
+  font-size: 17px;
+}
+
+.card-used {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.card-used strong {
+  font-weight: 800;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-used span {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.card-slots {
+  display: flex;
+  gap: 3px;
+}
+
+.card-slots .slot {
+  flex: 1;
+  height: 8px;
+}
+
+.card-slots .slot.empty {
+  border: 1px solid var(--warn-wash);
+  background: repeating-linear-gradient(135deg, var(--warn-wash) 0 1px, transparent 1px 3px);
+}
+
+.card-who-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.who-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.who-name {
+  flex: 1;
+  font-size: 13px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.who-n {
+  font-weight: 800;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.who-gold {
+  width: 64px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 10px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+
+@media (max-width: 768px) {
+  .attempt-board {
+    border: none;
+    background: transparent;
+  }
+  .board-summary-strip {
+    flex-direction: column;
+    border: none;
+  }
+  .summary-left {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    padding: 16px 0;
+    align-items: center;
+    text-align: center;
+  }
+  .roster-tiles {
+    overflow-x: auto;
+    padding: 16px 0;
+    gap: 12px;
+  }
+  .roster-tile {
+    flex: 0 0 160px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .add-character-btn {
+    border-left: none;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0 20px;
+  }
+  .board-grid {
+    grid-template-columns: 1fr;
+    background: transparent;
+    gap: 16px;
+    padding: 16px 0;
+  }
+  .board-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    min-height: auto;
+  }
+}
