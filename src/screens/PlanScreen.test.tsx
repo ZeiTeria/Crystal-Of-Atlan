@@ -3,13 +3,23 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlanScreen from './PlanScreen';
 import { loadPlanInput } from '../data/loadPlanInput';
-import { currentGameAccountId } from '../data/accounts';
+import { currentGameAccountId, listCharacters, type CharacterRow } from '../data/accounts';
 import type { PlanInput } from '../engine/types';
 import { stubMatchMedia } from '../ui/testing/matchMedia';
 import { resetDensity } from '../ui/density';
 
 vi.mock('../data/loadPlanInput', () => ({ loadPlanInput: vi.fn() }));
-vi.mock('../data/accounts', () => ({ currentGameAccountId: vi.fn() }));
+// The roster is read separately from the plan input: the input has already
+// dropped parked characters, and the log has to be able to unpark one.
+vi.mock('../data/accounts', () => ({
+  currentGameAccountId: vi.fn(),
+  listCharacters: vi.fn(),
+  createCharacter: vi.fn(),
+  deleteCharacter: vi.fn(),
+  renameCharacter: vi.fn(),
+  toggleCharacterActive: vi.fn(),
+  setCharacterOrder: vi.fn(),
+}));
 
 afterEach(() => {
   resetDensity();
@@ -37,7 +47,7 @@ const dungeon = {
 
 function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
   return {
-    characters: [{ id: 'c1', name: 'Mage' }],
+    characters: [{ id: 'c1', name: 'Mage', class: 'Magister' }],
     dungeons: [dungeon],
     grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0 }],
     accountAttemptsLeft: { d1: 18 },
@@ -53,8 +63,18 @@ function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
   };
 }
 
+const MAGE: CharacterRow = {
+  id: 'c1',
+  game_account_id: 'acc',
+  name: 'Mage',
+  class: 'Magister',
+  sort_order: 10,
+  is_active: true,
+};
+
 beforeEach(() => {
   vi.mocked(currentGameAccountId).mockResolvedValue('acc');
+  vi.mocked(listCharacters).mockResolvedValue([MAGE]);
   vi.mocked(loadPlanInput).mockResolvedValue(anInput());
 });
 
@@ -82,9 +102,10 @@ describe('PlanScreen', () => {
   it('shows a row per assignment with its gold', async () => {
     render(<PlanScreen />);
     expect(await screen.findAllByText('Mage')).toBeDefined();
-    // Simplified is the default, so the column reads as its short label; the
-    // full name stays on the title.
-    expect(screen.getByRole('columnheader', { name: 'A' }).getAttribute('title')).toBe('Abyss');
+    // One card per dungeon, and the character's row inside it carries what
+    // those runs are worth - 3 runs of elite at 30.
+    expect(screen.getByText('Abyss')).toBeDefined();
+    expect(screen.getByText('90')).toBeDefined();
   });
 
   it('counts down to the coming reset, not the one after it', async () => {
@@ -132,11 +153,12 @@ describe('PlanScreen', () => {
   });
 
   it('says what to do when there is nothing to plan', async () => {
+    vi.mocked(listCharacters).mockResolvedValue([]);
     vi.mocked(loadPlanInput).mockResolvedValue(
       anInput({ characters: [], grid: [], characterAttemptsLeft: {}, goldHeadroom: {} }),
     );
     render(<PlanScreen />);
-    expect(await screen.findByText(/add a character/i)).toBeDefined();
+    expect(await screen.findByRole('button', { name: /add character/i })).toBeDefined();
   });
 
   it('reports the tighter of the two ceilings, not their sum or the wrong one, and renders a stopping reason', async () => {

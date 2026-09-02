@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useMutation } from '../hooks/useMutation';
-import Button from '../ui/Button';
-import { currentGameAccountId, createCharacter } from '../data/accounts';
-import { setGridCell } from '../data/grid';
+import { createCharacter, currentGameAccountId, listCharacters, type CharacterRow } from '../data/accounts';
+import { setGridCells } from '../data/grid';
 import { loadPlanInput } from '../data/loadPlanInput';
 import {
   attemptCeiling,
@@ -12,18 +10,20 @@ import {
   type Reason,
 } from '../engine/ceilings';
 import { solveOptimal } from '../engine/solver';
-import type { PlanInput, PlanResult } from '../engine/types';
+import type { PlanInput, PlanResult, Tier } from '../engine/types';
+import { useMutation } from '../hooks/useMutation';
+import Button from '../ui/Button';
+import Countdown from '../ui/Countdown';
 import ErrorBanner from '../ui/ErrorBanner';
+import AddCharacterModal from './AddCharacterModal';
 import AttemptBoard from './AttemptBoard';
 import QuestLog from './QuestLog';
-
-import AddCharacterModal from './AddCharacterModal';
-import type { Tier } from '../engine/types';
-import Countdown from '../ui/Countdown';
+import { describeConflict, describeReason, type Names } from './planText';
 
 interface Solved {
   input: PlanInput;
   result: PlanResult;
+  roster: CharacterRow[];
   reasons: Reason[];
   relaxed: boolean;
   goldCeiling: number;
@@ -38,26 +38,18 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
   const [solved, setSolved] = useState<Solved | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const handleUpdateMinRuns = async (charId: string, dId: string, currentTier: string, minRuns: number) => {
-    await setGridCell(charId, dId, { tier: currentTier as Tier, min_runs: minRuns });
-    void solve();
-  };
-
-  const handleAddCharacter = async (name: string, classStr: string, tiers: Record<string, Tier>) => {
-    const accountId = await currentGameAccountId();
-    // createCharacter expects specific literal string types for Tier
-    await createCharacter(accountId, name, classStr, tiers as any);
-    void solve();
-  };
-
   const solveFn = useCallback(async () => {
     try {
       const accountId = await currentGameAccountId();
       const input = await loadPlanInput(accountId);
+      // The roster is read separately because the plan input has already
+      // dropped parked characters, and the log has to be able to unpark one.
+      const roster = await listCharacters(accountId);
       const result = await solveOptimal(input);
       setSolved({
         input,
         result,
+        roster,
         reasons: explainCeiling(input, result),
         relaxed: noContention(input),
         goldCeiling: goldCapCeiling(input),
@@ -69,84 +61,145 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
     }
   }, []);
 
-  const { busy, error, refresh: solve } = useMutation(solveFn);
+  const { busy, error, mutate, refresh: solve } = useMutation(solveFn);
 
   useEffect(() => {
     void solve().catch(() => setSolved(null));
   }, [solve]);
 
+  async function handleAddCharacter(name: string, characterClass: string, tiers: Record<string, Tier>) {
+    if (!solved) return;
+    await mutate(async () => {
+      const accountId = await currentGameAccountId();
+      const created = await createCharacter(accountId, name, characterClass);
+      // Seeding the grid is part of creating the character, inside the same
+      // mutation, so a failure here surfaces and refreshes like any other
+      // rather than leaving a character that silently did not get its tiers.
+      //
+      // Only tiers that DIFFER from the dungeon's default are written, and an
+      // explicit `none` against a default of elite is such a difference. A row
+      // that merely repeats the default would freeze today's value and stop
+      // this character following a later change to the catalogue.
+      const cells = solved.input.dungeons
+        .filter((d) => (tiers[d.id] ?? d.default_tier) !== d.default_tier)
+        .map((d) => ({
+          character_id: created.id,
+          dungeon_id: d.id,
+          tier: tiers[d.id] ?? d.default_tier,
+          min_runs: d.default_min_runs,
+        }));
+      if (cells.length > 0) await setGridCells(cells);
+    });
+  }
+
   if (!solved) {
     return (
-      <div style={{ padding: 20 }}>
+      <section className="plan-empty">
         <p>{error ? `Error: ${error}` : 'Solving...'}</p>
         {error && (
           <Button disabled={busy} onClick={() => void solve()}>
             Retry
           </Button>
         )}
-      </div>
-    );
-  }
-
-  const { input, result } = solved;
-
-  if (input.characters.length === 0) {
-    return (
-      <section style={{ padding: 20 }}>
-        <h2>Plan</h2>
-        <p className="muted">Add a character to plan for.</p>
-        <Button onClick={() => setShowAddModal(true)} style={{ marginTop: 20 }}>
-          Add Character
-        </Button>
-        {showAddModal && (
-          <AddCharacterModal 
-            dungeons={input.dungeons} 
-            onClose={() => setShowAddModal(false)} 
-            onAdd={handleAddCharacter} 
-          />
-        )}
       </section>
     );
   }
 
-  if (input.grid.length === 0) {
+  const { input, result, roster } = solved;
+  const names: Names = {
+    character: (id) => input.characters.find((c) => c.id === id)?.name ?? id,
+    dungeon: (id) => input.dungeons.find((d) => d.id === id)?.name ?? id,
+  };
+
+  const modal = showAddModal && (
+    <AddCharacterModal
+      dungeons={input.dungeons}
+      grid={input.grid}
+      characters={roster}
+      onClose={() => setShowAddModal(false)}
+      onAdd={handleAddCharacter}
+    />
+  );
+
+  if (roster.length === 0) {
     return (
-      <section style={{ padding: 20 }}>
+      <section className="plan-empty">
         <h2>Plan</h2>
-        <p className="muted">
-          Nothing is unlocked yet — set each character's tier per dungeon on the Grid tab.
-        </p>
+        <p className="muted">Add a character to plan for.</p>
+        <Button onClick={() => setShowAddModal(true)}>Add character</Button>
+        {modal}
       </section>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px' }}>
-      <ErrorBanner message={error} />
-      
-      <div className="mobile-only-header">
-        <span className="mobile-title">{activeView === 'board' ? 'Plan' : 'Character'}</span>
-        <span className="mobile-countdown"><Countdown settings={solved.input.settings} /></span>
+    <div className="plan-screen">
+      <div className="plan-head">
+        <span className="plan-title">{activeView === 'board' ? 'Plan' : 'Character'}</span>
+        <span className="muted plan-countdown">
+          Resets in <Countdown settings={input.settings} />
+        </span>
       </div>
+      <ErrorBanner message={error} />
 
-      {activeView === 'board' ? (
-        <AttemptBoard input={solved.input} result={solved.result} onAddClick={() => setShowAddModal(true)} />
+      {input.grid.length === 0 ? (
+        <p className="muted">
+          Nothing is unlocked yet — set each character&rsquo;s tier per dungeon in the Character
+          view.
+        </p>
+      ) : result.status === 'infeasible' ? (
+        <section className="plan-infeasible">
+          <p>These requirements cannot all be met:</p>
+          <ul>
+            {result.conflicts.map((c, i) => (
+              <li key={i}>{describeConflict(c, names)}</li>
+            ))}
+          </ul>
+          <p className="muted">Lower a minimum in the Character view, then come back.</p>
+        </section>
       ) : (
-        <QuestLog 
-          input={solved.input} 
-          result={solved.result} 
-          onAddClick={() => setShowAddModal(true)} 
-          onUpdateMinRuns={handleUpdateMinRuns}
-        />
+        <>
+          {solved.relaxed && (
+            <p className="plan-relaxed">
+              <strong>No choices to make</strong> — every character can simply run its maximum.
+            </p>
+          )}
+
+          {activeView === 'board' ? (
+            <AttemptBoard
+              input={input}
+              assignments={result.assignments}
+              totals={result.totals}
+              reasons={solved.reasons}
+              goldCeiling={solved.goldCeiling}
+              attemptsCeiling={solved.attemptsCeiling}
+              names={names}
+              onAddClick={() => setShowAddModal(true)}
+            />
+          ) : (
+            <QuestLog
+              input={input}
+              assignments={result.assignments}
+              roster={roster}
+              mutate={mutate}
+              busy={busy}
+              onAddClick={() => setShowAddModal(true)}
+            />
+          )}
+
+          {solved.reasons.some((r) => r.kind === 'gold-cap-reached') && (
+            <ul className="muted plan-reasons">
+              {solved.reasons
+                .filter((r) => r.kind === 'gold-cap-reached')
+                .map((r, i) => (
+                  <li key={i}>{describeReason(r, names)}</li>
+                ))}
+            </ul>
+          )}
+        </>
       )}
-      
-      {showAddModal && (
-        <AddCharacterModal 
-          dungeons={input.dungeons} 
-          onClose={() => setShowAddModal(false)} 
-          onAdd={handleAddCharacter} 
-        />
-      )}
+
+      {modal}
     </div>
   );
 }

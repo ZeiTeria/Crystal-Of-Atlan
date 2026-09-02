@@ -6,7 +6,7 @@ import type { Character, Dungeon, GridEntry, PlanInput } from '../types';
  */
 
 export function aCharacter(id: string): Character {
-  return { id, name: id.toUpperCase() };
+  return { id, name: id.toUpperCase(), class: null };
 }
 
 export function aDungeon(id: string, overrides: Partial<Dungeon> = {}): Dungeon {

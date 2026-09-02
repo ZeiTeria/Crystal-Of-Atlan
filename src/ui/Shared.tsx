@@ -1,4 +1,3 @@
-import React from 'react';
 import './Shared.css';
 
 import coaLogo from '../assets/images/Crystal Of Atlan Logo.avif';
@@ -18,7 +17,7 @@ export function getClassHue(className: string | null | undefined, fallbackName?:
       const colors = ['#4A6EF5', '#A06EF5', '#F26B6B', '#4BA3C3', '#4ADE80', '#F0B23C'];
       let hash = 0;
       for (let i = 0; i < fallbackName.length; i++) hash = fallbackName.charCodeAt(i) + ((hash << 5) - hash);
-      return colors[Math.abs(hash) % colors.length];
+      return colors[Math.abs(hash) % colors.length] ?? '#6B7280';
     }
   }
 }
@@ -73,5 +72,5 @@ export function getGroupHue(groupName: string | null | undefined): string {
   const colors = ['#4A6EF5', '#A06EF5', '#F26B6B', '#4BA3C3', '#4ADE80', '#F0B23C', '#E8A236'];
   let hash = 0;
   for (let i = 0; i < groupName.length; i++) hash = groupName.charCodeAt(i) + ((hash << 5) - hash);
-  return colors[Math.abs(hash) % colors.length];
+  return colors[Math.abs(hash) % colors.length] ?? '#6B7280';
 }

@@ -1,172 +1,340 @@
-import React, { useState } from 'react';
-import type { PlanInput, PlanResult } from '../engine/types';
+import { useState } from 'react';
+import {
+  deleteCharacter,
+  renameCharacter,
+  setCharacterOrder,
+  toggleCharacterActive,
+  type CharacterRow,
+} from '../data/accounts';
+import { setGridCell } from '../data/grid';
+import type { PlanAssignment, PlanInput, Tier } from '../engine/types';
+import Button from '../ui/Button';
+import CharacterPicker from '../ui/CharacterPicker';
+import InfoDot from '../ui/InfoDot';
 import { Portrait, getClassHue } from '../ui/Shared';
+import TierGem from '../ui/TierGem';
+import { PHONE, useMediaQuery } from '../ui/useMediaQuery';
+import { sortOrderPatches } from '../ui/reorder';
+import { useSortableList } from '../ui/useSortableList';
+import { matrixColumns } from './columns';
+import { goldWarning } from './goldWarning';
+import { gold } from './planText';
 import './QuestLog.css';
+
+const TIERS: Tier[] = ['none', 'solo', 'story', 'elite', 'legend'];
 
 interface QuestLogProps {
   input: PlanInput;
-  result: PlanResult;
+  assignments: PlanAssignment[];
+  /** Every character on the account, parked ones included - the plan input has
+   *  already dropped those, and a roster you cannot unpark from is a trap. */
+  roster: CharacterRow[];
+  /** Runs a write, then re-reads everything. Owned by the screen above. */
+  mutate: (write: () => Promise<void>) => Promise<void>;
+  busy: boolean;
   onAddClick?: () => void;
-  onUpdateMinRuns?: (charId: string, dId: string, currentTier: string, minRuns: number) => void;
 }
 
-export default function QuestLog({ input, result, onAddClick, onUpdateMinRuns }: QuestLogProps) {
-  const { characters, dungeons } = input;
-  const [selectedId, setSelectedId] = useState<string>(characters[0]?.id ?? '');
+/**
+ * One character at a time: what it is set to run, and what the plan does with
+ * that. This is also where the roster is managed - renaming, parking, deleting
+ * and reordering all live beside the character they act on rather than on a
+ * separate screen.
+ */
+export default function QuestLog({
+  input,
+  assignments,
+  roster,
+  mutate,
+  busy,
+  onAddClick,
+}: QuestLogProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const isPhone = useMediaQuery(PHONE);
 
-  if (result.status === 'infeasible') {
-    return <div>Plan infeasible</div>;
+  const byId = new Map(roster.map((c) => [c.id, c]));
+  const { order, activeId, handleProps } = useSortableList({
+    ids: roster.map((c) => c.id),
+    onReorder: (ids) => void mutate(() => setCharacterOrder(sortOrderPatches(ids))),
+  });
+  const characters = order.map((id) => byId.get(id)).filter((c) => c !== undefined);
+
+  // Falls back to the first rather than showing nothing when the selection
+  // names a character that has since been deleted.
+  const selected = characters.find((c) => c.id === selectedId) ?? characters[0];
+
+  if (!selected) {
+    return (
+      <section className="quest-log-container">
+        <p className="muted">Add a character to plan for.</p>
+        <Button onClick={onAddClick}>Add character</Button>
+      </section>
+    );
   }
 
-  if (characters.length === 0) return <div>No characters</div>;
+  const dungeons = matrixColumns(input.dungeons);
+  const parked = selected.is_active === false;
 
-  const selectedChar = characters.find(c => c.id === selectedId) || characters[0];
-  const charAssignments = result.assignments.filter(a => a.characterId === selectedChar.id);
-  const runsCount = charAssignments.reduce((sum, a) => sum + a.runs, 0);
-  
+  const tierOf = new Map<string, Tier>(
+    input.grid.map((g) => [`${g.characterId}:${g.dungeonId}`, g.tier]),
+  );
+  const minRunsOf = new Map<string, number>(
+    input.grid.map((g) => [`${g.characterId}:${g.dungeonId}`, g.minRuns]),
+  );
+
   const cap = input.settings.goldCap;
-  const earned = cap - (input.goldHeadroom[selectedChar.id] ?? cap);
+  const earned = cap - (input.goldHeadroom[selected.id] ?? cap);
+  const capped = earned >= cap;
+  const runsThisWeek = assignments
+    .filter((a) => a.characterId === selected.id)
+    .reduce((sum, a) => sum + a.runs, 0);
+  const hue = getClassHue(selected.class, selected.name);
 
-  const distinctGroups = Array.from(new Set(dungeons.map(d => d.group_name || 'OTHER')));
-  const groups = distinctGroups.map(g => {
-    return {
-      name: g,
-      items: dungeons.filter(d => (d.group_name || 'OTHER') === g).map(d => {
-        const assignment = charAssignments.find(a => a.dungeonId === d.id);
-        const gridEntry = input.grid.find(ge => ge.dungeonId === d.id && ge.characterId === selectedChar.id);
-        const minRuns = gridEntry ? gridEntry.minRuns : 0;
-        const runs = assignment ? assignment.runs : 0;
-        const tier = gridEntry && gridEntry.tier !== 'none' ? gridEntry.tier : (assignment ? assignment.tier : 'story'); // fallback display
-        const totalUsed = result.assignments.filter(a => a.dungeonId === d.id).reduce((sum, a) => sum + a.runs, 0);
-        return {
-          id: d.id,
-          name: d.name,
-          tier: runs > 0 ? tier : (d.default_tier !== 'none' ? d.default_tier : 'story'),
-          runs,
-          minRuns,
-          gold: runs > 0 ? assignment!.goldTotal : 0,
-          goldPerRun: d.gold.elite, // simplifcation
-          usedTotal: totalUsed,
-          capTotal: d.accountAttempts,
-          charCap: d.characterAttempts
-        };
-      })
-    };
-  }).filter(g => g.items.length > 0);
+  /**
+   * Writes the whole cell, never a patch. What is on screen for an untouched
+   * pair comes from the dungeon's defaults, so both values go with every write
+   * - otherwise the upsert inserts schema defaults for whatever was left out,
+   * which is how a tier change used to reset the minimum to zero.
+   */
+  function write(dungeonId: string, cell: { tier: Tier; min_runs: number }) {
+    if (!selected) return;
+    void mutate(() => setGridCell(selected.id, dungeonId, cell));
+  }
+
+  // Group order follows the column order, so the log and the board agree.
+  const groups: { name: string; dungeons: typeof dungeons }[] = [];
+  for (const d of dungeons) {
+    const name = d.group_name ?? 'Ungrouped';
+    const last = groups[groups.length - 1];
+    if (last && last.name === name) last.dungeons.push(d);
+    else groups.push({ name, dungeons: [d] });
+  }
 
   return (
     <div className="quest-log-container">
-      <div className="quest-sidebar">
-        <div className="roster-header">ROSTER</div>
-        <div className="roster-list">
-          {characters.map(c => {
-            const assign = result.assignments.filter(a => a.characterId === c.id);
-            const rCount = assign.reduce((sum, a) => sum + a.runs, 0);
-            const rEarned = cap - (input.goldHeadroom[c.id] ?? cap);
-            const pct = Math.min(100, (rEarned / cap) * 100);
-            const isSelected = c.id === selectedId;
-            const hue = getClassHue(c.class, c.name);
-            return (
-              <div 
-                key={c.id} 
-                className={`roster-item ${isSelected ? 'selected' : ''}`}
-                onClick={() => setSelectedId(c.id)}
-                style={{ '--hue': hue } as React.CSSProperties}
-              >
-                <div className="roster-item-content">
-                  <Portrait name={c.name} hue={hue} size={28} />
-                  <div className="roster-item-info">
-                    <div className="roster-item-top">
-                      <span className="roster-name">{c.name}</span>
-                      <span className="roster-runs">{rCount}x</span>
-                    </div>
-                    <div className="roster-item-meter-bg">
-                      <div className="roster-item-meter-fill" style={{ width: `${pct}%`, background: rEarned >= cap ? '#F9E57A' : hue }}></div>
-                    </div>
-                  </div>
+      {isPhone ? (
+        <CharacterPicker
+          characters={characters}
+          selectedId={selected.id}
+          onSelect={setSelectedId}
+        />
+      ) : (
+        <div className="quest-sidebar">
+          <div className="roster-header">Roster</div>
+          <div className="roster-list">
+            {characters.map((c) => {
+              const cHue = getClassHue(c.class, c.name);
+              const cRuns = assignments
+                .filter((a) => a.characterId === c.id)
+                .reduce((sum, a) => sum + a.runs, 0);
+              const cEarned = cap - (input.goldHeadroom[c.id] ?? cap);
+              const cParked = c.is_active === false;
+              return (
+                <div
+                  key={c.id}
+                  data-sortable-id={c.id}
+                  className={[
+                    'roster-item',
+                    c.id === selected.id ? 'selected' : '',
+                    cParked ? 'is-parked' : '',
+                    activeId === c.id ? 'sorting' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  style={{ '--hue': cHue } as React.CSSProperties}
+                >
+                  <button
+                    type="button"
+                    className="roster-item-content"
+                    aria-current={c.id === selected.id ? 'true' : undefined}
+                    onClick={() => setSelectedId(c.id)}
+                  >
+                    <Portrait name={c.name} hue={cHue} size={28} dim={cParked} />
+                    <span className="roster-item-info">
+                      <span className="roster-item-top">
+                        <span className="roster-name">{c.name}</span>
+                        <span className="roster-runs">
+                          {cParked ? 'parked' : `${cRuns}×`}
+                        </span>
+                      </span>
+                      <span className="roster-item-meter-bg">
+                        <span
+                          className="roster-item-meter-fill"
+                          style={{
+                            width: `${Math.min(100, (cEarned / cap) * 100)}%`,
+                            background: cEarned >= cap ? 'var(--warn)' : cHue,
+                          }}
+                        />
+                      </span>
+                    </span>
+                  </button>
+                  <span {...handleProps(c.id, `Reorder ${c.name}`)}>
+                    &#10286;
+                  </span>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-        <div 
-          className="roster-item" 
-          onClick={onAddClick}
-          style={{ opacity: 0.6, marginTop: 'auto', borderTop: '1px solid var(--line-strong)' }}
-        >
-          <div className="roster-item-content">
-            <div style={{ width: 28, height: 28, border: '1px dashed var(--text-faint)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)' }}>+</div>
-            <div className="roster-item-info">
-              <span className="roster-name" style={{ color: 'var(--text-dim)' }}>Add Character</span>
-            </div>
+              );
+            })}
           </div>
+          <button type="button" className="roster-add" onClick={onAddClick}>
+            + Add character
+          </button>
         </div>
-      </div>
-      
+      )}
+
       <div className="quest-main">
         <div className="quest-header">
           <div className="quest-header-left">
-            <Portrait name={selectedChar.name} hue={getClassHue(selectedChar.class, selectedChar.name)} size={52} />
+            <Portrait name={selected.name} hue={hue} size={52} dim={parked} />
             <div className="quest-header-text">
-              <span className="qh-name">{selectedChar.name}</span>
-              <span className="qh-sub">{runsCount} runs this week {earned >= cap ? '· gold cap reached' : ''}</span>
+              <input
+                className="qh-name"
+                aria-label={`${selected.name} name`}
+                defaultValue={selected.name}
+                key={selected.id + selected.name}
+                onBlur={(e) => {
+                  const next = e.target.value.trim();
+                  if (next === '' || next === selected.name) return;
+                  void mutate(() => renameCharacter(selected.id, next));
+                }}
+              />
+              <span className="qh-sub">
+                {parked
+                  ? 'Parked — left out of the plan until you put it back.'
+                  : `${runsThisWeek} runs this week${capped ? ' · gold cap reached' : ''}`}
+              </span>
             </div>
           </div>
           <div className="quest-header-right">
             <div className="qh-gold-line">
-              <span className="qh-gold-val">{earned.toLocaleString('en-US')}</span>
-              <span className="qh-gold-cap">/ {cap.toLocaleString('en-US')}</span>
+              <span className={capped ? 'qh-gold-val warning-text' : 'qh-gold-val'}>
+                {gold(earned)}
+              </span>
+              <span className="qh-gold-cap">/ {gold(cap)}</span>
             </div>
             <div className="qh-meter-bg">
-              <div className="qh-meter-fill" style={{ width: `${Math.min(100, (earned / cap) * 100)}%`, background: earned >= cap ? '#F9E57A' : getClassHue(selectedChar.class, selectedChar.name) }}></div>
+              <div
+                className="qh-meter-fill"
+                style={{
+                  width: `${Math.min(100, (earned / cap) * 100)}%`,
+                  background: capped ? 'var(--warn)' : hue,
+                }}
+              />
+            </div>
+            <div className="qh-actions">
+              <label className="qh-park">
+                <input
+                  type="checkbox"
+                  checked={!parked}
+                  aria-label={`Include ${selected.name} in plan`}
+                  onChange={(e) =>
+                    void mutate(() => toggleCharacterActive(selected.id, e.target.checked))
+                  }
+                />
+                In the plan
+              </label>
+              <Button
+                variant="quiet"
+                aria-label={`Delete ${selected.name}`}
+                onClick={() => {
+                  const ok = window.confirm(
+                    `Delete ${selected.name}? Its unlocked tiers and all its logged runs go too.`,
+                  );
+                  if (ok) void mutate(() => deleteCharacter(selected.id));
+                }}
+              >
+                &times;
+              </Button>
             </div>
           </div>
         </div>
-        
+
         <div className="quest-body">
-          {groups.map(g => (
+          {dungeons.length === 0 && (
+            <p className="muted">
+              No active dungeons in the catalogue yet — an admin has to add dungeons first.
+            </p>
+          )}
+          {groups.map((g) => (
             <div key={g.name} className="dungeon-group">
               <div className="group-heading" style={{ color: `var(--group-${g.name.toLowerCase()})` }}>
                 {g.name}
               </div>
-              {g.items.map(d => (
-                <div key={d.id} className={`dungeon-row ${d.runs === 0 ? 'dimmed' : ''}`}>
-                  <div className="dungeon-row-info">
-                    <div className="d-icon-col" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div className={`tier-gem tier-${d.tier}`}></div>
-                      <span className="d-name">{d.name}</span>
+              {g.dungeons.map((d) => {
+                const key = `${selected.id}:${d.id}`;
+                const tier = tierOf.get(key) ?? d.default_tier;
+                const minRuns = minRunsOf.get(key) ?? d.default_min_runs;
+                const assignment = assignments.find(
+                  (a) => a.characterId === selected.id && a.dungeonId === d.id,
+                );
+                const runs = assignment?.runs ?? 0;
+                const perRun = tier === 'none' ? null : d.gold[tier];
+                const usedAccountWide = assignments
+                  .filter((a) => a.dungeonId === d.id)
+                  .reduce((sum, a) => sum + a.runs, 0);
+                const remaining = input.accountAttemptsLeft[d.id] ?? 0;
+                const why = goldWarning(d, tier);
+
+                return (
+                  <div key={d.id} className={`dungeon-row ${runs === 0 ? 'dimmed' : ''}`}>
+                    <div className="dungeon-row-info">
+                      <span className="d-icon-col">
+                        <TierGem tier={tier} />
+                        <span className="d-name">{d.name}</span>
+                        {why && <InfoDot label={why}>{why}</InfoDot>}
+                      </span>
+                      <span className="d-sub">
+                        {perRun === null ? 'Not unlocked' : `${gold(perRun)} per run`} &middot;{' '}
+                        {usedAccountWide}/{remaining} used account-wide
+                      </span>
                     </div>
-                    <span className="d-sub">{d.goldPerRun.toLocaleString('en-US')} per run · {d.usedTotal}/{d.capTotal} used account-wide</span>
+                    <div className="d-tier">
+                      <select
+                        aria-label={`${selected.name} tier in ${d.name}`}
+                        value={tier}
+                        disabled={parked}
+                        style={{ color: `var(--tier-${tier})` }}
+                        onChange={(e) =>
+                          write(d.id, { tier: e.target.value as Tier, min_runs: minRuns })
+                        }
+                      >
+                        {TIERS.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="d-stepper">
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        aria-label={`One fewer minimum run of ${d.name} for ${selected.name}`}
+                        disabled={parked || busy || minRuns <= 0}
+                        onClick={() => write(d.id, { tier, min_runs: minRuns - 1 })}
+                      >
+                        &minus;
+                      </button>
+                      <span
+                        className="stepper-val"
+                        aria-label={`${selected.name} minimum runs in ${d.name}`}
+                        style={{ color: minRuns > 0 ? hue : 'var(--text-disabled)' }}
+                      >
+                        {minRuns}
+                      </span>
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        aria-label={`One more minimum run of ${d.name} for ${selected.name}`}
+                        disabled={parked || busy || minRuns >= d.characterAttempts}
+                        onClick={() => write(d.id, { tier, min_runs: minRuns + 1 })}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="d-gold">{runs > 0 ? gold(assignment?.goldTotal ?? 0) : '—'}</div>
                   </div>
-                  <div className="d-tier">
-                    <select 
-                      value={d.tier}
-                      onChange={(e) => onUpdateGrid?.(selectedChar.id, d.id, e.target.value, d.minRuns)}
-                      style={{ background: 'transparent', color: `var(--tier-${d.tier})`, border: 'none', outline: 'none', font: 'inherit', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' }}
-                    >
-                      <option value="none" style={{ color: 'var(--tier-none)' }}>None</option>
-                      <option value="solo" style={{ color: 'var(--tier-solo)' }}>Solo</option>
-                      <option value="story" style={{ color: 'var(--tier-story)' }}>Story</option>
-                      <option value="elite" style={{ color: 'var(--tier-elite)' }}>Elite</option>
-                      <option value="legend" style={{ color: 'var(--tier-legend)' }}>Legend</option>
-                    </select>
-                  </div>
-                  <div className="d-stepper">
-                    <button 
-                      className="stepper-btn" 
-                      onClick={() => onUpdateGrid?.(selectedChar.id, d.id, d.tier, Math.max(0, d.minRuns - 1))}
-                    >−</button>
-                    <span className="stepper-val" style={{ color: d.minRuns > 0 ? getClassHue(selectedChar.class, selectedChar.name) : '#3A414D' }}>
-                      {d.minRuns}
-                    </span>
-                    <button 
-                      className="stepper-btn" 
-                      onClick={() => onUpdateGrid?.(selectedChar.id, d.id, d.tier, Math.min(d.charCap, d.minRuns + 1))}
-                    >+</button>
-                  </div>
-                  <div className="d-gold">{d.runs > 0 ? d.gold.toLocaleString('en-US') : '—'}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ))}
         </div>

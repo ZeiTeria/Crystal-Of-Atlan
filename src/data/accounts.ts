@@ -89,44 +89,32 @@ export async function listCharacters(gameAccountId: string): Promise<CharacterRo
   return data;
 }
 
+/**
+ * A new character on the roster.
+ *
+ * `characterClass` is optional because a character is valid without one - it
+ * only picks the display hue. Seeding the grid is deliberately NOT done here:
+ * it is a separate `setGridCells` the caller makes inside the same mutation, so
+ * one failure surfaces rather than leaving a character that silently did not
+ * get its tiers.
+ */
 export async function createCharacter(
   gameAccountId: string,
   name: string,
-  classStr: string,
-  tiers: Record<string, 'none' | 'solo' | 'story' | 'elite' | 'legend'>
+  characterClass?: string | null,
 ): Promise<CharacterRow> {
   const existing = await listCharacters(gameAccountId);
-  
-  // 1. Create the character
   const { data, error } = await supabase
     .from('characters')
-    .insert({ 
-      game_account_id: gameAccountId, 
-      name, 
-      class: classStr,
-      sort_order: nextSortOrder(existing) 
+    .insert({
+      game_account_id: gameAccountId,
+      name,
+      class: characterClass ?? null,
+      sort_order: nextSortOrder(existing),
     })
     .select()
     .single();
   if (error) throw error;
-  
-  // 2. Set the initial tiers
-  const gridInserts = Object.entries(tiers)
-    .filter(([_, tier]) => tier !== 'none') // Don't insert 'none' since it's the fallback if we don't have a row
-    .map(([dungeonId, tier]) => ({
-      character_id: data.id,
-      dungeon_id: dungeonId,
-      tier,
-      min_runs: 0
-    }));
-    
-  if (gridInserts.length > 0) {
-    const { error: gridError } = await supabase
-      .from('character_dungeon')
-      .insert(gridInserts);
-    if (gridError) throw gridError;
-  }
-  
   return data;
 }
 

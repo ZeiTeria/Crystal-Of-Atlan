@@ -1,35 +1,32 @@
 import { useEffect, useState } from 'react';
+import { nextReset } from '../engine/resetWindow';
 import type { PlanInput } from '../engine/types';
 
-interface CountdownProps {
-  settings: PlanInput['settings'];
-}
-
-export default function Countdown({ settings }: CountdownProps) {
-  const [timeLeft, setTimeLeft] = useState('');
-
+/**
+ * Time left until the gold cap resets. The boundary is recomputed from the
+ * ticking clock rather than passed in, so the display rolls straight over to
+ * the following week the moment one reset passes.
+ */
+export default function Countdown({ settings }: { settings: PlanInput['settings'] }) {
+  const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    function update() {
-      const now = new Date();
-      // Simple mock for now - you would calculate real time based on settings.goldResetWeekday
-      // but standard formatting is sufficient for this UI demo.
-      const ms = 2 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000; // 2d 4h left
-      
-      const days = Math.floor(ms / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const mins = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-      
-      if (days > 0) {
-        setTimeLeft(`${days}d ${hours}h`);
-      } else {
-        setTimeLeft(`${hours}h ${mins}m`);
-      }
-    }
-    
-    update();
-    const interval = setInterval(update, 60000);
-    return () => clearInterval(interval);
-  }, [settings]);
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  return <span>{timeLeft || '02:24'}</span>; // Match handoff fallback
+  // Strictly ahead of `now` by construction, so this can never read zero.
+  const diff =
+    nextReset(settings.goldResetWeekday, settings.resetHour, settings.timeZone, now).getTime()
+    - now.getTime();
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / 1000 / 60) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
+
+  return (
+    <span className="num countdown">
+      {days}d {hours}h {minutes.toString().padStart(2, '0')}m {seconds.toString().padStart(2, '0')}s
+    </span>
+  );
 }

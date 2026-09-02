@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react';
 import { errorMessage } from './errorMessage';
 import { configError } from './lib/supabase';
-import { getSession, signInWithDiscord, signOut, onAuthChange } from './lib/auth';
+import { getSession, signOut, onAuthChange } from './lib/auth';
 import { loadProfile, type Profile } from './data/profile';
-import Badge from './ui/Badge';
-import Button from './ui/Button';
-import Tabs from './ui/Tabs';
-import ThemeToggle from './ui/ThemeToggle';
 import PlanScreen from './screens/PlanScreen';
+import { PHONE, useMediaQuery } from './ui/useMediaQuery';
 import DungeonsScreen from './screens/DungeonsScreen';
 import type { Session } from '@supabase/supabase-js';
 import LandingScreen from './screens/LandingScreen';
@@ -29,6 +26,7 @@ export default function App() {
   const [view, setView] = useState<View>('board');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isPhone = useMediaQuery(PHONE);
 
   useEffect(() => {
     let mounted = true;
@@ -94,17 +92,21 @@ export default function App() {
             <LogoMark />
             <span className="brand-text">CRYSTAL OF ATLAN</span>
           </div>
+          {!isPhone && (
           <div className="coa-tabs">
-            {tabs.map(t => (
-              <span 
-                key={t.view} 
+            {tabs.map((t) => (
+              <button
+                key={t.view}
+                type="button"
                 className={`coa-tab ${view === t.view ? 'active' : ''}`}
+                aria-current={view === t.view ? 'page' : undefined}
                 onClick={() => setView(t.view)}
               >
                 {t.label}
-              </span>
+              </button>
             ))}
           </div>
+          )}
         </div>
         <div className="header-right">
           <div className="user-profile">
@@ -114,7 +116,9 @@ export default function App() {
             <span className="user-name">{session.user.user_metadata?.custom_claims?.global_name || profile?.discord_username || session.user.email}</span>
             {profile?.is_admin && <span className="admin-tag">ADMIN</span>}
           </div>
-          <span className="sign-out-btn" onClick={() => void signOut()}>Sign out</span>
+          <button type="button" className="sign-out-btn" onClick={() => void signOut()}>
+            Sign out
+          </button>
         </div>
       </header>
 
@@ -125,17 +129,21 @@ export default function App() {
         {view === 'dungeons' && profile?.is_admin && <DungeonsScreen />}
       </div>
       
+      {isPhone && (
       <div className="mobile-tab-bar">
-        {tabs.map(t => (
-          <span 
-            key={t.view} 
+        {tabs.map((t) => (
+          <button
+            key={t.view}
+            type="button"
             className={`mobile-tab ${view === t.view ? 'active' : ''}`}
+            aria-current={view === t.view ? 'page' : undefined}
             onClick={() => setView(t.view)}
           >
             {t.label}
-          </span>
+          </button>
         ))}
       </div>
+      )}
     </div>
   );
 }

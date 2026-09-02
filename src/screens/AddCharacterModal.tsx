@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import type { Dungeon, Tier } from '../engine/types';
+import type { Dungeon, GridEntry, Tier } from '../engine/types';
 import { Portrait, getClassHue } from '../ui/Shared';
+import { TIER_TEMPLATES, templateCells } from './gridTemplate';
 import './AddCharacterModal.css';
 
 interface AddCharacterModalProps {
   dungeons: Dungeon[];
+  /** Every character's current tiers, so a new one can be copied from one. */
+  grid: GridEntry[];
+  characters: { id: string; name: string }[];
   onClose: () => void;
   onAdd: (name: string, characterClass: string, tiers: Record<string, Tier>) => Promise<void>;
 }
@@ -12,21 +16,49 @@ interface AddCharacterModalProps {
 const CLASSES = ['Magister', 'Puppet Master', 'Swordsman', 'Musketeer', 'Alchemist', 'Fighter'];
 const TIERS: Tier[] = ['none', 'solo', 'story', 'elite', 'legend'];
 
-export default function AddCharacterModal({ dungeons, onClose, onAdd }: AddCharacterModalProps) {
+function defaultTiers(dungeons: Dungeon[]): Record<string, Tier> {
+  const initial: Record<string, Tier> = {};
+  for (const d of dungeons) initial[d.id] = d.default_tier;
+  return initial;
+}
+
+export default function AddCharacterModal({
+  dungeons,
+  grid,
+  characters,
+  onClose,
+  onAdd,
+}: AddCharacterModalProps) {
   const [name, setName] = useState('');
-  const [selectedClass, setSelectedClass] = useState(CLASSES[0]);
-  
-  // Default tiers to 'none' for all dungeons
-  const [tiers, setTiers] = useState<Record<string, Tier>>(() => {
-    const initial: Record<string, Tier> = {};
-    for (const d of dungeons) {
-      initial[d.id] = d.default_tier;
+  const [selectedClass, setSelectedClass] = useState<string>(CLASSES[0] ?? 'Magister');
+  const [template, setTemplate] = useState('blank');
+  const [tiers, setTiers] = useState<Record<string, Tier>>(() => defaultTiers(dungeons));
+
+  /**
+   * Starting point for the tier rows. A copy takes what the source DISPLAYS,
+   * defaults included - copying only its stored rows would leave the two
+   * matching by coincidence and diverging the moment a default changed.
+   */
+  function applyTemplate(value: string) {
+    setTemplate(value);
+    const cells = templateCells(value, {
+      targetId: 'new',
+      dungeons,
+      lookup: (characterId, dungeonId) => {
+        const row = grid.find((g) => g.characterId === characterId && g.dungeonId === dungeonId);
+        return row ? { tier: row.tier, min_runs: row.minRuns } : undefined;
+      },
+    });
+    if (cells.length === 0) {
+      setTiers(defaultTiers(dungeons));
+      return;
     }
-    return initial;
-  });
+    const next: Record<string, Tier> = {};
+    for (const cell of cells) next[cell.dungeon_id] = cell.tier;
+    setTiers(next);
+  }
 
   const hue = getClassHue(selectedClass);
-  const initial = name.trim() ? name.trim()[0].toUpperCase() : '?';
   const unlockedCount = Object.values(tiers).filter(t => t !== 'none').length;
   
   const canAdd = name.trim().length > 0;
@@ -49,7 +81,7 @@ export default function AddCharacterModal({ dungeons, onClose, onAdd }: AddChara
       <div className="add-character-panel">
         <div className="ac-header">
           <div className="ac-header-left">
-            <Portrait name={name} hue={hue} size={44} forceInitial={initial} />
+            <Portrait name={name.trim()} hue={hue} size={44} />
             <div className="ac-header-text">
               <span className="ac-title">{name.trim() || 'New character'}</span>
               <span className="ac-sub">Joins the roster with 0 gold this week</span>
@@ -68,6 +100,33 @@ export default function AddCharacterModal({ dungeons, onClose, onAdd }: AddChara
               placeholder="Character name"
               autoFocus
             />
+          </div>
+          <div className="ac-input-group">
+            <span className="ac-label">START FROM</span>
+            <select
+              aria-label="Template"
+              className="ac-template"
+              value={template}
+              onChange={(e) => applyTemplate(e.target.value)}
+            >
+              <option value="blank">Template: none</option>
+              <optgroup label="Every dungeon at">
+                {TIER_TEMPLATES.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </optgroup>
+              {characters.length > 0 && (
+                <optgroup label="Copy a character">
+                  {characters.map((c) => (
+                    <option key={c.id} value={`char:${c.id}`}>
+                      {c.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
           </div>
           <div className="ac-input-group">
             <span className="ac-label">CLASS</span>

@@ -1,4 +1,3 @@
-import React from 'react';
 import { signInWithDiscord } from '../lib/auth';
 import coaLogo from '../assets/images/Crystal Of Atlan Logo.avif';
 import './LandingScreen.css';
@@ -19,7 +18,7 @@ export default function LandingScreen({ error }: { error?: string | null }) {
         </div>
       </div>
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={error ?? null} />
 
       <div className="landing-hero">
         <div className="hero-content slide-up">
