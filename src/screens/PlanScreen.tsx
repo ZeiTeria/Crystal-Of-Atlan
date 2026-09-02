@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { createCharacter, currentGameAccountId, listCharacters, type CharacterRow } from '../data/accounts';
-import { listGrid, setGridCells, type GridRow } from '../data/grid';
-import { loadAppSettings, maxCharacters } from '../data/roster';
-import { loadPlanInput } from '../data/loadPlanInput';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  createCharacter,
+  currentGameAccountId,
+  listCharacters,
+  type CharacterRow,
+} from '../data/accounts';
+import { setGridCells, type GridRow } from '../data/grid';
+import { maxCharacters } from '../data/roster';
+import { loadPlanState } from '../data/loadPlanInput';
 import {
   attemptCeiling,
   explainCeiling,
@@ -41,41 +46,56 @@ interface PlanScreenProps {
 export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
   const [solved, setSolved] = useState<Solved | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  // The account cannot change while this screen is mounted, so it is resolved
+  // once rather than on every refresh - and every write causes a refresh.
+  const accountRef = useRef<string | null>(null);
+
+  const accountId = useCallback(async () => {
+    accountRef.current ??= await currentGameAccountId();
+    return accountRef.current;
+  }, []);
 
   const solveFn = useCallback(async () => {
     try {
-      const accountId = await currentGameAccountId();
-      const input = await loadPlanInput(accountId);
-      // The roster and the grid are read separately from the plan input, which
-      // is the SOLVER's view: it has already dropped parked characters and any
-      // pair whose tier is `none`. The log edits the stored rows, so it needs
-      // them as stored - otherwise choosing `none` reads back as the dungeon's
-      // default on the next refresh.
-      const roster = await listCharacters(accountId);
-      // In parallel: neither needs the other, and the cap is only ever read.
-      const [gridRows, settings] = await Promise.all([
-        listGrid(roster.map((c) => c.id)),
-        loadAppSettings(),
-      ]);
-      const result = await solveOptimal(input);
+      // ONE read. It returns the rows as well as the engine's input, because
+      // the screens need what the engine drops - parked characters, and grid
+      // rows whose tier is `none`. Asking for those separately fetched
+      // characters, the grid and the settings a second time apiece.
+      const state = await loadPlanState(await accountId());
+      const result = await solveOptimal(state.input);
       setSolved({
-        input,
+        input: state.input,
         result,
-        roster,
-        gridRows,
-        maxCharacters: maxCharacters(settings),
-        reasons: explainCeiling(input, result),
-        relaxed: noContention(input),
-        goldCeiling: goldCapCeiling(input),
-        attemptsCeiling: attemptCeiling(input),
+        roster: state.characters,
+        gridRows: state.grid,
+        maxCharacters: maxCharacters(state.settings),
+        reasons: explainCeiling(state.input, result),
+        relaxed: noContention(state.input),
+        goldCeiling: goldCapCeiling(state.input),
+        attemptsCeiling: attemptCeiling(state.input),
       });
     } catch (err: unknown) {
       setSolved(null);
       throw err;
     }
-  }, []);
+  }, [accountId]);
 
   const { busy, error, mutate, refresh: solve } = useMutation(solveFn);
+
+  /**
+   * Re-reads the roster and nothing else.
+   *
+   * A rename, a class or a reorder cannot change the plan - the solver never
+   * reads any of them - so paying for five tables and a wasm solve to see a
+   * new name appear is waste the user can feel. Anything that DOES move the
+   * plan (a tier, a minimum, parking, adding, deleting) goes through `mutate`.
+   */
+  const relabelFn = useCallback(async () => {
+    const roster = await listCharacters(await accountId());
+    setSolved((was) => (was ? { ...was, roster } : was));
+  }, [accountId]);
+
+  const { error: relabelError, mutate: relabel } = useMutation(relabelFn);
 
   useEffect(() => {
     void solve().catch(() => setSolved(null));
@@ -91,8 +111,7 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
     // roster fills from somewhere else, and RLS has no opinion about a cap.
     if (solved.roster.length >= solved.maxCharacters) return;
     await mutate(async () => {
-      const accountId = await currentGameAccountId();
-      const created = await createCharacter(accountId, name, characterClass);
+      const created = await createCharacter(await accountId(), name, characterClass);
       // Seeding the grid is part of creating the character, inside the same
       // mutation, so a failure here surfaces and refreshes like any other
       // rather than leaving a character that silently did not get its tiers.
@@ -162,7 +181,7 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
           Resets in <Countdown settings={input.settings} />
         </span>
       </div>
-      <ErrorBanner message={error} />
+      <ErrorBanner message={error ?? relabelError} />
 
       {input.grid.length === 0 ? (
         <p className="muted">
@@ -207,6 +226,7 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
               gridRows={gridRows}
               roster={roster}
               mutate={mutate}
+              relabel={relabel}
               atCap={atCap}
               maxCharacters={solved.maxCharacters}
               onAddClick={() => setShowAddModal(true)}

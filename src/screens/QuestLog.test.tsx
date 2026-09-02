@@ -77,6 +77,11 @@ const mutate = vi.fn(async (write: () => Promise<void>) => {
   await write();
 });
 
+/** The cheap path, for writes the solver cannot see. */
+const relabel = vi.fn(async (write: () => Promise<void>) => {
+  await write();
+});
+
 function renderLog(
   opts: {
     input?: PlanInput;
@@ -92,6 +97,7 @@ function renderLog(
       gridRows={opts.gridRows ?? [storedRow]}
       roster={opts.roster ?? [mage]}
       mutate={mutate}
+      relabel={relabel}
     />,
   );
 }
@@ -114,6 +120,7 @@ beforeEach(() => {
   vi.mocked(toggleCharacterActive).mockResolvedValue(undefined);
   vi.mocked(setCharacterOrder).mockResolvedValue(undefined);
   mutate.mockClear();
+  relabel.mockClear();
 });
 
 describe('QuestLog cells', () => {
@@ -355,6 +362,43 @@ describe('QuestLog roster management', () => {
     fireEvent.change(field, { target: { value: '   ' } });
     fireEvent.blur(field);
     expect(vi.mocked(renameCharacter)).not.toHaveBeenCalled();
+  });
+
+  it('renames without re-solving the plan', async () => {
+    // A name is invisible to the solver. Re-reading five tables and running the
+    // wasm solve to see it change is waste the user can feel.
+    renderLog();
+    const field = await screen.findByDisplayValue('Mage');
+    fireEvent.change(field, { target: { value: 'Archmage' } });
+    fireEvent.blur(field);
+    await waitFor(() => expect(vi.mocked(renameCharacter)).toHaveBeenCalled());
+    expect(relabel).toHaveBeenCalled();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('sets a class without re-solving the plan', async () => {
+    renderLog();
+    fireEvent.click(await screen.findByRole('button', { name: /set mage's class/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Set class to Warlock' }));
+    await waitFor(() => expect(vi.mocked(setCharacterClass)).toHaveBeenCalled());
+    expect(relabel).toHaveBeenCalled();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('re-solves when parking a character, which the solver DOES see', async () => {
+    renderLog();
+    fireEvent.click(await screen.findByLabelText('Include Mage in plan'));
+    await waitFor(() => expect(vi.mocked(toggleCharacterActive)).toHaveBeenCalled());
+    expect(mutate).toHaveBeenCalled();
+  });
+
+  it('re-solves when a minimum changes', async () => {
+    renderLog();
+    fireEvent.click(
+      await screen.findByRole('button', { name: /one fewer minimum run of abyss for mage/i }),
+    );
+    await waitFor(() => expect(vi.mocked(setGridCell)).toHaveBeenCalled());
+    expect(mutate).toHaveBeenCalled();
   });
 
   it('warns that deleting a character takes its runs with it', async () => {

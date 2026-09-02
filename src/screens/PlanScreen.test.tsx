@@ -2,31 +2,20 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlanScreen from './PlanScreen';
-import { loadPlanInput } from '../data/loadPlanInput';
+import { loadPlanState } from '../data/loadPlanInput';
 import {
   createCharacter,
   currentGameAccountId,
   listCharacters,
   type CharacterRow,
 } from '../data/accounts';
-import { listGrid, setGridCells } from '../data/grid';
-import { loadAppSettings } from '../data/roster';
+import { setGridCells, type GridRow } from '../data/grid';
 import type { PlanInput } from '../engine/types';
 import { stubMatchMedia } from '../ui/testing/matchMedia';
 import { resetDensity } from '../ui/density';
 
-vi.mock('../data/loadPlanInput', () => ({ loadPlanInput: vi.fn() }));
-// Only the network call is stubbed; nextDefaultName and the cap arithmetic
-// are pure and are exactly what these tests are about.
-vi.mock('../data/roster', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../data/roster')>()),
-  loadAppSettings: vi.fn(),
-}));
-vi.mock('../data/grid', () => ({
-  listGrid: vi.fn(),
-  setGridCell: vi.fn(),
-  setGridCells: vi.fn(),
-}));
+vi.mock('../data/loadPlanInput', () => ({ loadPlanState: vi.fn() }));
+vi.mock('../data/grid', () => ({ setGridCell: vi.fn(), setGridCells: vi.fn() }));
 // The roster is read separately from the plan input: the input has already
 // dropped parked characters, and the log has to be able to unpark one.
 vi.mock('../data/accounts', () => ({
@@ -81,6 +70,26 @@ function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
   };
 }
 
+/** The single read the screen makes: derived input plus the rows behind it. */
+function aState(
+  overrides: Partial<PlanInput> = {},
+  rows: { characters?: CharacterRow[]; grid?: GridRow[]; maxCharacters?: number } = {},
+) {
+  return {
+    input: anInput(overrides),
+    settings: {
+      id: true as const,
+      gold_cap_per_character: 1_000_000,
+      gold_reset_weekday: 1,
+      reset_hour: 6,
+      server_timezone: 'UTC',
+      max_characters: rows.maxCharacters ?? 12,
+    },
+    characters: rows.characters ?? [MAGE],
+    grid: rows.grid ?? [],
+  };
+}
+
 const MAGE: CharacterRow = {
   id: 'c1',
   game_account_id: 'acc',
@@ -95,16 +104,7 @@ beforeEach(() => {
   vi.mocked(listCharacters).mockResolvedValue([MAGE]);
   vi.mocked(createCharacter).mockResolvedValue({ ...MAGE, id: 'new', name: 'Rogue' });
   vi.mocked(setGridCells).mockResolvedValue(undefined);
-  vi.mocked(listGrid).mockResolvedValue([]);
-  vi.mocked(loadAppSettings).mockResolvedValue({
-    id: true,
-    gold_cap_per_character: 1_000_000,
-    gold_reset_weekday: 1,
-    reset_hour: 6,
-    server_timezone: 'UTC',
-    max_characters: 12,
-  });
-  vi.mocked(loadPlanInput).mockResolvedValue(anInput());
+  vi.mocked(loadPlanState).mockResolvedValue(aState());
 });
 
 /** Opens the add form from the board and fills in a name. */
@@ -160,8 +160,8 @@ describe('PlanScreen', () => {
   });
 
   it('picks one character out of every card when you point at it', async () => {
-    vi.mocked(loadPlanInput).mockResolvedValue(
-      anInput({
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({
         characters: [
           { id: 'c1', name: 'Mage', class: 'Magister' },
           { id: 'c2', name: 'Rogue', class: 'Fighter' },
@@ -199,8 +199,8 @@ describe('PlanScreen', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date('2026-09-06T21:00:00Z'));
     try {
-      vi.mocked(loadPlanInput).mockResolvedValue(
-        anInput({
+      vi.mocked(loadPlanState).mockResolvedValue(
+      aState({
           settings: {
             goldCap: 1_000_000,
             goldResetWeekday: 1,
@@ -228,8 +228,8 @@ describe('PlanScreen', () => {
   });
 
   it('reports an impossible minimum instead of a plan', async () => {
-    vi.mocked(loadPlanInput).mockResolvedValue(
-      anInput({
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({
         grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'none', minRuns: 2 }],
       }),
     );
@@ -238,9 +238,9 @@ describe('PlanScreen', () => {
   });
 
   it('says what to do when there is nothing to plan', async () => {
-    vi.mocked(listCharacters).mockResolvedValue([]);
-    vi.mocked(loadPlanInput).mockResolvedValue(
-      anInput({ characters: [], grid: [], characterAttemptsLeft: {}, goldHeadroom: {} }),
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({ characters: [], grid: [], characterAttemptsLeft: {}, goldHeadroom: {} },
+        { characters: [] }),
     );
     render(<PlanScreen />);
     expect(await screen.findByRole('button', { name: /add character/i })).toBeDefined();
@@ -250,7 +250,8 @@ describe('PlanScreen', () => {
     // goldHeadroom (50) is deliberately tighter than what the attempts could
     // earn (min(characterAttempts, accountAttempts) * goldPerRun = 3 * 30 = 90).
     // Math.max, +, or dropping either term would all print something other than 50.
-    vi.mocked(loadPlanInput).mockResolvedValue(anInput({ goldHeadroom: { c1: 50 } }));
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({ goldHeadroom: { c1: 50 } }));
     render(<PlanScreen />);
     await screen.findAllByText('Mage');
     expect(await screen.findByText(/at most 50/)).toBeDefined();
@@ -269,8 +270,8 @@ describe('PlanScreen', () => {
     // 1 * 30 = 30. Math.min(a, b) and plain `a` (goldCeiling) would both
     // render 1,000,000 here, so only the attempts term being present is what
     // makes this case fail on Math.max, `+`, or a dropped attempts term.
-    vi.mocked(loadPlanInput).mockResolvedValue(
-      anInput({ goldHeadroom: { c1: 1_000_000 }, accountAttemptsLeft: { d1: 1 } }),
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({ goldHeadroom: { c1: 1_000_000 }, accountAttemptsLeft: { d1: 1 } }),
     );
     render(<PlanScreen />);
     await screen.findAllByText('Mage');
@@ -279,7 +280,7 @@ describe('PlanScreen', () => {
   });
 
   it('does not render a table when the initial load fails, and offers a retry', async () => {
-    vi.mocked(loadPlanInput).mockRejectedValueOnce(
+    vi.mocked(loadPlanState).mockRejectedValueOnce(
       new NamedError('FetchError', 'could not reach supabase'),
     );
     render(<PlanScreen />);
@@ -293,14 +294,14 @@ describe('PlanScreen', () => {
   });
 
   it('clears the stale error and shows progress while a retry is in flight', async () => {
-    vi.mocked(loadPlanInput).mockRejectedValueOnce(
+    vi.mocked(loadPlanState).mockRejectedValueOnce(
       new NamedError('FetchError', 'could not reach supabase'),
     );
     render(<PlanScreen />);
     expect(await screen.findByText(/could not reach supabase/i)).toBeDefined();
 
-    const gate = deferred<PlanInput>();
-    vi.mocked(loadPlanInput).mockReturnValue(gate.promise);
+    const gate = deferred<ReturnType<typeof aState>>();
+    vi.mocked(loadPlanState).mockReturnValue(gate.promise);
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
 
@@ -311,7 +312,7 @@ describe('PlanScreen', () => {
     });
     expect(screen.getByText(/solving/i)).toBeDefined();
 
-    gate.resolve(anInput());
+    gate.resolve(aState());
     expect(await screen.findAllByText('Mage')).toBeDefined();
   });
 
@@ -346,20 +347,31 @@ describe('PlanScreen', () => {
 describe('PlanScreen on a phone', () => {
 
   it('refuses to add past the cap, and says so', async () => {
-    vi.mocked(loadAppSettings).mockResolvedValue({
-      id: true,
-      gold_cap_per_character: 1_000_000,
-      gold_reset_weekday: 1,
-      reset_hour: 6,
-      server_timezone: 'UTC',
-      max_characters: 1,
-    });
+    vi.mocked(loadPlanState).mockResolvedValue(aState({}, { maxCharacters: 1 }));
     render(<PlanScreen />);
     await screen.findAllByText('Mage');
     const add = screen.getByRole('button', { name: /1 \/ 1|\+ add/i }) as HTMLButtonElement;
     expect(add.disabled).toBe(true);
     fireEvent.click(add);
     expect(screen.queryByLabelText('New character name')).toBe(null);
+  });
+
+  it('reads the whole plan once per refresh, not the same tables twice', async () => {
+    // characters, the grid and the settings all arrive with the plan. Reading
+    // them again apiece meant three extra round trips after every write.
+    render(<PlanScreen />);
+    await screen.findAllByText('Mage');
+    expect(vi.mocked(loadPlanState)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(listCharacters)).not.toHaveBeenCalled();
+  });
+
+  it('resolves the account once, not on every refresh', async () => {
+    render(<PlanScreen />);
+    await screen.findAllByText('Mage');
+    fireEvent.click(screen.getByRole('button', { name: /\+ add/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /add character/i }));
+    await waitFor(() => expect(vi.mocked(createCharacter)).toHaveBeenCalled());
+    expect(vi.mocked(currentGameAccountId)).toHaveBeenCalledTimes(1);
   });
 
   it('offers the character picker rather than a matrix', async () => {
@@ -374,8 +386,8 @@ describe('PlanScreen gold that is standing in', () => {
     // The character runs this dungeon at elite, and elite HAS a figure. A
     // dungeon-level mark would flag this cell anyway, which trains the eye to
     // ignore the mark entirely.
-    vi.mocked(loadPlanInput).mockResolvedValue(
-      anInput({ dungeons: [{ ...dungeon, goldEstimated: ['solo', 'legend'] }] }),
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({ dungeons: [{ ...dungeon, goldEstimated: ['solo', 'legend'] }] }),
     );
     render(<PlanScreen />);
     await screen.findAllByText('Mage');
@@ -383,8 +395,8 @@ describe('PlanScreen gold that is standing in', () => {
   });
 
   it('marks the cell when the difficulty it actually runs has no figure', async () => {
-    vi.mocked(loadPlanInput).mockResolvedValue(
-      anInput({ dungeons: [{ ...dungeon, goldEstimated: ['elite'] }] }),
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({ dungeons: [{ ...dungeon, goldEstimated: ['elite'] }] }),
     );
     render(<PlanScreen />);
     const dot = await screen.findByRole('button', { name: /has no gold figure for elite/i });
@@ -396,16 +408,16 @@ describe('PlanScreen gold that is standing in', () => {
   });
 
   it('marks a dungeon with no figures at all, whatever the difficulty', async () => {
-    vi.mocked(loadPlanInput).mockResolvedValue(
-      anInput({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
     );
     render(<PlanScreen />);
     expect(await screen.findByRole('button', { name: /no gold figures at all/i })).toBeDefined();
   });
 
   it('opens an explanation on click, and closes it on Escape', async () => {
-    vi.mocked(loadPlanInput).mockResolvedValue(
-      anInput({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
     );
     render(<PlanScreen />);
     const dot = await screen.findByRole('button', { name: /no gold figures at all/i });
@@ -428,8 +440,8 @@ describe('PlanScreen gold that is standing in', () => {
 
 describe('PlanScreen explanation on hover', () => {
   it('opens on pointing at it, and closes again on leaving', async () => {
-    vi.mocked(loadPlanInput).mockResolvedValue(
-      anInput({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
     );
     render(<PlanScreen />);
     const dot = await screen.findByRole('button', { name: /no gold figures at all/i });
@@ -445,8 +457,8 @@ describe('PlanScreen explanation on hover', () => {
   it('stays open after a click, so it survives the pointer leaving', async () => {
     // Which is what makes it usable on a touch screen, where there is no hover
     // to keep it open in the first place.
-    vi.mocked(loadPlanInput).mockResolvedValue(
-      anInput({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
     );
     render(<PlanScreen />);
     const dot = await screen.findByRole('button', { name: /no gold figures at all/i });
@@ -478,7 +490,8 @@ describe('PlanScreen leftover attempts', () => {
 
   it('says nothing when nothing is left over', async () => {
     // Exactly as many attempts remaining as the plan can spend.
-    vi.mocked(loadPlanInput).mockResolvedValue(anInput({ accountAttemptsLeft: { d1: 3 } }));
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({ accountAttemptsLeft: { d1: 3 } }));
     render(<PlanScreen />);
     await screen.findAllByText('Mage');
     expect(screen.getByText('0 / 3')).toBeDefined();

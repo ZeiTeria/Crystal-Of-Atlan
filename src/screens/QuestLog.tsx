@@ -41,8 +41,15 @@ interface QuestLogProps {
   /** Every character on the account, parked ones included - the plan input has
    *  already dropped those, and a roster you cannot unpark from is a trap. */
   roster: CharacterRow[];
-  /** Runs a write, then re-reads everything. Owned by the screen above. */
+  /** Runs a write, then re-reads everything and re-solves. */
   mutate: (write: () => Promise<void>) => Promise<void>;
+  /**
+   * Runs a write that CANNOT change the plan, then re-reads the roster only.
+   *
+   * A name, a class and an order are invisible to the solver, so re-reading
+   * five tables and running the wasm solve to see one change is waste.
+   */
+  relabel?: (write: () => Promise<void>) => Promise<void>;
   /** The roster is full, so adding is offered but refused. */
   atCap?: boolean;
   maxCharacters?: number;
@@ -64,6 +71,7 @@ export default function QuestLog({
   gridRows,
   roster,
   mutate,
+  relabel,
   atCap,
   maxCharacters,
   onAddClick,
@@ -99,10 +107,13 @@ export default function QuestLog({
     return () => document.removeEventListener('keydown', onKey);
   }, [classOpen]);
 
+  // Order, name and class never move the plan; everything else does.
+  const write = relabel ?? mutate;
+
   const byId = new Map(roster.map((c) => [c.id, c]));
   const { order, activeId, handleProps } = useSortableList({
     ids: roster.map((c) => c.id),
-    onReorder: (ids) => void mutate(() => setCharacterOrder(sortOrderPatches(ids))),
+    onReorder: (ids) => void write(() => setCharacterOrder(sortOrderPatches(ids))),
   });
   const characters = order.map((id) => byId.get(id)).filter((c) => c !== undefined);
 
@@ -302,7 +313,7 @@ export default function QuestLog({
                         className="class-popover-clear"
                         onClick={() => {
                           setClassOpen(false);
-                          void mutate(() => setCharacterClass(selected.id, null));
+                          void write(() => setCharacterClass(selected.id, null));
                         }}
                       >
                         Clear
@@ -314,7 +325,7 @@ export default function QuestLog({
                     labelFor={(name) => `Set class to ${name}`}
                     onSelect={(name) => {
                       setClassOpen(false);
-                      void mutate(() => setCharacterClass(selected.id, name));
+                      void write(() => setCharacterClass(selected.id, name));
                     }}
                   />
                 </div>
@@ -329,7 +340,7 @@ export default function QuestLog({
                 onBlur={(e) => {
                   const next = e.target.value.trim();
                   if (next === '' || next === selected.name) return;
-                  void mutate(() => renameCharacter(selected.id, next));
+                  void write(() => renameCharacter(selected.id, next));
                 }}
               />
               <span className="qh-sub">

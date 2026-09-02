@@ -129,16 +129,33 @@ function earliestBoundary(
 }
 
 /**
+ * One account's stored state: what the engine needs, and the rows it came from.
+ *
+ * The rows are returned as well as the derived input because the SCREENS need
+ * what the engine deliberately drops - parked characters, and grid rows whose
+ * tier is `none`. Reading them separately meant fetching characters, the grid
+ * and the settings twice on every refresh, and a refresh follows every write.
+ */
+export interface PlanState {
+  input: PlanInput;
+  settings: Row<'app_settings'>;
+  /** Every character on the account, parked included. */
+  characters: Row<'characters'>[];
+  /** The stored grid rows, `none` tiers included. */
+  grid: Row<'character_dungeon'>[];
+}
+
+/**
  * Reads one account's stored state and hands the finished engine its input.
  *
  * Row level security is what scopes this to the signed-in user; the account id
  * only picks which of their accounts to plan. An account they do not own simply
  * returns no characters.
  */
-export async function loadPlanInput(
+export async function loadPlanState(
   gameAccountId: string,
   now: Date = new Date(),
-): Promise<PlanInput> {
+): Promise<PlanState> {
   const [settingsResult, charactersResult, dungeonsResult] = await Promise.all([
     supabase.from('app_settings').select('*').eq('id', true).single(),
     supabase
@@ -162,7 +179,15 @@ export async function loadPlanInput(
   // No characters means no grid and no runs to ask for, and `in ()` with an
   // empty list is a query the client should never have to send.
   if (characterIds.length === 0) {
-    return buildPlanInput({ settings: settingsRow, characters, dungeons, grid: [], runs: [] }, now);
+    return {
+      input: buildPlanInput(
+        { settings: settingsRow, characters, dungeons, grid: [], runs: [] },
+        now,
+      ),
+      settings: settingsRow,
+      characters,
+      grid: [],
+    };
   }
 
   const since = earliestBoundary(toSettings(settingsRow), dungeons, now);
@@ -178,14 +203,19 @@ export async function loadPlanInput(
   if (gridResult.error) throw gridResult.error;
   if (runsResult.error) throw runsResult.error;
 
-  return buildPlanInput(
-    {
-      settings: settingsRow,
-      characters,
-      dungeons,
-      grid: gridResult.data,
-      runs: runsResult.data,
-    },
-    now,
-  );
+  return {
+    input: buildPlanInput(
+      {
+        settings: settingsRow,
+        characters,
+        dungeons,
+        grid: gridResult.data,
+        runs: runsResult.data,
+      },
+      now,
+    ),
+    settings: settingsRow,
+    characters,
+    grid: gridResult.data,
+  };
 }
