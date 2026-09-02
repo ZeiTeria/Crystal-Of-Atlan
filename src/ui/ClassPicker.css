@@ -96,19 +96,32 @@
   white-space: nowrap;
 }
 
-/* The class control on a character: the portrait opens this. */
+/*
+ * The class control on a character: the portrait opens this.
+ *
+ * Wide enough for all seven families side by side, so changing a class never
+ * scrolls - at 560px it was three columns, three rows deep, and scrolling past
+ * the families to reach one while the panel beside it sat empty. The lower
+ * bound keeps it usable on a phone, where that width does not exist; the
+ * overflow stays only as a floor for a very short window.
+ */
 .class-popover {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
   z-index: 40;
-  width: min(560px, 78vw);
-  max-height: 320px;
+  width: clamp(260px, calc(100vw - 300px), 1180px);
+  max-height: min(72vh, 560px);
   overflow-y: auto;
   padding: var(--s3);
   border: 1px solid var(--line-strong);
   background: var(--surface-2);
   box-shadow: 0 10px 30px rgb(0 0 0 / 50%);
+}
+
+/* Narrower tracks here than in the add form: seven of them have to fit. */
+.class-popover .class-families {
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
 }
 
 .class-popover-head {
