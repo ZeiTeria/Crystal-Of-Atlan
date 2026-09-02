@@ -1,0 +1,72 @@
+.tier-select {
+  position: relative;
+  display: inline-flex;
+}
+
+/* An open menu has to sit above the rows after it, and only while open. */
+.tier-select.is-open {
+  z-index: 25;
+}
+
+.tier-value {
+  min-width: 64px;
+  padding: 4px 6px;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: capitalize;
+  text-align: left;
+  border: 1px solid transparent;
+  transition: border-color .15s, background-color .15s;
+}
+
+.tier-value:hover:not(:disabled),
+.tier-select.is-open .tier-value {
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tier-value:disabled {
+  opacity: .55;
+}
+
+.tier-value:focus-visible {
+  outline: 1px solid var(--line-focus);
+  outline-offset: 1px;
+}
+
+.tier-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+  padding: var(--s1);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 45%);
+}
+
+.tier-option {
+  padding: 6px 12px;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: capitalize;
+  text-align: left;
+  white-space: nowrap;
+  transition: background-color .12s;
+}
+
+.tier-option:hover,
+.tier-option:focus-visible {
+  background: rgba(255, 255, 255, 0.07);
+  outline: none;
+}
+
+/* The one in force, marked without spending a column on a tick. */
+.tier-option.on {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 2px 0 0 currentColor;
+}

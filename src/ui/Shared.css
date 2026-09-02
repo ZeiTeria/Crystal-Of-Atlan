@@ -1,0 +1,60 @@
+.logo-mark {
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(150deg, #7FA6FF, #4A6EF5);
+  clip-path: polygon(50% 0, 100% 28%, 100% 72%, 50% 100%, 0 72%, 0 28%);
+}
+
+.portrait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  border: 1px solid;
+  clip-path: polygon(0 0, 100% 0, 100% 72%, 72% 100%, 0 100%);
+  flex-shrink: 0;
+}
+
+.portrait.dim {
+  opacity: 0.55;
+}
+
+.diamond-dot {
+  display: inline-block;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  flex-shrink: 0;
+}
+
+/* Common tab styles */
+.coa-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.coa-tab {
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-faint);
+}
+
+.coa-tab.active {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.coa-tab:not(.active):hover {
+  color: var(--text-dim);
+}
+
+/* The class mark inside a portrait. Masked, not drawn: the source art is
+   white, and each class has to come out in its own colour. */
+.portrait-mark {
+  display: block;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}

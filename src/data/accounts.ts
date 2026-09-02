@@ -42,10 +42,12 @@ export async function currentGameAccountId(): Promise<string> {
   const newId = created.data.id;
   // Slots 10 apart, matching nextSortOrder and the reorder's (i + 1) * 10, so
   // seeded and later-added characters share one spacing scheme.
+  const seedClasses = ['Magister', 'Puppet Master', 'Swordsman', 'Musketeer', 'Alchemist', 'Fighter'];
   await supabase.from('characters').insert(
     [1, 2, 3, 4, 5, 6].map((n) => ({
       game_account_id: newId,
       name: `Character ${n}`,
+      class: seedClasses[n - 1],
       sort_order: n * 10,
     })),
   );
@@ -87,14 +89,29 @@ export async function listCharacters(gameAccountId: string): Promise<CharacterRo
   return data;
 }
 
+/**
+ * A new character on the roster.
+ *
+ * `characterClass` is optional because a character is valid without one - it
+ * only picks the display hue. Seeding the grid is deliberately NOT done here:
+ * it is a separate `setGridCells` the caller makes inside the same mutation, so
+ * one failure surfaces rather than leaving a character that silently did not
+ * get its tiers.
+ */
 export async function createCharacter(
   gameAccountId: string,
   name: string,
+  characterClass?: string | null,
 ): Promise<CharacterRow> {
   const existing = await listCharacters(gameAccountId);
   const { data, error } = await supabase
     .from('characters')
-    .insert({ game_account_id: gameAccountId, name, sort_order: nextSortOrder(existing) })
+    .insert({
+      game_account_id: gameAccountId,
+      name,
+      class: characterClass ?? null,
+      sort_order: nextSortOrder(existing),
+    })
     .select()
     .single();
   if (error) throw error;
@@ -103,6 +120,15 @@ export async function createCharacter(
 
 export async function renameCharacter(id: string, name: string): Promise<void> {
   const { error } = await supabase.from('characters').update({ name }).eq('id', id);
+  if (error) throw error;
+}
+
+/** `null` clears it, which is a real state: a character need not have a class. */
+export async function setCharacterClass(id: string, characterClass: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('characters')
+    .update({ class: characterClass })
+    .eq('id', id);
   if (error) throw error;
 }
 

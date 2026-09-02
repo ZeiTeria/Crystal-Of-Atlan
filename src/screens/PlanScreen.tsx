@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useMutation } from '../hooks/useMutation';
-import Button from '../ui/Button';
-import { currentGameAccountId } from '../data/accounts';
-import { loadPlanInput } from '../data/loadPlanInput';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  createCharacter,
+  currentGameAccountId,
+  listCharacters,
+  type CharacterRow,
+} from '../data/accounts';
+import { setGridCells, type GridRow } from '../data/grid';
+import { maxCharacters } from '../data/roster';
+import { loadPlanState } from '../data/loadPlanInput';
 import {
   attemptCeiling,
   explainCeiling,
@@ -11,392 +16,217 @@ import {
   type Reason,
 } from '../engine/ceilings';
 import { solveOptimal } from '../engine/solver';
-import type { PaidTier, PlanInput, PlanResult, Tier } from '../engine/types';
-import { describeConflict, describeReason, gold, type Names } from './planText';
-import InfoDot from '../ui/InfoDot';
-import DensityToggle from '../ui/DensityToggle';
-import { useDensity } from '../ui/density';
-import { suggestAbbreviation } from './abbreviate';
-import { nextReset } from '../engine/resetWindow';
-import Meter from '../ui/Meter';
-import { groupSpans, matrixColumns } from './columns';
-import CharacterPicker from '../ui/CharacterPicker';
-import { PHONE, useMediaQuery } from '../ui/useMediaQuery';
+import type { PlanInput, PlanResult, Tier } from '../engine/types';
+import { useMutation } from '../hooks/useMutation';
+import Button from '../ui/Button';
 import ErrorBanner from '../ui/ErrorBanner';
-
-/**
- * Time left until the gold cap resets. The boundary is recomputed from the
- * ticking clock rather than passed in, so the display rolls straight over to
- * the following week the moment one reset passes.
- */
-function Countdown({ settings }: { settings: PlanInput['settings'] }) {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Strictly ahead of `now` by construction, so this can never read zero.
-  const diff =
-    nextReset(settings.goldResetWeekday, settings.resetHour, settings.timeZone, now).getTime()
-    - now.getTime();
-
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-  const minutes = Math.floor((diff / 1000 / 60) % 60);
-  const seconds = Math.floor((diff / 1000) % 60);
-
-  return (
-    <span className="num">
-      {days}d {hours}h {minutes.toString().padStart(2, '0')}m {seconds.toString().padStart(2, '0')}s
-    </span>
-  );
-}
-
-/**
- * Why a cell's gold cannot be trusted, or null when it can.
- *
- * Deliberately per CELL and per TIER, not per dungeon: a dungeon can know
- * exactly what elite pays and nothing about legend, and a character running it
- * at elite has a figure that is simply correct. Flagging the whole dungeon
- * marked those cells too, which trains the eye to ignore the mark.
- *
- * It points at @zteria rather than the Dungeons tab because the catalogue is
- * admin-only: telling a player to edit a screen they cannot open is worse than
- * saying nothing.
- */
-function goldWarning(
-  dungeon: { name: string; goldEstimated: PaidTier[]; goldUnknown: boolean },
-  tier: Tier | undefined,
-): string | null {
-  if (dungeon.goldUnknown) {
-    return `${dungeon.name} has no gold figures at all, so this plan cannot weigh it against anything else. Contact @zteria on Discord to get it filled in.`;
-  }
-  if (!tier || tier === 'none') return null;
-  if (!dungeon.goldEstimated.includes(tier)) return null;
-  return `${dungeon.name} has no gold figure for ${tier}. Another difficulty's figure is standing in, so this row is an estimate. Contact @zteria on Discord to get it filled in.`;
-}
+import AddCharacterModal from './AddCharacterModal';
+import AttemptBoard from './AttemptBoard';
+import QuestLog from './QuestLog';
+import { describeConflict, describeReason, type Names } from './planText';
 
 interface Solved {
   input: PlanInput;
   result: PlanResult;
+  roster: CharacterRow[];
+  gridRows: GridRow[];
+  /** How many characters this account may have. An admin setting. */
+  maxCharacters: number;
   reasons: Reason[];
   relaxed: boolean;
   goldCeiling: number;
   attemptsCeiling: number;
 }
 
-export default function PlanScreen() {
+interface PlanScreenProps {
+  activeView?: 'board' | 'log';
+}
+
+export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
   const [solved, setSolved] = useState<Solved | null>(null);
-  const [phoneCharacterId, setPhoneCharacterId] = useState<string | null>(null);
-  const isPhone = useMediaQuery(PHONE);
-  const [density] = useDensity();
+  const [showAddModal, setShowAddModal] = useState(false);
+  // The account cannot change while this screen is mounted, so it is resolved
+  // once rather than on every refresh - and every write causes a refresh.
+  const accountRef = useRef<string | null>(null);
+
+  const accountId = useCallback(async () => {
+    accountRef.current ??= await currentGameAccountId();
+    return accountRef.current;
+  }, []);
 
   const solveFn = useCallback(async () => {
     try {
-      const accountId = await currentGameAccountId();
-      const input = await loadPlanInput(accountId);
-      const result = await solveOptimal(input);
+      // ONE read. It returns the rows as well as the engine's input, because
+      // the screens need what the engine drops - parked characters, and grid
+      // rows whose tier is `none`. Asking for those separately fetched
+      // characters, the grid and the settings a second time apiece.
+      const state = await loadPlanState(await accountId());
+      const result = await solveOptimal(state.input);
       setSolved({
-        input,
+        input: state.input,
         result,
-        reasons: explainCeiling(input, result),
-        relaxed: noContention(input),
-        goldCeiling: goldCapCeiling(input),
-        attemptsCeiling: attemptCeiling(input),
+        roster: state.characters,
+        gridRows: state.grid,
+        maxCharacters: maxCharacters(state.settings),
+        reasons: explainCeiling(state.input, result),
+        relaxed: noContention(state.input),
+        goldCeiling: goldCapCeiling(state.input),
+        attemptsCeiling: attemptCeiling(state.input),
       });
     } catch (err: unknown) {
       setSolved(null);
       throw err;
     }
-  }, []);
+  }, [accountId]);
 
-  // No `mutate`: the Plan is read-only now. Solving is a refresh, not a write.
-  const { busy, error, refresh: solve } = useMutation(solveFn);
+  const { busy, error, mutate, refresh: solve } = useMutation(solveFn);
+
+  /**
+   * Re-reads the roster and nothing else.
+   *
+   * A rename, a class or a reorder cannot change the plan - the solver never
+   * reads any of them - so paying for five tables and a wasm solve to see a
+   * new name appear is waste the user can feel. Anything that DOES move the
+   * plan (a tier, a minimum, parking, adding, deleting) goes through `mutate`.
+   */
+  const relabelFn = useCallback(async () => {
+    const roster = await listCharacters(await accountId());
+    setSolved((was) => (was ? { ...was, roster } : was));
+  }, [accountId]);
+
+  const { error: relabelError, mutate: relabel } = useMutation(relabelFn);
 
   useEffect(() => {
     void solve().catch(() => setSolved(null));
   }, [solve]);
 
+  async function handleAddCharacter(
+    name: string,
+    characterClass: string | null,
+    tiers: Record<string, Tier>,
+  ) {
+    if (!solved) return;
+    // Checked here as well as on the controls: the form can be open when the
+    // roster fills from somewhere else, and RLS has no opinion about a cap.
+    if (solved.roster.length >= solved.maxCharacters) return;
+    await mutate(async () => {
+      const created = await createCharacter(await accountId(), name, characterClass);
+      // Seeding the grid is part of creating the character, inside the same
+      // mutation, so a failure here surfaces and refreshes like any other
+      // rather than leaving a character that silently did not get its tiers.
+      //
+      // EVERY dungeon gets a row, including ones left exactly on the default.
+      // A dungeon's default is a template for making a character, not a live
+      // link to it: once the character exists its tiers are its own, and
+      // editing the catalogue later must not reach back and change what a
+      // player already told us about a character they have played.
+      const cells = solved.input.dungeons.map((d) => ({
+        character_id: created.id,
+        dungeon_id: d.id,
+        tier: tiers[d.id] ?? d.default_tier,
+        min_runs: d.default_min_runs,
+      }));
+      if (cells.length > 0) await setGridCells(cells);
+    });
+  }
+
   if (!solved) {
     return (
-      <>
+      <section className="plan-empty">
         <p>{error ? `Error: ${error}` : 'Solving...'}</p>
         {error && (
           <Button disabled={busy} onClick={() => void solve()}>
             Retry
           </Button>
         )}
-      </>
+      </section>
     );
   }
 
-  const { input, result } = solved;
+  const { input, result, roster, gridRows } = solved;
+  const atCap = roster.length >= solved.maxCharacters;
   const names: Names = {
     character: (id) => input.characters.find((c) => c.id === id)?.name ?? id,
     dungeon: (id) => input.dungeons.find((d) => d.id === id)?.name ?? id,
   };
 
-  if (input.characters.length === 0) {
+  const modal = showAddModal && !atCap && (
+    <AddCharacterModal
+      dungeons={input.dungeons}
+      grid={input.grid}
+      characters={roster}
+      onClose={() => setShowAddModal(false)}
+      onAdd={handleAddCharacter}
+    />
+  );
+
+  if (roster.length === 0) {
     return (
-      <section>
+      <section className="plan-empty">
         <h2>Plan</h2>
         <p className="muted">Add a character to plan for.</p>
+        <Button onClick={() => setShowAddModal(true)}>Add character</Button>
+        {modal}
       </section>
     );
   }
-
-  if (input.grid.length === 0) {
-    return (
-      <section>
-        <h2>Plan</h2>
-        <p className="muted">
-          Nothing is unlocked yet — set each character&rsquo;s tier per dungeon on the Grid tab.
-        </p>
-      </section>
-    );
-  }
-
-  // Same order as the Grid: newest dungeon leftmost.
-  const columns = matrixColumns(input.dungeons);
-  const spans = groupSpans(columns);
-
-  // The tier a character enters a dungeon at, which is what decides whether the
-  // gold figure behind a cell is real.
-  const tierOf = new Map(input.grid.map((g) => [`${g.characterId}:${g.dungeonId}`, g.tier]));
-
-  // The phone shows one character at a time. Falls back to the first rather
-  // than showing nothing when the selection names a character that has since
-  // been deleted or parked.
-  const shownCharacter =
-    input.characters.find((c) => c.id === phoneCharacterId) ?? input.characters[0];
 
   return (
-    <section>
-      <div className="plan-head">
-        <h2>Plan</h2>
-        <span className="muted plan-countdown">
-          Resets in: <strong><Countdown settings={input.settings} /></strong>
-        </span>
-      </div>
-      <ErrorBanner message={error} />
+    <div className={activeView === 'log' ? 'plan-screen is-log' : 'plan-screen'}>
+      <ErrorBanner message={error ?? relabelError} />
 
-      {result.status === 'infeasible' ? (
-        <>
+      {input.grid.length === 0 ? (
+        <p className="muted">
+          Nothing is unlocked yet — set each character&rsquo;s tier per dungeon in the Character
+          view.
+        </p>
+      ) : result.status === 'infeasible' ? (
+        <section className="plan-infeasible">
           <p>These requirements cannot all be met:</p>
           <ul>
             {result.conflicts.map((c, i) => (
               <li key={i}>{describeConflict(c, names)}</li>
             ))}
           </ul>
-          <p className="muted">Lower a minimum on the Grid tab, then come back.</p>
-        </>
+          <p className="muted">Lower a minimum in the Character view, then come back.</p>
+        </section>
       ) : (
         <>
           {solved.relaxed && (
-            <p>
+            <p className="plan-relaxed">
               <strong>No choices to make</strong> — every character can simply run its maximum.
             </p>
           )}
 
-          <div className="row-actions density-row">
-            <DensityToggle />
-            <span className="muted">Newest dungeon first, matching the Grid.</span>
-          </div>
-
-          {isPhone ? (
-            <>
-              <CharacterPicker
-                characters={input.characters}
-                selectedId={shownCharacter?.id ?? null}
-                onSelect={setPhoneCharacterId}
-              />
-              {shownCharacter && (
-                <div className="pcard">
-                  {(() => {
-                    const mine = result.assignments.filter(
-                      (a) => a.characterId === shownCharacter.id,
-                    );
-                    if (mine.length === 0) {
-                      return <p className="muted">Nothing planned for {shownCharacter.name}.</p>;
-                    }
-                    return mine.map((a) => {
-                      const d = columns.find((x) => x.id === a.dungeonId);
-                      return (
-                        <div className="prow" key={a.dungeonId}>
-                          <div className="info">
-                            <span className="dn">{d?.name ?? a.dungeonId}</span>
-                            <span className="sub num cellgold-line">
-                              {gold(a.goldPerRun)} each &middot; {gold(a.goldTotal)} total
-                              {(() => {
-                                const why = d
-                                  ? goldWarning(d, tierOf.get(`${shownCharacter.id}:${d.id}`))
-                                  : null;
-                                return why ? <InfoDot label={why}>{why}</InfoDot> : null;
-                              })()}
-                            </span>
-                          </div>
-                          <div className="act">
-                            <span className="big num">{a.runs}</span>
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              )}
-            </>
+          {activeView === 'board' ? (
+            <AttemptBoard
+              input={input}
+              assignments={result.assignments}
+              totals={result.totals}
+              reasons={solved.reasons}
+              goldCeiling={solved.goldCeiling}
+              attemptsCeiling={solved.attemptsCeiling}
+              names={names}
+              atCap={atCap}
+              maxCharacters={solved.maxCharacters}
+              onAddClick={() => setShowAddModal(true)}
+            />
           ) : (
-          <div className="datatable-scroll plan-scroll matrix-scroll">
-            <table className={`datatable matrix plan-matrix ${density === 'simple' ? 'matrix-simple' : ''}`}>
-              <thead>
-                <tr className="groupband">
-                  <th />
-                  {spans.map((span, i) => (
-                    <th key={i} colSpan={span.span} className={span.label ? 'grouped' : undefined}>
-                      {span.label}
-                    </th>
-                  ))}
-                </tr>
-                <tr>
-                  <th scope="col" className="plan-who">
-                    Character
-                  </th>
-                  {columns.map((d) => (
-                    <th key={d.id} scope="col" title={d.name}>
-                      {density === 'simple'
-                        ? (d.short_name ?? suggestAbbreviation(d.name, d.group_name))
-                        : d.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {input.characters.map((c) => (
-                  <tr key={c.id}>
-                    <th scope="row">
-                      <span className="who-name">{c.name}</span>
-                      {(() => {
-                        // Gold sits with the name rather than in a list above the
-                        // table: it is a property of the character, and the row
-                        // header is the one place already carrying those.
-                        const cap = input.settings.goldCap;
-                        const earned = cap - (input.goldHeadroom[c.id] ?? cap);
-                        const capped = earned >= cap;
-                        return (
-                          <>
-                            <span className={capped ? 'who-gold num warning-text' : 'who-gold num'}>
-                              {gold(earned)} / {gold(cap)}
-                              {capped ? ' · capped' : ''}
-                            </span>
-                            <Meter value={earned} max={cap} tone={capped ? 'warn' : 'accent'} />
-                          </>
-                        );
-                      })()}
-                    </th>
-                    {columns.map((d) => {
-                      const assignment = result.assignments.find(
-                        (a) => a.characterId === c.id && a.dungeonId === d.id,
-                      );
-                      if (!assignment) {
-                        return (
-                          <td key={d.id} className="muted center runcell runs-0">
-                            -
-                          </td>
-                        );
-                      }
-                      return (
-                        <td key={d.id} className={`runcell runs-${Math.min(assignment.runs, 3)}`}>
-                          <div className="cellstack">
-                            <strong className="runs num">{assignment.runs}x</strong>
-                            <span className="cellgold-line">
-                              <span className="muted cellgold num">
-                                {gold(assignment.goldTotal)}
-                              </span>
-                              {(() => {
-                                const why = goldWarning(d, tierOf.get(`${c.id}:${d.id}`));
-                                return why ? <InfoDot label={why}>{why}</InfoDot> : null;
-                              })()}
-                            </span>
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+            <QuestLog
+              input={input}
+              assignments={result.assignments}
+              gridRows={gridRows}
+              roster={roster}
+              mutate={mutate}
+              relabel={relabel}
+              atCap={atCap}
+              maxCharacters={solved.maxCharacters}
+              onAddClick={() => setShowAddModal(true)}
+            />
           )}
-
-          {result.assignments.length === 0 && (
-            <p className="muted">Nothing left to run this week.</p>
-          )}
-
-          <h3>This week</h3>
-          <ul>
-            <li>Runs planned: {result.totals.attempts}</li>
-            <li>Weekly-quest pairs covered: {result.totals.coverage}</li>
-            <li>
-              Gold: {gold(result.totals.gold)} — the caps allow at most{' '}
-              {gold(Math.min(solved.goldCeiling, solved.attemptsCeiling))} (
-              {gold(solved.goldCeiling)} by the gold cap, {gold(solved.attemptsCeiling)} by
-              attempts)
-            </li>
-          </ul>
-
-          <h3>Attempts left over</h3>
-          <p className="muted">
-            How many of this week's remaining attempts the plan does not use. A "?" says why
-            the leftover is not zero; nothing to explain means nothing is wasted.
-          </p>
-          <table className="datatable leftovers">
-            <thead>
-              <tr>
-                <th scope="col">Dungeon</th>
-                <th scope="col" className="num">
-                  Left over / remaining
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {columns.map((d) => {
-                const remaining = input.accountAttemptsLeft[d.id] ?? 0;
-                const planned = result.assignments
-                  .filter((a) => a.dungeonId === d.id)
-                  .reduce((sum, a) => sum + a.runs, 0);
-                const leftOver = Math.max(0, remaining - planned);
-                // Prefer the solver's own account of this dungeon; fall back to
-                // the general reason, which is always one of these three.
-                const reason = solved.reasons.find(
-                  (r) => 'dungeonId' in r && r.dungeonId === d.id,
-                );
-                const why = reason
-                  ? describeReason(reason, names)
-                  : `${leftOver} attempts on ${d.name} are left unused. Either no character has it unlocked at a difficulty worth running, or the characters that do have hit their own weekly limit or their gold cap.`;
-                return (
-                  <tr key={d.id}>
-                    <th scope="row" title={d.name}>
-                      {density === 'simple'
-                        ? (d.short_name ?? suggestAbbreviation(d.name, d.group_name))
-                        : d.name}
-                    </th>
-                    <td className="num">
-                      <span className="leftover-line">
-                        <span className={leftOver > 0 ? 'warning-text' : undefined}>
-                          {leftOver} / {remaining}
-                        </span>
-                        {leftOver > 0 && <InfoDot label={why}>{why}</InfoDot>}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
 
           {solved.reasons.some((r) => r.kind === 'gold-cap-reached') && (
-            <ul className="muted">
+            <ul className="muted plan-reasons">
               {solved.reasons
                 .filter((r) => r.kind === 'gold-cap-reached')
                 .map((r, i) => (
@@ -406,6 +236,8 @@ export default function PlanScreen() {
           )}
         </>
       )}
-    </section>
+
+      {modal}
+    </div>
   );
 }

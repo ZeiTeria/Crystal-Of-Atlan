@@ -1,0 +1,168 @@
+/*
+ * One column per family, each headed by its base class. Fixed tracks rather
+ * than a wrap: every chip the same width means every class mark lands in the
+ * same column, so a family reads as a list instead of a pile.
+ */
+.class-families {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 14px 12px;
+}
+
+.class-family {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.class-grid {
+  display: grid;
+  gap: 3px;
+  /* Indented under the base class it advances from. */
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+  margin-left: 7px;
+}
+
+/* The base class heads its family, so it carries the weight. */
+.class-chip.is-base {
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.05);
+}
+.class-chip.is-base .class-chip-mark {
+  width: 18px;
+  height: 18px;
+  opacity: .9;
+}
+.class-chip.is-base:hover {
+  color: var(--text);
+}
+
+.class-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: left;
+  color: var(--text-faint);
+  background: rgba(255, 255, 255, 0.02);
+  transition: color .15s, background-color .15s, border-color .15s;
+}
+
+.class-chip:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--line-strong);
+}
+
+.class-chip:focus-visible {
+  outline: none;
+  border-color: var(--line-focus);
+}
+
+/* The one in force carries its own class colour, so the choice is legible
+   without reading the label. */
+.class-chip.selected {
+  color: var(--c-hue);
+  border-color: var(--c-hue);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.class-chip-mark {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  opacity: .75;
+  transition: opacity .15s;
+}
+
+.class-chip:hover .class-chip-mark,
+.class-chip.selected .class-chip-mark {
+  opacity: 1;
+}
+
+.class-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * The class control on a character: the portrait opens this.
+ *
+ * Wide enough for all seven families side by side, so changing a class never
+ * scrolls - at 560px it was three columns, three rows deep, and scrolling past
+ * the families to reach one while the panel beside it sat empty. The lower
+ * bound keeps it usable on a phone, where that width does not exist; the
+ * overflow stays only as a floor for a very short window.
+ */
+.class-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  width: clamp(260px, calc(100vw - 300px), 1180px);
+  max-height: min(72vh, 560px);
+  overflow-y: auto;
+  padding: var(--s3);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 50%);
+}
+
+/* Narrower tracks here than in the add form: seven of them have to fit. */
+.class-popover .class-families {
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+}
+
+.class-popover-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s2);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.class-popover-clear {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.class-popover-clear:hover {
+  color: var(--text);
+}
+
+/* The portrait doubles as the control that opens the picker, and anchors it. */
+.portrait-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.portrait-button {
+  display: inline-flex;
+}
+
+.portrait-button > .portrait {
+  transition: box-shadow .15s;
+}
+
+.portrait-button:hover > .portrait,
+.portrait-button:focus-visible > .portrait {
+  box-shadow: 0 0 0 2px var(--line-focus);
+}
