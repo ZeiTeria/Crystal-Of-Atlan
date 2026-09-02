@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Dungeon, GridEntry, Tier } from '../engine/types';
 import { Portrait } from '../ui/Shared';
 import { getClassHue } from '../ui/hues';
+import { CHARACTER_CLASSES } from '../data/classes';
 import { TIER_TEMPLATES, templateCells } from './gridTemplate';
 import './AddCharacterModal.css';
 
@@ -14,7 +15,6 @@ interface AddCharacterModalProps {
   onAdd: (name: string, characterClass: string, tiers: Record<string, Tier>) => Promise<void>;
 }
 
-const CLASSES = ['Magister', 'Puppet Master', 'Swordsman', 'Musketeer', 'Alchemist', 'Fighter'];
 const TIERS: Tier[] = ['none', 'solo', 'story', 'elite', 'legend'];
 
 function defaultTiers(dungeons: Dungeon[]): Record<string, Tier> {
@@ -31,7 +31,7 @@ export default function AddCharacterModal({
   onAdd,
 }: AddCharacterModalProps) {
   const [name, setName] = useState('');
-  const [selectedClass, setSelectedClass] = useState<string>(CLASSES[0] ?? 'Magister');
+  const [selectedClass, setSelectedClass] = useState<string>(CHARACTER_CLASSES[0]?.name ?? 'Sugariff');
   const [template, setTemplate] = useState('blank');
   const [tiers, setTiers] = useState<Record<string, Tier>>(() => defaultTiers(dungeons));
 
@@ -82,7 +82,7 @@ export default function AddCharacterModal({
       <div className="add-character-panel">
         <div className="ac-header">
           <div className="ac-header-left">
-            <Portrait name={name.trim()} hue={hue} size={44} />
+            <Portrait name={name.trim()} hue={hue} size={44} characterClass={selectedClass} />
             <div className="ac-header-text">
               <span className="ac-title">{name.trim() || 'New character'}</span>
               <span className="ac-sub">Joins the roster with 0 gold this week</span>
@@ -135,19 +135,19 @@ export default function AddCharacterModal({
           <div className="ac-input-group">
             <span className="ac-label">CLASS</span>
             <div className="ac-class-grid">
-              {CLASSES.map(c => {
-                const cHue = getClassHue(c);
-                const isSelected = selectedClass === c;
+              {CHARACTER_CLASSES.map((c) => {
+                const isSelected = selectedClass === c.name;
                 return (
                   <button
                     type="button"
-                    key={c}
+                    key={c.name}
                     aria-pressed={isSelected}
-                    onClick={() => setSelectedClass(c)}
+                    onClick={() => setSelectedClass(c.name)}
                     className={`ac-class-chip ${isSelected ? 'selected' : ''}`}
-                    style={{ '--c-hue': cHue } as React.CSSProperties}
+                    style={{ '--c-hue': c.hue } as React.CSSProperties}
                   >
-                    {c}
+                    <img src={c.icon} alt="" className="ac-class-mark" />
+                    {c.name}
                   </button>
                 );
               })}

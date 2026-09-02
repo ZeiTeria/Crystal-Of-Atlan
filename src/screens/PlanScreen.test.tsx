@@ -308,7 +308,8 @@ describe('PlanScreen', () => {
     await openAddForm('Rogue');
     fireEvent.click(screen.getByRole('button', { name: /add character/i }));
     await waitFor(() => {
-      expect(vi.mocked(createCharacter)).toHaveBeenCalledWith('acc', 'Rogue', 'Magister');
+      // The class defaults to the first the official site lists.
+      expect(vi.mocked(createCharacter)).toHaveBeenCalledWith('acc', 'Rogue', 'Sugariff');
     });
     expect(vi.mocked(setGridCells)).not.toHaveBeenCalled();
   });

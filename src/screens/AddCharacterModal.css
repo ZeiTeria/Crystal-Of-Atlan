@@ -289,3 +289,12 @@
     flex: 1 1 100%;
   }
 }
+
+/* The class mark on a picker chip, tinted to that class. */
+.ac-class-mark {
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  vertical-align: -2px;
+  opacity: .85;
+}

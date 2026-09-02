@@ -111,7 +111,7 @@ export default function AttemptBoard({
                 onMouseLeave={() => setHoveredId(null)}
               >
                 <div className="tile-top">
-                  <Portrait name={c.name} hue={hue} dim={runs === 0} />
+                  <Portrait name={c.name} hue={hue} dim={runs === 0} characterClass={c.class} />
                   <div className="tile-name-col">
                     <strong>{c.name}</strong>
                     <span>{runs} runs planned</span>

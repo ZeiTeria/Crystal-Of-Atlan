@@ -211,7 +211,7 @@ export default function QuestLog({
                     aria-current={c.id === selected.id ? 'true' : undefined}
                     onClick={() => setSelectedId(c.id)}
                   >
-                    <Portrait name={c.name} hue={cHue} size={28} dim={cParked} />
+                    <Portrait name={c.name} hue={cHue} size={28} dim={cParked} characterClass={c.class} />
                     <span className="roster-item-info">
                       <span className="roster-item-top">
                         <span className="roster-name">{c.name}</span>
@@ -246,7 +246,7 @@ export default function QuestLog({
       <div className="quest-main">
         <div className="quest-header">
           <div className="quest-header-left">
-            <Portrait name={selected.name} hue={hue} size={52} dim={parked} />
+            <Portrait name={selected.name} hue={hue} size={52} dim={parked} characterClass={selected.class} />
             <div className="quest-header-text">
               <input
                 className="qh-name"

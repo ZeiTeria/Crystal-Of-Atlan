@@ -46,3 +46,15 @@
 .coa-tab:not(.active):hover {
   color: var(--text-dim);
 }
+
+/* The class mark inside a portrait. Masked, not drawn: the source art is
+   white, and each class has to come out in its own colour. */
+.portrait-mark {
+  display: block;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
