@@ -150,6 +150,23 @@ describe('QuestLog cells', () => {
     expect(screen.getByLabelText('Mage minimum runs in Abyss').textContent).toBe('2');
   });
 
+  it('shows the new difficulty before the write lands', async () => {
+    // Same reason the stepper is optimistic: the write re-reads and re-solves
+    // the whole plan, and waiting for that before the word changed made every
+    // choice feel like it had not registered.
+    let settle!: () => void;
+    mutate.mockImplementationOnce(async (write) => {
+      await write();
+      await new Promise<void>((resolve) => {
+        settle = resolve;
+      });
+    });
+    renderLog();
+    await chooseTier('Mage', 'Abyss', 'legend');
+    expect(shownTier('Mage', 'Abyss')).toBe('legend');
+    settle();
+  });
+
   it('upserts a tier change immediately', async () => {
     renderLog();
     await chooseTier('Mage', 'Abyss', 'legend');

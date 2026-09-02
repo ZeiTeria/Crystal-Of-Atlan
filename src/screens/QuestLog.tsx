@@ -64,14 +64,16 @@ export default function QuestLog({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const isPhone = useMediaQuery(PHONE);
 
-  // What the steppers show while a write is still on its way.
+  // What the controls show while a write is still on its way.
   //
   // A write re-reads the whole plan and re-solves it, which is a wasm round
-  // trip - waiting for that before moving the number made every click feel
-  // broken, and disabling the buttons meanwhile made a run of clicks
-  // impossible. So the number moves at once and the write follows, once the
-  // clicking stops.
+  // trip - waiting for that before the screen moves made every click feel
+  // broken. So the value changes at once and the write follows behind.
+  //
+  // Keyed by character AND dungeon: keyed by dungeon alone, switching character
+  // mid-write showed the previous one's value on the new one's row.
   const [pending, setPending] = useState<Record<string, number>>({});
+  const [pendingTier, setPendingTier] = useState<Record<string, Tier>>({});
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   useEffect(() => {
     const running = timers.current;
@@ -115,35 +117,49 @@ export default function QuestLog({
     .reduce((sum, a) => sum + a.runs, 0);
   const hue = getClassHue(selected.class, selected.name);
 
-  /**
-   * Writes the whole cell, never a patch. What is on screen for an untouched
-   * pair comes from the dungeon's defaults, so both values go with every write
-   * - otherwise the upsert inserts schema defaults for whatever was left out,
-   * which is how a tier change used to reset the minimum to zero.
+  /*
+   * Both writers below send the WHOLE cell, never a patch. What is on screen
+   * for an untouched pair comes from the dungeon's defaults, so both values go
+   * with every write - otherwise the upsert inserts schema defaults for
+   * whatever was left out, which is how a tier change used to reset the
+   * minimum to zero.
    */
-  function write(dungeonId: string, cell: { tier: Tier; min_runs: number }) {
-    if (!selected) return;
-    void mutate(() => setGridCell(selected.id, dungeonId, cell));
-  }
 
   /** Moves the number now; writes it once the clicking has stopped. */
   function stepMinRuns(dungeonId: string, tier: Tier, next: number) {
     if (!selected) return;
     const characterId = selected.id;
-    setPending((p) => ({ ...p, [dungeonId]: next }));
+    const key = `${characterId}:${dungeonId}`;
+    setPending((p) => ({ ...p, [key]: next }));
 
-    const running = timers.current[dungeonId];
+    const running = timers.current[key];
     if (running) clearTimeout(running);
-    timers.current[dungeonId] = setTimeout(() => {
-      delete timers.current[dungeonId];
+    timers.current[key] = setTimeout(() => {
+      delete timers.current[key];
       void mutate(() => setGridCell(characterId, dungeonId, { tier, min_runs: next })).finally(
         () => {
           // The refreshed props now carry this value, so the local one steps
           // aside rather than shadowing a later change from anywhere else.
-          setPending(({ [dungeonId]: _dropped, ...rest }) => rest);
+          setPending(({ [key]: _dropped, ...rest }) => rest);
         },
       );
     }, STEP_SETTLE_MS);
+  }
+
+  /**
+   * Shows the new difficulty now; writes it now too.
+   *
+   * No settle delay, unlike the stepper: a difficulty is one deliberate choice
+   * rather than a run of clicks, and it changes the plan, so the sooner the
+   * re-solve starts the sooner the board agrees with the log.
+   */
+  function chooseTier(dungeonId: string, next: Tier, minRuns: number) {
+    if (!selected) return;
+    const characterId = selected.id;
+    const key = `${characterId}:${dungeonId}`;
+    setPendingTier((p) => ({ ...p, [key]: next }));
+    void mutate(() => setGridCell(characterId, dungeonId, { tier: next, min_runs: minRuns }))
+      .finally(() => setPendingTier(({ [key]: _dropped, ...rest }) => rest));
   }
 
   // Group order follows the column order, so the log and the board agree.
@@ -306,9 +322,10 @@ export default function QuestLog({
                 {g.name}
               </div>
               {g.dungeons.map((d) => {
-                const row = stored.get(`${selected.id}:${d.id}`);
-                const tier = row?.tier ?? d.default_tier;
-                const minRuns = pending[d.id] ?? row?.min_runs ?? d.default_min_runs;
+                const key = `${selected.id}:${d.id}`;
+                const row = stored.get(key);
+                const tier = pendingTier[key] ?? row?.tier ?? d.default_tier;
+                const minRuns = pending[key] ?? row?.min_runs ?? d.default_min_runs;
                 const assignment = assignments.find(
                   (a) => a.characterId === selected.id && a.dungeonId === d.id,
                 );
@@ -342,7 +359,7 @@ export default function QuestLog({
                         // The minimum goes with the tier, untouched: a
                         // tier-only write would insert the schema default and
                         // silently reset it.
-                        onChange={(next) => write(d.id, { tier: next, min_runs: minRuns })}
+                        onChange={(next) => chooseTier(d.id, next, minRuns)}
                       />
                     </div>
                     <div className="d-stepper">
