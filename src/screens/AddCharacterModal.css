@@ -269,3 +269,9 @@
   padding: 18px 28px;
   border-bottom: 1px solid var(--line);
 }
+
+.ac-class-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}

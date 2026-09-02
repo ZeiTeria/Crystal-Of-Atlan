@@ -73,7 +73,11 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
     void solve().catch(() => setSolved(null));
   }, [solve]);
 
-  async function handleAddCharacter(name: string, characterClass: string, tiers: Record<string, Tier>) {
+  async function handleAddCharacter(
+    name: string,
+    characterClass: string | null,
+    tiers: Record<string, Tier>,
+  ) {
     if (!solved) return;
     await mutate(async () => {
       const accountId = await currentGameAccountId();

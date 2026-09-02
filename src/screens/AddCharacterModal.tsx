@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type { Dungeon, GridEntry, Tier } from '../engine/types';
 import { Portrait } from '../ui/Shared';
 import { getClassHue } from '../ui/hues';
-import { CHARACTER_CLASSES } from '../data/classes';
 import ClassPicker from '../ui/ClassPicker';
 import { TIER_TEMPLATES, templateCells } from './gridTemplate';
 import './AddCharacterModal.css';
@@ -13,7 +12,7 @@ interface AddCharacterModalProps {
   grid: GridEntry[];
   characters: { id: string; name: string }[];
   onClose: () => void;
-  onAdd: (name: string, characterClass: string, tiers: Record<string, Tier>) => Promise<void>;
+  onAdd: (name: string, characterClass: string | null, tiers: Record<string, Tier>) => Promise<void>;
 }
 
 const TIERS: Tier[] = ['none', 'solo', 'story', 'elite', 'legend'];
@@ -32,7 +31,16 @@ export default function AddCharacterModal({
   onAdd,
 }: AddCharacterModalProps) {
   const [name, setName] = useState('');
-  const [selectedClass, setSelectedClass] = useState<string>(CHARACTER_CLASSES[0]?.name ?? 'Sugariff');
+  /**
+   * No class until one is chosen.
+   *
+   * This used to default to the first class on the list, so a character added
+   * without touching the picker was silently saved as a Sugariff - wrong for
+   * almost every character, and invisible until you noticed the mark. A class
+   * is display-only, so `none` is a perfectly good answer, and the portrait
+   * sets one later in a click.
+   */
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [template, setTemplate] = useState('blank');
   const [tiers, setTiers] = useState<Record<string, Tier>>(() => defaultTiers(dungeons));
 
@@ -136,8 +144,18 @@ export default function AddCharacterModal({
         </div>
 
         <div className="ac-class-section">
-          <span className="ac-label">CLASS</span>
-          <ClassPicker value={selectedClass} onSelect={setSelectedClass} />
+          <div className="ac-class-head">
+            <span className="ac-label">CLASS</span>
+            <span className="ac-helper">
+              {selectedClass
+                ? 'Pick it again to clear it.'
+                : 'Optional — it only sets the colour and mark, and can be set later.'}
+            </span>
+          </div>
+          <ClassPicker
+            value={selectedClass}
+            onSelect={(name) => setSelectedClass((was) => (was === name ? null : name))}
+          />
         </div>
 
         <div className="ac-tiers-section">

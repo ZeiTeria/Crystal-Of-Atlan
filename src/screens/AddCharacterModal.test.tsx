@@ -26,7 +26,7 @@ const abyss: Dungeon = {
   goldUnknown: false,
 };
 
-const onAdd = vi.fn<(name: string, cls: string, tiers: Record<string, Tier>) => Promise<void>>();
+const onAdd = vi.fn<(name: string, cls: string | null, tiers: Record<string, Tier>) => Promise<void>>();
 const onClose = vi.fn();
 
 function renderModal(opts: { grid?: GridEntry[]; characters?: { id: string; name: string }[] } = {}) {
@@ -90,6 +90,38 @@ describe('AddCharacterModal', () => {
     gate.resolve();
     await waitFor(() => {
       expect(onAdd).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('adds no class unless one is chosen', async () => {
+    // It used to default to the first class on the list, so a character added
+    // without touching the picker was silently saved as a Sugariff.
+    renderModal();
+    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: 'Rogue' } });
+    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
+    await waitFor(() => {
+      expect(onAdd.mock.calls[0]?.[1]).toBe(null);
+    });
+  });
+
+  it('adds the class that was chosen', async () => {
+    renderModal();
+    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: 'Rogue' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Warlock' }));
+    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
+    await waitFor(() => {
+      expect(onAdd.mock.calls[0]?.[1]).toBe('Warlock');
+    });
+  });
+
+  it('clears the class by picking it again', async () => {
+    renderModal();
+    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: 'Rogue' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Warlock' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Warlock' }));
+    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
+    await waitFor(() => {
+      expect(onAdd.mock.calls[0]?.[1]).toBe(null);
     });
   });
 
