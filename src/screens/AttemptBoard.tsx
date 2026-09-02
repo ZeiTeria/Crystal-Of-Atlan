@@ -300,6 +300,74 @@ export default function AttemptBoard({
           );
         })}
       </div>
+
+      {/*
+        The board answers "who runs this dungeon". This answers the question the
+        other way round - "what does THIS character run, and how often" - which
+        is the one you ask when you sit down to actually play one of them.
+      */}
+      <div className="by-character">
+        <h3 className="by-character-head">Runs by character</h3>
+        <div className="by-character-grid">
+          {characters.map((c) => {
+            const hue = getClassHue(c.class, c.name);
+            const mine = assignments.filter((a) => a.characterId === c.id);
+            const runs = mine.reduce((sum, a) => sum + a.runs, 0);
+            const planned = mine.reduce((sum, a) => sum + a.goldTotal, 0);
+            // Dungeon order, so every card reads down in the same sequence as
+            // the board above it.
+            const rows = dungeons
+              .map((d) => ({ d, a: mine.find((x) => x.dungeonId === d.id) }))
+              .filter((r): r is { d: (typeof dungeons)[number]; a: PlanAssignment } => !!r.a);
+            return (
+              <div
+                key={c.id}
+                className={hoveredId && hoveredId !== c.id ? 'char-card dim' : 'char-card'}
+                onMouseEnter={() => setHoveredId(c.id)}
+                onMouseLeave={() => setHoveredId(null)}
+              >
+                <div className="char-card-head">
+                  <Portrait name={c.name} hue={hue} size={28} dim={runs === 0} characterClass={c.class} />
+                  <span className="char-card-name">{c.name}</span>
+                  <span className="char-card-total">
+                    <strong style={{ color: runs > 0 ? hue : undefined }}>{runs}</strong> runs
+                  </span>
+                </div>
+                {rows.length === 0 ? (
+                  <p className="char-card-none">Nothing planned this week.</p>
+                ) : (
+                  <>
+                    <div className="char-card-rows">
+                      {rows.map(({ d, a }) => {
+                        const tier = tierOf.get(`${c.id}:${d.id}`) ?? d.default_tier;
+                        return (
+                          <div className="char-row" key={d.id}>
+                            <span className="char-row-name" title={d.name}>
+                              {d.short_name ?? d.name}
+                            </span>
+                            <span
+                              className="char-row-tier"
+                              style={{ color: `var(--tier-${tier})` }}
+                            >
+                              {tier}
+                            </span>
+                            <strong className="char-row-runs">{a.runs}&times;</strong>
+                            <span className="char-row-gold">{gold(a.goldTotal)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="char-card-foot">
+                      <span>{rows.length} dungeons</span>
+                      <span className="char-card-gold">{gold(planned)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

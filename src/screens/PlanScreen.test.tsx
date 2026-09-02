@@ -141,7 +141,8 @@ describe('PlanScreen', () => {
     // One card per dungeon, and the character's row inside it carries what
     // those runs are worth - 3 runs of elite at 30. Scoped to the card: the
     // same total is also a headline stat, and this is about the row.
-    const card = screen.getByText('Abyss').closest('.board-card') as HTMLElement;
+    const board = document.querySelector('.board-grid') as HTMLElement;
+    const card = within(board).getByText('Abyss').closest('.board-card') as HTMLElement;
     expect(within(card).getByText('Mage')).toBeDefined();
     expect(within(card).getByText('90')).toBeDefined();
   });
@@ -151,12 +152,38 @@ describe('PlanScreen', () => {
     // what decides its worth is the difficulty.
     render(<PlanScreen />);
     await screen.findAllByText('Mage');
-    const card = screen.getByText('Abyss').closest('.board-card') as HTMLElement;
+    const board = document.querySelector('.board-grid') as HTMLElement;
+    const card = within(board).getByText('Abyss').closest('.board-card') as HTMLElement;
     const filled = card.querySelectorAll('.slot.filled');
     expect(filled).toHaveLength(3);
     for (const slot of filled) {
       expect(slot.getAttribute('style')).toContain('--tier-elite');
     }
+  });
+
+  it('says what each character runs, and how many times', async () => {
+    // The board answers "who runs this dungeon"; this answers it the other way
+    // round, which is the question you ask before playing one character.
+    render(<PlanScreen />);
+    await screen.findAllByText('Mage');
+    const card = document.querySelector('.char-card') as HTMLElement;
+    expect(within(card).getByText('Mage')).toBeDefined();
+    expect(within(card).getByText('Abyss')).toBeDefined();
+    // 3 runs of elite at 30 gold.
+    expect(within(card).getByText('3×')).toBeDefined();
+    expect(within(card).getByText('elite')).toBeDefined();
+    // The row's gold and the card's total, which happen to match on one dungeon.
+    expect(card.querySelector('.char-row-gold')?.textContent).toBe('90');
+    expect(card.querySelector('.char-card-gold')?.textContent).toBe('90');
+  });
+
+  it('says so plainly when a character has nothing planned', async () => {
+    vi.mocked(loadPlanState).mockResolvedValue(
+      aState({ accountAttemptsLeft: { d1: 0 } }),
+    );
+    render(<PlanScreen />);
+    await screen.findAllByText('Mage');
+    expect(document.querySelector('.char-card-none')?.textContent).toMatch(/nothing planned/i);
   });
 
   it('picks one character out of every card when you point at it', async () => {
