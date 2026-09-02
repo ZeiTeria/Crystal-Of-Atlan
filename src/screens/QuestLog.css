@@ -232,13 +232,19 @@
 
 /*
  * A row the plan does not use recedes - but the fade is applied to its PARTS,
- * never to the row. `opacity` composites the whole subtree, which took the "?"
- * explanation down with it: an open popup came out translucent with the rows
- * behind it showing straight through. A warning should not fade anyway.
+ * never to anything a popup opens inside. `opacity` composites the whole
+ * subtree, so any ancestor of an open menu takes that menu down with it, however
+ * opaque the menu's own background is.
+ *
+ * This has now bitten twice. First the "?" explanation, which came out
+ * translucent with the rows behind it showing through. Then the tier menu,
+ * because the fade was on `.d-tier` and the menu opens inside it - and a row set
+ * to `none` has no runs, so it is ALWAYS dimmed and its dropdown was always
+ * wrong. The trigger fades; the thing it opens does not.
  */
 .dungeon-row.dimmed .d-name,
 .dungeon-row.dimmed .d-sub,
-.dungeon-row.dimmed .d-tier,
+.dungeon-row.dimmed .tier-value,
 .dungeon-row.dimmed .d-stepper,
 .dungeon-row.dimmed .d-gold,
 .dungeon-row.dimmed .gem {
