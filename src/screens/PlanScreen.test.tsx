@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlanScreen from './PlanScreen';
 import { loadPlanInput } from '../data/loadPlanInput';
@@ -119,9 +119,24 @@ describe('PlanScreen', () => {
     render(<PlanScreen />);
     expect(await screen.findAllByText('Mage')).toBeDefined();
     // One card per dungeon, and the character's row inside it carries what
-    // those runs are worth - 3 runs of elite at 30.
-    expect(screen.getByText('Abyss')).toBeDefined();
-    expect(screen.getByText('90')).toBeDefined();
+    // those runs are worth - 3 runs of elite at 30. Scoped to the card: the
+    // same total is also a headline stat, and this is about the row.
+    const card = screen.getByText('Abyss').closest('.board-card') as HTMLElement;
+    expect(within(card).getByText('Mage')).toBeDefined();
+    expect(within(card).getByText('90')).toBeDefined();
+  });
+
+  it('colours an attempt by the difficulty it is run at, not by who runs it', async () => {
+    // The who-list already says who. The slot is the attempt being spent, and
+    // what decides its worth is the difficulty.
+    render(<PlanScreen />);
+    await screen.findAllByText('Mage');
+    const card = screen.getByText('Abyss').closest('.board-card') as HTMLElement;
+    const filled = card.querySelectorAll('.slot.filled');
+    expect(filled).toHaveLength(3);
+    for (const slot of filled) {
+      expect(slot.getAttribute('style')).toContain('--tier-elite');
+    }
   });
 
   it('counts down to the coming reset, not the one after it', async () => {
@@ -188,8 +203,9 @@ describe('PlanScreen', () => {
     expect(screen.getByText(/50 by the gold cap, 90 by attempts/)).toBeDefined();
 
     // The reason is no longer prose under a heading: it is a "?" beside the
-    // leftover count, which only appears when the leftover is not zero.
-    expect(screen.getByText(/attempts left over/i)).toBeDefined();
+    // leftover count on the card, which only appears when the leftover is not
+    // zero. The strip above leads with what the week has spent.
+    expect(screen.getByText(/attempts used/i)).toBeDefined();
     expect(screen.getByRole('button', { name: /cannot be used/i })).toBeDefined();
   });
 

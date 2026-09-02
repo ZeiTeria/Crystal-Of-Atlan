@@ -9,6 +9,29 @@
   box-sizing: border-box;
 }
 
+/*
+ * Controls are <button> for the keyboard's sake - a span cannot be tabbed to,
+ * pressed with a key, or announced as anything - but this design draws most of
+ * them as plain text, so the browser's own button chrome comes off by default.
+ *
+ * Zero specificity (:where), so a component that DOES want a background, a
+ * border or its own padding just states it and wins, whatever the file order.
+ */
+:where(button) {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+:where(button:disabled) {
+  cursor: default;
+}
+
 body {
   margin: 0;
   min-height: 100svh;

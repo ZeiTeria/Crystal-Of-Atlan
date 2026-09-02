@@ -72,13 +72,20 @@ export default function AttemptBoard({
     <div className="attempt-board">
       <div className="board-summary-strip">
         <div className="summary-left">
-          <span className="summary-label">Attempts left over</span>
+          <span className="summary-label">Attempts used</span>
           <span className="summary-numbers">
-            <strong>{totalLeftOver}</strong>
+            <strong>{totalRemaining - totalLeftOver}</strong>
             <span>/ {totalRemaining}</span>
           </span>
           <span className="summary-note">
-            <span className="empty-box" /> Nothing else can be spent on these.
+            {totalLeftOver > 0 ? (
+              <>
+                <span className="empty-box" /> {totalLeftOver} cannot be spent — marked on the
+                cards below.
+              </>
+            ) : (
+              'Every remaining attempt is spent.'
+            )}
           </span>
         </div>
 
@@ -124,13 +131,32 @@ export default function AttemptBoard({
         </div>
       </div>
 
-      {/* One element, so every number below reads as one sentence: the plan, and
-          the two ceilings that stop it going further. */}
-      <p className="board-ceiling">
-        Planned: {totals.attempts} runs, {gold(totals.gold)} gold — the caps allow at most{' '}
-        {gold(Math.min(goldCeiling, attemptsCeiling))} ({gold(goldCeiling)} by the gold cap,{' '}
-        {gold(attemptsCeiling)} by attempts). Weekly-quest pairs covered: {totals.coverage}.
-      </p>
+      <div className="board-ceiling">
+        <div className="ceiling-stats">
+          <div className="ceiling-stat">
+            <span className="ceiling-label">Runs planned</span>
+            <strong>{totals.attempts}</strong>
+          </div>
+          <div className="ceiling-stat">
+            <span className="ceiling-label">Gold</span>
+            <strong>{gold(totals.gold)}</strong>
+          </div>
+          <div className="ceiling-stat">
+            <span className="ceiling-label">Ceiling</span>
+            <strong>{gold(Math.min(goldCeiling, attemptsCeiling))}</strong>
+          </div>
+          <div className="ceiling-stat">
+            <span className="ceiling-label">Quest pairs</span>
+            <strong>{totals.coverage}</strong>
+          </div>
+        </div>
+        {/* One element on purpose: the two ceilings only mean something read as
+            one sentence, against each other. */}
+        <p className="ceiling-note">
+          The caps allow at most {gold(Math.min(goldCeiling, attemptsCeiling))} (
+          {gold(goldCeiling)} by the gold cap, {gold(attemptsCeiling)} by attempts).
+        </p>
+      </div>
 
       {isPhone && (
         <CharacterPicker
@@ -173,20 +199,17 @@ export default function AttemptBoard({
               </div>
 
               <div className="card-slots">
-                {mine.flatMap((a) =>
-                  Array.from({ length: a.runs }, (_, i) => (
+                {mine.flatMap((a) => {
+                  const tier = tierOf.get(`${a.characterId}:${d.id}`) ?? d.default_tier;
+                  return Array.from({ length: a.runs }, (_, i) => (
                     <span
                       key={`${a.characterId}-${i}`}
                       className="slot filled"
-                      style={{
-                        backgroundColor: getClassHue(
-                          characters.find((c) => c.id === a.characterId)?.class,
-                          names.character(a.characterId),
-                        ),
-                      }}
+                      title={`${names.character(a.characterId)} at ${tier}`}
+                      style={{ backgroundColor: `var(--tier-${tier})` }}
                     />
-                  )),
-                )}
+                  ));
+                })}
                 {Array.from({ length: leftOver }, (_, i) => (
                   <span key={`empty-${i}`} className="slot empty" />
                 ))}
@@ -197,13 +220,15 @@ export default function AttemptBoard({
                   .filter((a) => !isPhone || !shown || a.characterId === shown.id)
                   .map((a) => {
                     const character = characters.find((c) => c.id === a.characterId);
-                    const cellWarning = dungeonWarning
-                      ? null
-                      : goldWarning(d, tierOf.get(`${a.characterId}:${d.id}`));
+                    const tier = tierOf.get(`${a.characterId}:${d.id}`) ?? d.default_tier;
+                    const cellWarning = dungeonWarning ? null : goldWarning(d, tier);
                     return (
                       <div key={a.characterId} className="who-row">
                         <DiamondDot hue={getClassHue(character?.class, character?.name)} />
                         <span className="who-name">{names.character(a.characterId)}</span>
+                        <span className="who-tier" style={{ color: `var(--tier-${tier})` }}>
+                          {tier}
+                        </span>
                         <span className="who-n">{a.runs}&times;</span>
                         <span className="who-gold">{gold(a.goldTotal)}</span>
                         {cellWarning && <InfoDot label={cellWarning}>{cellWarning}</InfoDot>}

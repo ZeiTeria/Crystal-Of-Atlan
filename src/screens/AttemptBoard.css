@@ -307,3 +307,57 @@
     min-height: auto;
   }
 }
+
+/* The plan's headline numbers. Tiles rather than a sentence: this screen is
+   made of tiles, and a paragraph of prose in the middle of it reads as a
+   leftover from a different design. */
+.board-ceiling {
+  border: 1px solid var(--line);
+  border-left: 0;
+  border-right: 0;
+  padding: 14px 22px;
+}
+.ceiling-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+}
+.ceiling-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ceiling-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.ceiling-stat strong {
+  font-size: 20px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.ceiling-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* The difficulty a character enters at - the key to the slot colours above. */
+.who-tier {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .board-ceiling {
+    padding: 14px 16px;
+  }
+  .ceiling-stats {
+    gap: 18px;
+  }
+}

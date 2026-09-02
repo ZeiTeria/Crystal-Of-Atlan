@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   deleteCharacter,
   renameCharacter,
@@ -32,7 +32,6 @@ interface QuestLogProps {
   roster: CharacterRow[];
   /** Runs a write, then re-reads everything. Owned by the screen above. */
   mutate: (write: () => Promise<void>) => Promise<void>;
-  busy: boolean;
   onAddClick?: () => void;
 }
 
@@ -42,16 +41,34 @@ interface QuestLogProps {
  * and reordering all live beside the character they act on rather than on a
  * separate screen.
  */
+/** How long a run of stepper clicks is allowed to settle before it is written. */
+const STEP_SETTLE_MS = 350;
+
 export default function QuestLog({
   input,
   assignments,
   roster,
   mutate,
-  busy,
   onAddClick,
 }: QuestLogProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const isPhone = useMediaQuery(PHONE);
+
+  // What the steppers show while a write is still on its way.
+  //
+  // A write re-reads the whole plan and re-solves it, which is a wasm round
+  // trip - waiting for that before moving the number made every click feel
+  // broken, and disabling the buttons meanwhile made a run of clicks
+  // impossible. So the number moves at once and the write follows, once the
+  // clicking stops.
+  const [pending, setPending] = useState<Record<string, number>>({});
+  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  useEffect(() => {
+    const running = timers.current;
+    return () => {
+      for (const timer of Object.values(running)) clearTimeout(timer);
+    };
+  }, []);
 
   const byId = new Map(roster.map((c) => [c.id, c]));
   const { order, activeId, handleProps } = useSortableList({
@@ -100,6 +117,26 @@ export default function QuestLog({
   function write(dungeonId: string, cell: { tier: Tier; min_runs: number }) {
     if (!selected) return;
     void mutate(() => setGridCell(selected.id, dungeonId, cell));
+  }
+
+  /** Moves the number now; writes it once the clicking has stopped. */
+  function stepMinRuns(dungeonId: string, tier: Tier, next: number) {
+    if (!selected) return;
+    const characterId = selected.id;
+    setPending((p) => ({ ...p, [dungeonId]: next }));
+
+    const running = timers.current[dungeonId];
+    if (running) clearTimeout(running);
+    timers.current[dungeonId] = setTimeout(() => {
+      delete timers.current[dungeonId];
+      void mutate(() => setGridCell(characterId, dungeonId, { tier, min_runs: next })).finally(
+        () => {
+          // The refreshed props now carry this value, so the local one steps
+          // aside rather than shadowing a later change from anywhere else.
+          setPending(({ [dungeonId]: _dropped, ...rest }) => rest);
+        },
+      );
+    }, STEP_SETTLE_MS);
   }
 
   // Group order follows the column order, so the log and the board agree.
@@ -264,7 +301,7 @@ export default function QuestLog({
               {g.dungeons.map((d) => {
                 const key = `${selected.id}:${d.id}`;
                 const tier = tierOf.get(key) ?? d.default_tier;
-                const minRuns = minRunsOf.get(key) ?? d.default_min_runs;
+                const minRuns = pending[d.id] ?? minRunsOf.get(key) ?? d.default_min_runs;
                 const assignment = assignments.find(
                   (a) => a.characterId === selected.id && a.dungeonId === d.id,
                 );
@@ -311,8 +348,8 @@ export default function QuestLog({
                         type="button"
                         className="stepper-btn"
                         aria-label={`One fewer minimum run of ${d.name} for ${selected.name}`}
-                        disabled={parked || busy || minRuns <= 0}
-                        onClick={() => write(d.id, { tier, min_runs: minRuns - 1 })}
+                        disabled={parked || minRuns <= 0}
+                        onClick={() => stepMinRuns(d.id, tier, minRuns - 1)}
                       >
                         &minus;
                       </button>
@@ -327,8 +364,8 @@ export default function QuestLog({
                         type="button"
                         className="stepper-btn"
                         aria-label={`One more minimum run of ${d.name} for ${selected.name}`}
-                        disabled={parked || busy || minRuns >= d.characterAttempts}
-                        onClick={() => write(d.id, { tier, min_runs: minRuns + 1 })}
+                        disabled={parked || minRuns >= d.characterAttempts}
+                        onClick={() => stepMinRuns(d.id, tier, minRuns + 1)}
                       >
                         +
                       </button>

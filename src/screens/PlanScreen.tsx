@@ -182,7 +182,6 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
               assignments={result.assignments}
               roster={roster}
               mutate={mutate}
-              busy={busy}
               onAddClick={() => setShowAddModal(true)}
             />
           )}

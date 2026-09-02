@@ -85,7 +85,6 @@ function renderLog(
       assignments={opts.assignments ?? []}
       roster={opts.roster ?? [mage]}
       mutate={mutate}
-      busy={false}
     />,
   );
 }
@@ -169,6 +168,37 @@ describe('QuestLog cells', () => {
       expect(vi.mocked(setGridCell)).toHaveBeenCalledExactlyOnceWith('c1', 'd1', {
         tier: 'elite',
         min_runs: 1,
+      });
+    });
+  });
+
+  it('moves the number before the write lands', async () => {
+    // A write re-reads and re-solves the whole plan, which is a wasm round
+    // trip. Waiting for it before moving the number made every click feel
+    // broken; the number is local until the write catches up.
+    renderLog();
+    fireEvent.click(
+      await screen.findByRole('button', { name: /one more minimum run of abyss for mage/i }),
+    );
+    expect(screen.getByLabelText('Mage minimum runs in Abyss').textContent).toBe('3');
+    expect(vi.mocked(setGridCell)).not.toHaveBeenCalled();
+  });
+
+  it('writes once for a run of clicks, not once per click', async () => {
+    renderLog({
+      input: anInput({ grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0 }] }),
+    });
+    const up = await screen.findByRole('button', {
+      name: /one more minimum run of abyss for mage/i,
+    });
+    fireEvent.click(up);
+    fireEvent.click(up);
+    fireEvent.click(up);
+    expect(screen.getByLabelText('Mage minimum runs in Abyss').textContent).toBe('3');
+    await waitFor(() => {
+      expect(vi.mocked(setGridCell)).toHaveBeenCalledExactlyOnceWith('c1', 'd1', {
+        tier: 'elite',
+        min_runs: 3,
       });
     });
   });
