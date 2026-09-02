@@ -58,6 +58,27 @@ export interface CharacterClass {
  *
  * The icons are the site's hexagon class marks, downloaded to
  * `src/assets/classes/`.
+ *
+ * ---
+ *
+ * ADDING A CLASS when the game ships one. This is a snapshot, not a feed -
+ * nothing here reads the site at runtime, so a new class is invisible to this
+ * app until someone does this by hand, and no test can tell you it is time:
+ *
+ *   1. Download its hexagon mark from the site's class carousel into
+ *      `src/assets/classes/<name>.png`, and import it above.
+ *   2. Add a row here with its official English name (take it from the site's
+ *      own translation bundle, not from a wiki - and check it is the English
+ *      one, several locales sit side by side in there), the colour sampled
+ *      from its key art, and the base class it advances from.
+ *   3. Bump the count in `classes.test.ts`, and add it to the family shape
+ *      that test pins.
+ *
+ * Position in this array does not matter beyond cosmetics: it sets the order
+ * of a family's advancements in the picker, nothing else. It used to matter -
+ * the add form defaulted to the first entry, so whichever class the site
+ * listed newest became every new character's class - which is why nothing
+ * defaults to a class any more.
  */
 export const CHARACTER_CLASSES: CharacterClass[] = [
   { name: 'Sugariff', hue: '#FE45E5', icon: sugariff, base: 'Fighter' },

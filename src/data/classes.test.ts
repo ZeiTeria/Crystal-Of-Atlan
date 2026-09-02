@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { CHARACTER_CLASSES, CLASS_FAMILIES, findClass } from './classes';
 
 describe('character classes', () => {
-  it('carries every class the official site lists', () => {
-    // 26 as of the Sugariff patch. If the game adds one, this fails on purpose:
-    // the list is copied from coa.nvsgames.com, not derived, so nothing else
-    // would notice it had gone stale.
+  it('carries every class the official site listed when this was taken', () => {
+    // 26 as of the Sugariff patch. This CANNOT tell you the game has added a
+    // class - nothing here reads the site at runtime, so the list goes stale
+    // silently. It guards the edit instead: change the array without meaning
+    // to, or add a class and forget the family shape below, and this fails.
     expect(CHARACTER_CLASSES).toHaveLength(26);
   });
 
