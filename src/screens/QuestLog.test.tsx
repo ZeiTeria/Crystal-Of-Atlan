@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import QuestLog from './QuestLog';
-import { setGridCell } from '../data/grid';
+import { setGridCell, type GridRow } from '../data/grid';
 import {
   deleteCharacter,
   renameCharacter,
@@ -67,6 +67,9 @@ function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
   };
 }
 
+/** What the database actually holds for Mage in Abyss. */
+const storedRow: GridRow = { character_id: 'c1', dungeon_id: 'd1', tier: 'elite', min_runs: 2 };
+
 /** The screen above owns the write-then-refresh; here it is just the write. */
 const mutate = vi.fn(async (write: () => Promise<void>) => {
   await write();
@@ -76,6 +79,7 @@ function renderLog(
   opts: {
     input?: PlanInput;
     assignments?: PlanAssignment[];
+    gridRows?: GridRow[];
     roster?: CharacterRow[];
   } = {},
 ) {
@@ -83,10 +87,21 @@ function renderLog(
     <QuestLog
       input={opts.input ?? anInput()}
       assignments={opts.assignments ?? []}
+      gridRows={opts.gridRows ?? [storedRow]}
       roster={opts.roster ?? [mage]}
       mutate={mutate}
     />,
   );
+}
+
+/** The tier opens a menu now rather than being a native select. */
+async function chooseTier(character: string, dungeon: string, tier: string) {
+  fireEvent.click(await screen.findByLabelText(`${character} tier in ${dungeon}`));
+  fireEvent.click(screen.getByRole('button', { name: `${dungeon} at ${tier}` }));
+}
+
+function shownTier(character: string, dungeon: string) {
+  return screen.getByLabelText(`${character} tier in ${dungeon}`).textContent;
 }
 
 beforeEach(() => {
@@ -101,23 +116,43 @@ beforeEach(() => {
 describe('QuestLog cells', () => {
   it('shows the stored tier and minimum for a pair', async () => {
     renderLog();
-    const tier = (await screen.findByLabelText('Mage tier in Abyss')) as HTMLSelectElement;
-    expect(tier.value).toBe('elite');
+    await screen.findByLabelText('Mage tier in Abyss');
+    expect(shownTier('Mage', 'Abyss')).toBe('elite');
     expect(screen.getByLabelText('Mage minimum runs in Abyss').textContent).toBe('2');
   });
 
   it('defaults a pair with no row to the dungeon default tier and minimum', async () => {
-    renderLog({ input: anInput({ grid: [] }) });
-    const tier = (await screen.findByLabelText('Mage tier in Abyss')) as HTMLSelectElement;
-    expect(tier.value).toBe('elite');
+    renderLog({ gridRows: [] });
+    await screen.findByLabelText('Mage tier in Abyss');
+    expect(shownTier('Mage', 'Abyss')).toBe('elite');
     expect(screen.getByLabelText('Mage minimum runs in Abyss').textContent).toBe('1');
+  });
+
+  it('shows a stored none instead of falling back to the default', async () => {
+    // The plan input drops a `none` pair entirely - it is not a decision the
+    // solver has to make - so reading the tier from there showed the dungeon's
+    // default instead, and choosing `none` looked like it had not saved.
+    renderLog({ gridRows: [{ ...storedRow, tier: 'none' }], input: anInput({ grid: [] }) });
+    await screen.findByLabelText('Mage tier in Abyss');
+    expect(shownTier('Mage', 'Abyss')).toBe('none');
+    expect(screen.getByLabelText('Mage minimum runs in Abyss').textContent).toBe('2');
+  });
+
+  it('changing the difficulty never moves the minimum', async () => {
+    renderLog();
+    await chooseTier('Mage', 'Abyss', 'none');
+    await waitFor(() => {
+      expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
+        tier: 'none',
+        min_runs: 2,
+      });
+    });
+    expect(screen.getByLabelText('Mage minimum runs in Abyss').textContent).toBe('2');
   });
 
   it('upserts a tier change immediately', async () => {
     renderLog();
-    fireEvent.change(await screen.findByLabelText('Mage tier in Abyss'), {
-      target: { value: 'legend' },
-    });
+    await chooseTier('Mage', 'Abyss', 'legend');
     await waitFor(() => {
       expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
         tier: 'legend',
@@ -130,10 +165,8 @@ describe('QuestLog cells', () => {
     // A pair with no row yet shows the dungeon's defaults. Sending only the
     // tier makes the upsert insert a row whose min_runs takes the SCHEMA
     // default of 0, so the displayed minimum of 1 silently becomes 0.
-    renderLog({ input: anInput({ grid: [] }) });
-    fireEvent.change(await screen.findByLabelText('Mage tier in Abyss'), {
-      target: { value: 'legend' },
-    });
+    renderLog({ gridRows: [] });
+    await chooseTier('Mage', 'Abyss', 'legend');
     await waitFor(() => {
       expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
         tier: 'legend',
@@ -146,7 +179,7 @@ describe('QuestLog cells', () => {
     // The same hole in the other direction, and worse: an inserted row would
     // take tier 'none', which means "cannot enter" - the planner drops the pair
     // entirely rather than merely planning it badly.
-    renderLog({ input: anInput({ grid: [] }) });
+    renderLog({ gridRows: [] });
     fireEvent.click(
       await screen.findByRole('button', { name: /one more minimum run of abyss for mage/i }),
     );
@@ -185,9 +218,7 @@ describe('QuestLog cells', () => {
   });
 
   it('writes once for a run of clicks, not once per click', async () => {
-    renderLog({
-      input: anInput({ grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0 }] }),
-    });
+    renderLog({ gridRows: [{ ...storedRow, min_runs: 0 }] });
     const up = await screen.findByRole('button', {
       name: /one more minimum run of abyss for mage/i,
     });
@@ -204,18 +235,14 @@ describe('QuestLog cells', () => {
   });
 
   it('cannot step past the per-character cap, or below zero', async () => {
-    renderLog({
-      input: anInput({ grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 3 }] }),
-    });
+    renderLog({ gridRows: [{ ...storedRow, min_runs: 3 }] });
     const up = (await screen.findByRole('button', {
       name: /one more minimum run of abyss for mage/i,
     })) as HTMLButtonElement;
     expect(up.disabled).toBe(true);
 
     cleanup();
-    renderLog({
-      input: anInput({ grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0 }] }),
-    });
+    renderLog({ gridRows: [{ ...storedRow, min_runs: 0 }] });
     const down = (await screen.findByRole('button', {
       name: /one fewer minimum run of abyss for mage/i,
     })) as HTMLButtonElement;
@@ -225,16 +252,12 @@ describe('QuestLog cells', () => {
   it('prices a run at the tier the character actually runs, not a fixed one', async () => {
     // gold.elite is 3 and gold.story is 2: reading the wrong one is invisible
     // until the two differ.
-    renderLog({
-      input: anInput({ grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'story', minRuns: 0 }] }),
-    });
+    renderLog({ gridRows: [{ ...storedRow, tier: 'story', min_runs: 0 }] });
     expect(await screen.findByText(/2 per run/)).toBeDefined();
   });
 
   it('says a dungeon is not unlocked rather than pricing it', async () => {
-    renderLog({
-      input: anInput({ grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'none', minRuns: 0 }] }),
-    });
+    renderLog({ gridRows: [{ ...storedRow, tier: 'none', min_runs: 0 }] });
     expect(await screen.findByText(/not unlocked/i)).toBeDefined();
   });
 
@@ -307,7 +330,7 @@ describe('QuestLog roster management', () => {
       input: anInput({ characters: [], grid: [], characterAttemptsLeft: {}, goldHeadroom: {} }),
       roster: [{ ...mage, is_active: false }],
     });
-    const tier = (await screen.findByLabelText('Mage tier in Abyss')) as HTMLSelectElement;
+    const tier = (await screen.findByLabelText('Mage tier in Abyss')) as HTMLButtonElement;
     expect(tier.disabled).toBe(true);
     expect(
       (screen.getByRole('button', {
@@ -373,9 +396,7 @@ describe('QuestLog one character at a time', () => {
   it('still writes the whole cell from the phone tree', async () => {
     stubMatchMedia(true);
     renderLog();
-    fireEvent.change(await screen.findByLabelText('Mage tier in Abyss'), {
-      target: { value: 'legend' },
-    });
+    await chooseTier('Mage', 'Abyss', 'legend');
     await waitFor(() => {
       expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
         tier: 'legend',

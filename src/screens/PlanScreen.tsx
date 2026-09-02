@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createCharacter, currentGameAccountId, listCharacters, type CharacterRow } from '../data/accounts';
-import { setGridCells } from '../data/grid';
+import { listGrid, setGridCells, type GridRow } from '../data/grid';
 import { loadPlanInput } from '../data/loadPlanInput';
 import {
   attemptCeiling,
@@ -24,6 +24,7 @@ interface Solved {
   input: PlanInput;
   result: PlanResult;
   roster: CharacterRow[];
+  gridRows: GridRow[];
   reasons: Reason[];
   relaxed: boolean;
   goldCeiling: number;
@@ -42,14 +43,19 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
     try {
       const accountId = await currentGameAccountId();
       const input = await loadPlanInput(accountId);
-      // The roster is read separately because the plan input has already
-      // dropped parked characters, and the log has to be able to unpark one.
+      // The roster and the grid are read separately from the plan input, which
+      // is the SOLVER's view: it has already dropped parked characters and any
+      // pair whose tier is `none`. The log edits the stored rows, so it needs
+      // them as stored - otherwise choosing `none` reads back as the dungeon's
+      // default on the next refresh.
       const roster = await listCharacters(accountId);
+      const gridRows = await listGrid(roster.map((c) => c.id));
       const result = await solveOptimal(input);
       setSolved({
         input,
         result,
         roster,
+        gridRows,
         reasons: explainCeiling(input, result),
         relaxed: noContention(input),
         goldCeiling: goldCapCeiling(input),
@@ -105,7 +111,7 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
     );
   }
 
-  const { input, result, roster } = solved;
+  const { input, result, roster, gridRows } = solved;
   const names: Names = {
     character: (id) => input.characters.find((c) => c.id === id)?.name ?? id,
     dungeon: (id) => input.dungeons.find((d) => d.id === id)?.name ?? id,
@@ -180,6 +186,7 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
             <QuestLog
               input={input}
               assignments={result.assignments}
+              gridRows={gridRows}
               roster={roster}
               mutate={mutate}
               onAddClick={() => setShowAddModal(true)}

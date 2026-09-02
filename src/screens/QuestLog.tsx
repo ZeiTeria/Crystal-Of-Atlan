@@ -6,7 +6,7 @@ import {
   toggleCharacterActive,
   type CharacterRow,
 } from '../data/accounts';
-import { setGridCell } from '../data/grid';
+import { setGridCell, type GridRow } from '../data/grid';
 import type { PlanAssignment, PlanInput, Tier } from '../engine/types';
 import Button from '../ui/Button';
 import CharacterPicker from '../ui/CharacterPicker';
@@ -14,6 +14,7 @@ import InfoDot from '../ui/InfoDot';
 import { Portrait } from '../ui/Shared';
 import { getClassHue } from '../ui/hues';
 import TierGem from '../ui/TierGem';
+import TierSelect from '../ui/TierSelect';
 import { PHONE, useMediaQuery } from '../ui/useMediaQuery';
 import { sortOrderPatches } from '../ui/reorder';
 import { useSortableList } from '../ui/useSortableList';
@@ -22,11 +23,19 @@ import { goldWarning } from './goldWarning';
 import { gold } from './planText';
 import './QuestLog.css';
 
-const TIERS: Tier[] = ['none', 'solo', 'story', 'elite', 'legend'];
-
 interface QuestLogProps {
   input: PlanInput;
   assignments: PlanAssignment[];
+  /**
+   * The STORED grid rows, not `input.grid`.
+   *
+   * The plan input drops any pair whose tier is `none`, which is right for the
+   * solver - a dungeon a character cannot enter is not a decision variable -
+   * but wrong for the screen that sets it. Reading the plan's copy meant
+   * choosing `none` wrote correctly, then came back as the dungeon's default
+   * on the next refresh, taking the minimum with it.
+   */
+  gridRows: GridRow[];
   /** Every character on the account, parked ones included - the plan input has
    *  already dropped those, and a roster you cannot unpark from is a trap. */
   roster: CharacterRow[];
@@ -47,6 +56,7 @@ const STEP_SETTLE_MS = 350;
 export default function QuestLog({
   input,
   assignments,
+  gridRows,
   roster,
   mutate,
   onAddClick,
@@ -93,11 +103,8 @@ export default function QuestLog({
   const dungeons = matrixColumns(input.dungeons);
   const parked = selected.is_active === false;
 
-  const tierOf = new Map<string, Tier>(
-    input.grid.map((g) => [`${g.characterId}:${g.dungeonId}`, g.tier]),
-  );
-  const minRunsOf = new Map<string, number>(
-    input.grid.map((g) => [`${g.characterId}:${g.dungeonId}`, g.minRuns]),
+  const stored = new Map<string, GridRow>(
+    gridRows.map((row) => [`${row.character_id}:${row.dungeon_id}`, row]),
   );
 
   const cap = input.settings.goldCap;
@@ -299,9 +306,9 @@ export default function QuestLog({
                 {g.name}
               </div>
               {g.dungeons.map((d) => {
-                const key = `${selected.id}:${d.id}`;
-                const tier = tierOf.get(key) ?? d.default_tier;
-                const minRuns = pending[d.id] ?? minRunsOf.get(key) ?? d.default_min_runs;
+                const row = stored.get(`${selected.id}:${d.id}`);
+                const tier = row?.tier ?? d.default_tier;
+                const minRuns = pending[d.id] ?? row?.min_runs ?? d.default_min_runs;
                 const assignment = assignments.find(
                   (a) => a.characterId === selected.id && a.dungeonId === d.id,
                 );
@@ -327,21 +334,16 @@ export default function QuestLog({
                       </span>
                     </div>
                     <div className="d-tier">
-                      <select
-                        aria-label={`${selected.name} tier in ${d.name}`}
+                      <TierSelect
                         value={tier}
+                        label={`${selected.name} tier in ${d.name}`}
+                        optionLabel={(t) => `${d.name} at ${t}`}
                         disabled={parked}
-                        style={{ color: `var(--tier-${tier})` }}
-                        onChange={(e) =>
-                          write(d.id, { tier: e.target.value as Tier, min_runs: minRuns })
-                        }
-                      >
-                        {TIERS.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                      </select>
+                        // The minimum goes with the tier, untouched: a
+                        // tier-only write would insert the schema default and
+                        // silently reset it.
+                        onChange={(next) => write(d.id, { tier: next, min_runs: minRuns })}
+                      />
                     </div>
                     <div className="d-stepper">
                       <button

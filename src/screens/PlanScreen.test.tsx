@@ -9,13 +9,17 @@ import {
   listCharacters,
   type CharacterRow,
 } from '../data/accounts';
-import { setGridCells } from '../data/grid';
+import { listGrid, setGridCells } from '../data/grid';
 import type { PlanInput } from '../engine/types';
 import { stubMatchMedia } from '../ui/testing/matchMedia';
 import { resetDensity } from '../ui/density';
 
 vi.mock('../data/loadPlanInput', () => ({ loadPlanInput: vi.fn() }));
-vi.mock('../data/grid', () => ({ setGridCell: vi.fn(), setGridCells: vi.fn() }));
+vi.mock('../data/grid', () => ({
+  listGrid: vi.fn(),
+  setGridCell: vi.fn(),
+  setGridCells: vi.fn(),
+}));
 // The roster is read separately from the plan input: the input has already
 // dropped parked characters, and the log has to be able to unpark one.
 vi.mock('../data/accounts', () => ({
@@ -84,6 +88,7 @@ beforeEach(() => {
   vi.mocked(listCharacters).mockResolvedValue([MAGE]);
   vi.mocked(createCharacter).mockResolvedValue({ ...MAGE, id: 'new', name: 'Rogue' });
   vi.mocked(setGridCells).mockResolvedValue(undefined);
+  vi.mocked(listGrid).mockResolvedValue([]);
   vi.mocked(loadPlanInput).mockResolvedValue(anInput());
 });
 
