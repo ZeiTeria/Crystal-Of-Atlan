@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createCharacter, currentGameAccountId, listCharacters, type CharacterRow } from '../data/accounts';
 import { listGrid, setGridCells, type GridRow } from '../data/grid';
+import { loadAppSettings, maxCharacters } from '../data/roster';
 import { loadPlanInput } from '../data/loadPlanInput';
 import {
   attemptCeiling,
@@ -25,6 +26,8 @@ interface Solved {
   result: PlanResult;
   roster: CharacterRow[];
   gridRows: GridRow[];
+  /** How many characters this account may have. An admin setting. */
+  maxCharacters: number;
   reasons: Reason[];
   relaxed: boolean;
   goldCeiling: number;
@@ -49,13 +52,18 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
       // them as stored - otherwise choosing `none` reads back as the dungeon's
       // default on the next refresh.
       const roster = await listCharacters(accountId);
-      const gridRows = await listGrid(roster.map((c) => c.id));
+      // In parallel: neither needs the other, and the cap is only ever read.
+      const [gridRows, settings] = await Promise.all([
+        listGrid(roster.map((c) => c.id)),
+        loadAppSettings(),
+      ]);
       const result = await solveOptimal(input);
       setSolved({
         input,
         result,
         roster,
         gridRows,
+        maxCharacters: maxCharacters(settings),
         reasons: explainCeiling(input, result),
         relaxed: noContention(input),
         goldCeiling: goldCapCeiling(input),
@@ -79,6 +87,9 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
     tiers: Record<string, Tier>,
   ) {
     if (!solved) return;
+    // Checked here as well as on the controls: the form can be open when the
+    // roster fills from somewhere else, and RLS has no opinion about a cap.
+    if (solved.roster.length >= solved.maxCharacters) return;
     await mutate(async () => {
       const accountId = await currentGameAccountId();
       const created = await createCharacter(accountId, name, characterClass);
@@ -116,12 +127,13 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
   }
 
   const { input, result, roster, gridRows } = solved;
+  const atCap = roster.length >= solved.maxCharacters;
   const names: Names = {
     character: (id) => input.characters.find((c) => c.id === id)?.name ?? id,
     dungeon: (id) => input.dungeons.find((d) => d.id === id)?.name ?? id,
   };
 
-  const modal = showAddModal && (
+  const modal = showAddModal && !atCap && (
     <AddCharacterModal
       dungeons={input.dungeons}
       grid={input.grid}
@@ -184,6 +196,8 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
               goldCeiling={solved.goldCeiling}
               attemptsCeiling={solved.attemptsCeiling}
               names={names}
+              atCap={atCap}
+              maxCharacters={solved.maxCharacters}
               onAddClick={() => setShowAddModal(true)}
             />
           ) : (
@@ -193,6 +207,8 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
               gridRows={gridRows}
               roster={roster}
               mutate={mutate}
+              atCap={atCap}
+              maxCharacters={solved.maxCharacters}
               onAddClick={() => setShowAddModal(true)}
             />
           )}

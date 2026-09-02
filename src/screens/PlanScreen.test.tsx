@@ -10,11 +10,18 @@ import {
   type CharacterRow,
 } from '../data/accounts';
 import { listGrid, setGridCells } from '../data/grid';
+import { loadAppSettings } from '../data/roster';
 import type { PlanInput } from '../engine/types';
 import { stubMatchMedia } from '../ui/testing/matchMedia';
 import { resetDensity } from '../ui/density';
 
 vi.mock('../data/loadPlanInput', () => ({ loadPlanInput: vi.fn() }));
+// Only the network call is stubbed; nextDefaultName and the cap arithmetic
+// are pure and are exactly what these tests are about.
+vi.mock('../data/roster', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../data/roster')>()),
+  loadAppSettings: vi.fn(),
+}));
 vi.mock('../data/grid', () => ({
   listGrid: vi.fn(),
   setGridCell: vi.fn(),
@@ -89,6 +96,14 @@ beforeEach(() => {
   vi.mocked(createCharacter).mockResolvedValue({ ...MAGE, id: 'new', name: 'Rogue' });
   vi.mocked(setGridCells).mockResolvedValue(undefined);
   vi.mocked(listGrid).mockResolvedValue([]);
+  vi.mocked(loadAppSettings).mockResolvedValue({
+    id: true,
+    gold_cap_per_character: 1_000_000,
+    gold_reset_weekday: 1,
+    reset_hour: 6,
+    server_timezone: 'UTC',
+    max_characters: 12,
+  });
   vi.mocked(loadPlanInput).mockResolvedValue(anInput());
 });
 
@@ -308,9 +323,9 @@ describe('PlanScreen', () => {
     await openAddForm('Rogue');
     fireEvent.click(screen.getByRole('button', { name: /add character/i }));
     await waitFor(() => {
-      // No class unless one was chosen - it is display-only, and guessing it
-      // silently saved every new character as the first class on the list.
-      expect(vi.mocked(createCharacter)).toHaveBeenCalledWith('acc', 'Rogue', null);
+      // The newest class, which is what a player adding a character usually
+      // wants - and it is display-only either way.
+      expect(vi.mocked(createCharacter)).toHaveBeenCalledWith('acc', 'Rogue', 'Sugariff');
     });
     expect(vi.mocked(setGridCells)).not.toHaveBeenCalled();
   });
@@ -329,6 +344,23 @@ describe('PlanScreen', () => {
 });
 
 describe('PlanScreen on a phone', () => {
+
+  it('refuses to add past the cap, and says so', async () => {
+    vi.mocked(loadAppSettings).mockResolvedValue({
+      id: true,
+      gold_cap_per_character: 1_000_000,
+      gold_reset_weekday: 1,
+      reset_hour: 6,
+      server_timezone: 'UTC',
+      max_characters: 1,
+    });
+    render(<PlanScreen />);
+    await screen.findAllByText('Mage');
+    const add = screen.getByRole('button', { name: /1 \/ 1|\+ add/i }) as HTMLButtonElement;
+    expect(add.disabled).toBe(true);
+    fireEvent.click(add);
+    expect(screen.queryByLabelText('New character name')).toBe(null);
+  });
 
   it('offers the character picker rather than a matrix', async () => {
     stubMatchMedia(true);

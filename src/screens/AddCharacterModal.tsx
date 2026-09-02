@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { Dungeon, GridEntry, Tier } from '../engine/types';
 import { Portrait } from '../ui/Shared';
 import { getClassHue } from '../ui/hues';
+import { NEWEST_CLASS } from '../data/classes';
+import { nextDefaultName } from '../data/roster';
 import ClassPicker from '../ui/ClassPicker';
 import { TIER_TEMPLATES, templateCells } from './gridTemplate';
 import './AddCharacterModal.css';
@@ -32,15 +34,13 @@ export default function AddCharacterModal({
 }: AddCharacterModalProps) {
   const [name, setName] = useState('');
   /**
-   * No class until one is chosen.
-   *
-   * This used to default to the first class on the list, so a character added
-   * without touching the picker was silently saved as a Sugariff - wrong for
-   * almost every character, and invisible until you noticed the mark. A class
-   * is display-only, so `none` is a perfectly good answer, and the portrait
-   * sets one later in a click.
+   * Starts on the newest class, which is the one a player is most likely
+   * adding a character for. Picking it again clears it, and a class is
+   * display-only either way - nothing the solver reads.
    */
-  const [selectedClass, setSelectedClass] = useState<string | null>(null);
+  const [selectedClass, setSelectedClass] = useState<string | null>(
+    NEWEST_CLASS?.name ?? null,
+  );
   const [template, setTemplate] = useState('blank');
   const [tiers, setTiers] = useState<Record<string, Tier>>(() => defaultTiers(dungeons));
 
@@ -71,14 +71,15 @@ export default function AddCharacterModal({
   const hue = getClassHue(selectedClass);
   const unlockedCount = Object.values(tiers).filter(t => t !== 'none').length;
   
-  const canAdd = name.trim().length > 0;
+  const fallbackName = nextDefaultName(characters);
+  const finalName = name.trim() || fallbackName;
   const [submitting, setSubmitting] = useState(false);
 
   async function handleAdd() {
-    if (!canAdd || submitting) return;
+    if (submitting) return;
     setSubmitting(true);
     try {
-      await onAdd(name.trim(), selectedClass, tiers);
+      await onAdd(finalName, selectedClass, tiers);
       onClose();
     } catch (err) {
       console.error(err);
@@ -91,9 +92,9 @@ export default function AddCharacterModal({
       <div className="add-character-panel">
         <div className="ac-header">
           <div className="ac-header-left">
-            <Portrait name={name.trim()} hue={hue} size={44} characterClass={selectedClass} />
+            <Portrait name={finalName} hue={hue} size={44} characterClass={selectedClass} />
             <div className="ac-header-text">
-              <span className="ac-title">{name.trim() || 'New character'}</span>
+              <span className="ac-title">{name.trim() || fallbackName}</span>
               <span className="ac-sub">Joins the roster with 0 gold this week</span>
             </div>
           </div>
@@ -110,7 +111,7 @@ export default function AddCharacterModal({
               aria-label="New character name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Character name"
+              placeholder={fallbackName}
               autoFocus
             />
           </div>
@@ -202,7 +203,7 @@ export default function AddCharacterModal({
             <button
               type="button"
               className="ac-submit"
-              disabled={!canAdd || submitting}
+              disabled={submitting}
               onClick={() => void handleAdd()}
             >
               Add character

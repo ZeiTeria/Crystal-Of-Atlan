@@ -43,6 +43,9 @@ interface QuestLogProps {
   roster: CharacterRow[];
   /** Runs a write, then re-reads everything. Owned by the screen above. */
   mutate: (write: () => Promise<void>) => Promise<void>;
+  /** The roster is full, so adding is offered but refused. */
+  atCap?: boolean;
+  maxCharacters?: number;
   onAddClick?: () => void;
 }
 
@@ -61,6 +64,8 @@ export default function QuestLog({
   gridRows,
   roster,
   mutate,
+  atCap,
+  maxCharacters,
   onAddClick,
 }: QuestLogProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -249,8 +254,15 @@ export default function QuestLog({
               );
             })}
           </div>
-          <button type="button" className="roster-add" onClick={onAddClick}>
-            + Add character
+          <button
+            type="button"
+            className="roster-add"
+            disabled={atCap}
+            onClick={onAddClick}
+          >
+            {atCap
+              ? `Roster full — ${roster.length} of ${maxCharacters}`
+              : '+ Add character'}
           </button>
         </div>
       )}

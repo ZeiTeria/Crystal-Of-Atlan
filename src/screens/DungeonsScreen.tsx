@@ -13,6 +13,12 @@ import {
   type NewDungeon,
 } from '../data/dungeons';
 
+import {
+  loadAppSettings,
+  maxCharacters as readMaxCharacters,
+  setMaxCharacters,
+  type AppSettingsRow,
+} from '../data/roster';
 import type { Tier } from '../engine/types';
 import ErrorBanner from '../ui/ErrorBanner';
 
@@ -60,7 +66,10 @@ export default function DungeonsScreen() {
   const [draft, setDraft] = useState<NewDungeon>(BLANK);
   const [loading, setLoading] = useState(true);
 
+  const [settings, setSettings] = useState<AppSettingsRow | null>(null);
+
   const refreshFn = useCallback(async () => {
+    setSettings(await loadAppSettings());
     setDungeons(await listDungeons());
   }, []);
 
@@ -127,6 +136,31 @@ export default function DungeonsScreen() {
     <section>
       <h2>Dungeons</h2>
       <ErrorBanner message={error} />
+
+      <div className="admin-setting">
+        <label htmlFor="max-characters">Characters allowed per account</label>
+        <input
+          id="max-characters"
+          type="number"
+          min={1}
+          max={200}
+          key={readMaxCharacters(settings)}
+          defaultValue={readMaxCharacters(settings)}
+          disabled={busy}
+          onBlur={(e) => {
+            const next = Number(e.target.value);
+            if (!Number.isInteger(next) || next < 1 || next === readMaxCharacters(settings)) return;
+            void mutate(async () => {
+              await setMaxCharacters(next);
+              setSettings(await loadAppSettings());
+            });
+          }}
+        />
+        <span className="muted">
+          What the game allows, so it lives here rather than in the code. Lowering it below the
+          number an account already has does not delete anyone - it only stops more being added.
+        </span>
+      </div>
 
       {dungeons.length === 0 && <p className="muted">No dungeons in the catalogue yet.</p>}
 

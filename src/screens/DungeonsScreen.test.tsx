@@ -3,7 +3,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DungeonsScreen from './DungeonsScreen';
 import { createDungeon, deleteDungeon, listDungeons, updateDungeon } from '../data/dungeons';
+import { loadAppSettings, setMaxCharacters } from '../data/roster';
 
+vi.mock('../data/roster', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../data/roster')>()),
+  loadAppSettings: vi.fn(),
+  setMaxCharacters: vi.fn(),
+}));
 vi.mock('../data/dungeons', () => ({
   listDungeons: vi.fn(),
   createDungeon: vi.fn(),
@@ -56,6 +62,15 @@ beforeEach(() => {
   // it before each test, or a later "not called" assertion inherits an earlier
   // test's call.
   vi.clearAllMocks();
+  vi.mocked(loadAppSettings).mockResolvedValue({
+    id: true,
+    gold_cap_per_character: 1_000_000,
+    gold_reset_weekday: 1,
+    reset_hour: 6,
+    server_timezone: 'UTC',
+    max_characters: 12,
+  });
+  vi.mocked(setMaxCharacters).mockResolvedValue(undefined);
   vi.mocked(listDungeons).mockResolvedValue([abyss]);
   vi.mocked(createDungeon).mockResolvedValue({ ...abyss, id: 'd2', name: 'Vault' });
   vi.mocked(updateDungeon).mockResolvedValue(undefined);

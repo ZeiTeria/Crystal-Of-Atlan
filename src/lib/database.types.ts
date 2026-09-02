@@ -16,6 +16,8 @@ export interface Database {
           gold_reset_weekday: number;
           reset_hour: number;
           server_timezone: string;
+          /** Absent until migration 0010 has run, so read it defensively. */
+          max_characters?: number;
         };
         Insert: {
           id?: boolean;
@@ -23,6 +25,7 @@ export interface Database {
           gold_reset_weekday?: number;
           reset_hour?: number;
           server_timezone?: string;
+          max_characters?: number;
         };
         Update: {
           id?: boolean;
@@ -30,6 +33,7 @@ export interface Database {
           gold_reset_weekday?: number;
           reset_hour?: number;
           server_timezone?: string;
+          max_characters?: number;
         };
         Relationships: [];
       };

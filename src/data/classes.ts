@@ -109,6 +109,16 @@ export const CHARACTER_CLASSES: CharacterClass[] = [
   { name: 'Warlock', hue: '#C724D6', icon: warlock, base: 'Magister' },
 ];
 
+/**
+ * The class the game shipped most recently.
+ *
+ * The site's carousel leads with it, which is why it is first here - but the
+ * add form defaults to it because it is NEWEST, not because it is first. Said
+ * out loud so the two cannot drift apart: reorder this array for some other
+ * reason and the default has to be reconsidered, not silently reassigned.
+ */
+export const NEWEST_CLASS: CharacterClass | undefined = CHARACTER_CLASSES[0];
+
 const byName = new Map(CHARACTER_CLASSES.map((c) => [c.name.toLowerCase(), c]));
 
 /**

@@ -19,6 +19,9 @@ interface AttemptBoardProps {
   goldCeiling: number;
   attemptsCeiling: number;
   names: Names;
+  /** The roster is full, so adding is offered but refused. */
+  atCap?: boolean;
+  maxCharacters?: number;
   onAddClick?: () => void;
 }
 
@@ -36,6 +39,8 @@ export default function AttemptBoard({
   goldCeiling,
   attemptsCeiling,
   names,
+  atCap,
+  maxCharacters,
   onAddClick,
 }: AttemptBoardProps) {
   const isPhone = useMediaQuery(PHONE);
@@ -135,8 +140,14 @@ export default function AttemptBoard({
               </div>
             );
           })}
-          <button type="button" className="add-character-btn" onClick={onAddClick}>
-            + Add
+          <button
+            type="button"
+            className="add-character-btn"
+            disabled={atCap}
+            title={atCap ? `The roster is full at ${maxCharacters} characters.` : undefined}
+            onClick={onAddClick}
+          >
+            {atCap ? `${characters.length} / ${maxCharacters}` : '+ Add'}
           </button>
         </div>
       </div>

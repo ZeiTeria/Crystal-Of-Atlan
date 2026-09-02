@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AddCharacterModal from './AddCharacterModal';
 import type { Dungeon, GridEntry, Tier } from '../engine/types';
+import { NEWEST_CLASS } from '../data/classes';
 
 afterEach(() => {
   cleanup();
@@ -64,16 +65,32 @@ describe('AddCharacterModal', () => {
     });
   });
 
-  it('disables Add while the trimmed draft is empty', () => {
+  it('names an unnamed character rather than refusing to add it', async () => {
     renderModal();
     const add = screen.getByRole('button', { name: /add character/i }) as HTMLButtonElement;
-    expect(add.disabled).toBe(true);
-
-    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: '   ' } });
-    expect(add.disabled).toBe(true);
-
-    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: 'Rogue' } });
     expect(add.disabled).toBe(false);
+    fireEvent.click(add);
+    await waitFor(() => expect(onAdd.mock.calls[0]?.[0]).toBe('Char1'));
+  });
+
+  it('treats a name of only whitespace as no name', async () => {
+    renderModal();
+    fireEvent.change(screen.getByLabelText('New character name'), { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
+    await waitFor(() => expect(onAdd.mock.calls[0]?.[0]).toBe('Char1'));
+  });
+
+  it('takes the lowest unused default name, not one past the count', async () => {
+    // Delete Char2 out of three and counting would hand out Char3, which is
+    // already taken.
+    renderModal({
+      characters: [
+        { id: 'c1', name: 'Char1' },
+        { id: 'c3', name: 'Char3' },
+      ],
+    });
+    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
+    await waitFor(() => expect(onAdd.mock.calls[0]?.[0]).toBe('Char2'));
   });
 
   it('disables Add immediately and adds only once when clicked twice before it settles', async () => {
@@ -93,14 +110,14 @@ describe('AddCharacterModal', () => {
     });
   });
 
-  it('adds no class unless one is chosen', async () => {
-    // It used to default to the first class on the list, so a character added
-    // without touching the picker was silently saved as a Sugariff.
+  it('starts on the newest class', async () => {
+    // Deliberate, unlike before: the default is the newest class BECAUSE it is
+    // newest, which is the one a player is usually adding a character for.
     renderModal();
     fireEvent.change(screen.getByLabelText('New character name'), { target: { value: 'Rogue' } });
     fireEvent.click(screen.getByRole('button', { name: /add character/i }));
     await waitFor(() => {
-      expect(onAdd.mock.calls[0]?.[1]).toBe(null);
+      expect(onAdd.mock.calls[0]?.[1]).toBe(NEWEST_CLASS?.name);
     });
   });
 
@@ -115,6 +132,8 @@ describe('AddCharacterModal', () => {
   });
 
   it('clears the class by picking it again', async () => {
+    // A character without a class is still a real state; it is just no longer
+    // the starting one.
     renderModal();
     fireEvent.change(screen.getByLabelText('New character name'), { target: { value: 'Rogue' } });
     fireEvent.click(screen.getByRole('button', { name: 'Warlock' }));

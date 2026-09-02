@@ -1,0 +1,30 @@
+CSSEOF2
+
+/* An admin setting on the Dungeons screen: a fact about the game, not a
+   constant, so it is edited rather than deployed. */
+.admin-setting {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  font-size: 12px;
+}
+.admin-setting label {
+  font-weight: 800;
+}
+.admin-setting input {
+  width: 72px;
+  padding: 5px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.admin-setting .muted {
+  flex: 1;
+  min-width: 220px;
+}
