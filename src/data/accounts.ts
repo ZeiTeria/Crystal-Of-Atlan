@@ -123,6 +123,15 @@ export async function renameCharacter(id: string, name: string): Promise<void> {
   if (error) throw error;
 }
 
+/** `null` clears it, which is a real state: a character need not have a class. */
+export async function setCharacterClass(id: string, characterClass: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('characters')
+    .update({ class: characterClass })
+    .eq('id', id);
+  if (error) throw error;
+}
+
 export async function toggleCharacterActive(id: string, is_active: boolean): Promise<void> {
   const { error } = await supabase.from('characters').update({ is_active }).eq('id', id);
   if (error) throw error;

@@ -107,36 +107,6 @@
   border-bottom-color: var(--accent);
 }
 
-.ac-class-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.ac-class-chip {
-  padding: 6px 12px;
-  font-size: 11px;
-  font-weight: 800;
-  border: 1px solid var(--line-strong);
-  color: var(--text-dim);
-  cursor: pointer;
-  transition: .15s;
-  opacity: 0.55;
-  background: rgba(255,255,255,0.03);
-}
-
-.ac-class-chip:hover {
-  opacity: 0.8;
-}
-
-.ac-class-chip.selected {
-  opacity: 1;
-  color: var(--c-hue);
-  border-color: var(--c-hue);
-  background: rgba(255,255,255,0.08);
-  box-shadow: inset 3px 0 0 var(--c-hue);
-}
-
 .ac-tiers-section {
   display: flex;
   flex-direction: column;
@@ -290,11 +260,12 @@
   }
 }
 
-/* The class mark on a picker chip, tinted to that class. */
-.ac-class-mark {
-  width: 14px;
-  height: 14px;
-  margin-right: 6px;
-  vertical-align: -2px;
-  opacity: .85;
+/* Its own full-width row: 26 classes in a half-width column came out as one
+   long column and pushed everything below it off the panel. */
+.ac-class-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--line);
 }

@@ -6,6 +6,7 @@ import { setGridCell, type GridRow } from '../data/grid';
 import {
   deleteCharacter,
   renameCharacter,
+  setCharacterClass,
   setCharacterOrder,
   toggleCharacterActive,
   type CharacterRow,
@@ -16,6 +17,7 @@ import { stubMatchMedia } from '../ui/testing/matchMedia';
 vi.mock('../data/grid', () => ({ setGridCell: vi.fn() }));
 vi.mock('../data/accounts', () => ({
   renameCharacter: vi.fn(),
+  setCharacterClass: vi.fn(),
   deleteCharacter: vi.fn(),
   toggleCharacterActive: vi.fn(),
   setCharacterOrder: vi.fn(),
@@ -107,6 +109,7 @@ function shownTier(character: string, dungeon: string) {
 beforeEach(() => {
   vi.mocked(setGridCell).mockResolvedValue(undefined);
   vi.mocked(renameCharacter).mockResolvedValue(undefined);
+  vi.mocked(setCharacterClass).mockResolvedValue(undefined);
   vi.mocked(deleteCharacter).mockResolvedValue(undefined);
   vi.mocked(toggleCharacterActive).mockResolvedValue(undefined);
   vi.mocked(setCharacterOrder).mockResolvedValue(undefined);
@@ -288,6 +291,48 @@ describe('QuestLog cells', () => {
 });
 
 describe('QuestLog roster management', () => {
+  it('sets a class from the portrait, which is the thing showing it', async () => {
+    renderLog();
+    fireEvent.click(await screen.findByRole('button', { name: /set mage's class/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Set class to Warlock' }));
+    await waitFor(() => {
+      expect(vi.mocked(setCharacterClass)).toHaveBeenCalledWith('c1', 'Warlock');
+    });
+  });
+
+  it('names the current class on the control once one is set', async () => {
+    renderLog({ roster: [{ ...mage, class: 'Warlock' }] });
+    expect(
+      await screen.findByRole('button', { name: /mage is a warlock\. change class/i }),
+    ).toBeDefined();
+  });
+
+  it('clears a class back to none', async () => {
+    // A character without a class is a real state, not a missing value.
+    renderLog({ roster: [{ ...mage, class: 'Warlock' }] });
+    fireEvent.click(await screen.findByRole('button', { name: /change class/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^clear$/i }));
+    await waitFor(() => {
+      expect(vi.mocked(setCharacterClass)).toHaveBeenCalledWith('c1', null);
+    });
+  });
+
+  it('offers no clear when there is no class to clear', async () => {
+    renderLog();
+    fireEvent.click(await screen.findByRole('button', { name: /set mage's class/i }));
+    expect(screen.queryByRole('button', { name: /^clear$/i })).toBe(null);
+  });
+
+  it('closes the class picker on Escape', async () => {
+    renderLog();
+    fireEvent.click(await screen.findByRole('button', { name: /set mage's class/i }));
+    expect(screen.getByRole('button', { name: 'Set class to Warlock' })).toBeDefined();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Set class to Warlock' })).toBe(null),
+    );
+  });
+
   it('renames on blur', async () => {
     renderLog();
     const field = await screen.findByDisplayValue('Mage');

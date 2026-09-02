@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   deleteCharacter,
   renameCharacter,
+  setCharacterClass,
   setCharacterOrder,
   toggleCharacterActive,
   type CharacterRow,
@@ -10,6 +11,7 @@ import { setGridCell, type GridRow } from '../data/grid';
 import type { PlanAssignment, PlanInput, Tier } from '../engine/types';
 import Button from '../ui/Button';
 import CharacterPicker from '../ui/CharacterPicker';
+import ClassPicker from '../ui/ClassPicker';
 import InfoDot from '../ui/InfoDot';
 import { Portrait } from '../ui/Shared';
 import { getClassHue } from '../ui/hues';
@@ -62,6 +64,7 @@ export default function QuestLog({
   onAddClick,
 }: QuestLogProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [classOpen, setClassOpen] = useState(false);
   const isPhone = useMediaQuery(PHONE);
 
   // What the controls show while a write is still on its way.
@@ -81,6 +84,15 @@ export default function QuestLog({
       for (const timer of Object.values(running)) clearTimeout(timer);
     };
   }, []);
+
+  useEffect(() => {
+    if (!classOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setClassOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [classOpen]);
 
   const byId = new Map(roster.map((c) => [c.id, c]));
   const { order, activeId, handleProps } = useSortableList({
@@ -246,7 +258,56 @@ export default function QuestLog({
       <div className="quest-main">
         <div className="quest-header">
           <div className="quest-header-left">
-            <Portrait name={selected.name} hue={hue} size={52} dim={parked} characterClass={selected.class} />
+            {/* The portrait IS the class control: it is the thing showing the
+                class, so it is the thing you reach for to change it. */}
+            <span className="portrait-anchor">
+              <button
+                type="button"
+                className="portrait-button"
+                aria-label={
+                  selected.class
+                    ? `${selected.name} is a ${selected.class}. Change class`
+                    : `Set ${selected.name}'s class`
+                }
+                aria-expanded={classOpen}
+                onClick={() => setClassOpen((was) => !was)}
+              >
+                <Portrait
+                  name={selected.name}
+                  hue={hue}
+                  size={52}
+                  dim={parked}
+                  characterClass={selected.class}
+                />
+              </button>
+              {classOpen && (
+                <div className="class-popover">
+                  <div className="class-popover-head">
+                    <span>Class</span>
+                    {selected.class && (
+                      <button
+                        type="button"
+                        className="class-popover-clear"
+                        onClick={() => {
+                          setClassOpen(false);
+                          void mutate(() => setCharacterClass(selected.id, null));
+                        }}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <ClassPicker
+                    value={selected.class}
+                    labelFor={(name) => `Set class to ${name}`}
+                    onSelect={(name) => {
+                      setClassOpen(false);
+                      void mutate(() => setCharacterClass(selected.id, name));
+                    }}
+                  />
+                </div>
+              )}
+            </span>
             <div className="quest-header-text">
               <input
                 className="qh-name"

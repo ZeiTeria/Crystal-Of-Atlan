@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { Dungeon, GridEntry, Tier } from '../engine/types';
 import { Portrait } from '../ui/Shared';
 import { getClassHue } from '../ui/hues';
 import { CHARACTER_CLASSES } from '../data/classes';
+import ClassPicker from '../ui/ClassPicker';
 import { TIER_TEMPLATES, templateCells } from './gridTemplate';
 import './AddCharacterModal.css';
 
@@ -132,27 +133,11 @@ export default function AddCharacterModal({
               )}
             </select>
           </div>
-          <div className="ac-input-group">
-            <span className="ac-label">CLASS</span>
-            <div className="ac-class-grid">
-              {CHARACTER_CLASSES.map((c) => {
-                const isSelected = selectedClass === c.name;
-                return (
-                  <button
-                    type="button"
-                    key={c.name}
-                    aria-pressed={isSelected}
-                    onClick={() => setSelectedClass(c.name)}
-                    className={`ac-class-chip ${isSelected ? 'selected' : ''}`}
-                    style={{ '--c-hue': c.hue } as React.CSSProperties}
-                  >
-                    <img src={c.icon} alt="" className="ac-class-mark" />
-                    {c.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        </div>
+
+        <div className="ac-class-section">
+          <span className="ac-label">CLASS</span>
+          <ClassPicker value={selectedClass} onSelect={setSelectedClass} />
         </div>
 
         <div className="ac-tiers-section">
