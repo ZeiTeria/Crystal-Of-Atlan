@@ -32,6 +32,14 @@ export interface CharacterClass {
   hue: string;
   /** The hexagon class mark. */
   icon: string;
+  /**
+   * The base class this one advances from, or null when it IS a base class.
+   *
+   * The site presents all 26 as one flat carousel, which is why they arrived
+   * that way; the game groups them into seven families, and that is the shape
+   * a player picking one thinks in.
+   */
+  base: string | null;
 }
 
 /**
@@ -41,7 +49,8 @@ export interface CharacterClass {
  * Names come from the site's own translation bundle, so they are the strings
  * the game itself uses in English. The order is the order the site's class
  * carousel presents them in, newest first - which is why Sugariff, the class
- * added in the SNK collaboration patch, leads.
+ * added in the SNK collaboration patch, leads. Group them with CLASS_FAMILIES
+ * rather than reading this order as meaningful to a player.
  *
  * Colours are sampled from each class's own key art on that carousel. Bounty
  * Hunter's art is genuinely desaturated - it has no colour to take - so it gets
@@ -51,32 +60,32 @@ export interface CharacterClass {
  * `src/assets/classes/`.
  */
 export const CHARACTER_CLASSES: CharacterClass[] = [
-  { name: 'Sugariff', hue: '#FE45E5', icon: sugariff },
-  { name: 'Karmaslayer', hue: '#203AEF', icon: karmaslayer },
-  { name: 'Inventor', hue: '#E7DA19', icon: inventor },
-  { name: 'Empirica', hue: '#D6FA28', icon: empirica },
-  { name: 'Rhapsodia', hue: '#68E738', icon: rhapsodia },
-  { name: 'Glaciette', hue: '#FA5886', icon: glaciette },
-  { name: 'Assassin', hue: '#357896', icon: assassin },
-  { name: 'Phantom', hue: '#1744A6', icon: phantom },
-  { name: 'Mirage', hue: '#FF9639', icon: mirage },
-  { name: 'Mystrix', hue: '#7C55D0', icon: mystrix },
-  { name: 'Fighter', hue: '#FFD649', icon: fighter },
-  { name: 'Cloudstrider', hue: '#9DDAF4', icon: cloudstrider },
-  { name: 'Starbreaker', hue: '#DC1913', icon: starbreaker },
-  { name: 'Magician', hue: '#FFF449', icon: magician },
-  { name: 'Scytheguard', hue: '#F23F55', icon: scytheguard },
-  { name: 'Puppeteer', hue: '#FF6553', icon: puppeteer },
-  { name: 'Gunner', hue: '#9B6BFE', icon: gunner },
-  { name: 'Bounty Hunter', hue: '#8B93A1', icon: bountyHunter },
-  { name: 'Berserker', hue: '#79B8FE', icon: berserker },
-  { name: 'Elementalist', hue: '#28DBAE', icon: elementalist },
-  { name: 'Musketeer', hue: '#65D2C4', icon: musketeer },
-  { name: 'Magiblade', hue: '#5046DC', icon: magiblade },
-  { name: 'Swordsman', hue: '#5046DC', icon: swordsman },
-  { name: 'Blademaiden', hue: '#5046DC', icon: blademaiden },
-  { name: 'Magister', hue: '#DC41FF', icon: magister },
-  { name: 'Warlock', hue: '#C724D6', icon: warlock },
+  { name: 'Sugariff', hue: '#FE45E5', icon: sugariff, base: 'Fighter' },
+  { name: 'Karmaslayer', hue: '#203AEF', icon: karmaslayer, base: 'Swordsman' },
+  { name: 'Inventor', hue: '#E7DA19', icon: inventor, base: null },
+  { name: 'Empirica', hue: '#D6FA28', icon: empirica, base: 'Inventor' },
+  { name: 'Rhapsodia', hue: '#68E738', icon: rhapsodia, base: 'Inventor' },
+  { name: 'Glaciette', hue: '#FA5886', icon: glaciette, base: 'Puppeteer' },
+  { name: 'Assassin', hue: '#357896', icon: assassin, base: null },
+  { name: 'Specter', hue: '#1744A6', icon: phantom, base: 'Assassin' },
+  { name: 'Mirage', hue: '#FF9639', icon: mirage, base: 'Assassin' },
+  { name: 'Mystrix', hue: '#7C55D0', icon: mystrix, base: 'Musketeer' },
+  { name: 'Fighter', hue: '#FFD649', icon: fighter, base: null },
+  { name: 'Cloudstrider', hue: '#9DDAF4', icon: cloudstrider, base: 'Fighter' },
+  { name: 'Starbreaker', hue: '#DC1913', icon: starbreaker, base: 'Fighter' },
+  { name: 'Magician', hue: '#FFF449', icon: magician, base: 'Magister' },
+  { name: 'Scytheguard', hue: '#F23F55', icon: scytheguard, base: 'Puppeteer' },
+  { name: 'Puppeteer', hue: '#FF6553', icon: puppeteer, base: null },
+  { name: 'Gunner', hue: '#9B6BFE', icon: gunner, base: 'Musketeer' },
+  { name: 'Bounty Hunter', hue: '#8B93A1', icon: bountyHunter, base: 'Musketeer' },
+  { name: 'Berserker', hue: '#79B8FE', icon: berserker, base: 'Swordsman' },
+  { name: 'Elementalist', hue: '#28DBAE', icon: elementalist, base: 'Magister' },
+  { name: 'Musketeer', hue: '#65D2C4', icon: musketeer, base: null },
+  { name: 'Magiblade', hue: '#5046DC', icon: magiblade, base: 'Swordsman' },
+  { name: 'Swordsman', hue: '#5046DC', icon: swordsman, base: null },
+  { name: 'Blademaiden', hue: '#5046DC', icon: blademaiden, base: 'Puppeteer' },
+  { name: 'Magister', hue: '#DC41FF', icon: magister, base: null },
+  { name: 'Warlock', hue: '#C724D6', icon: warlock, base: 'Magister' },
 ];
 
 const byName = new Map(CHARACTER_CLASSES.map((c) => [c.name.toLowerCase(), c]));
@@ -95,3 +104,31 @@ export function findClass(name: string | null | undefined): CharacterClass | und
   const key = name.trim().toLowerCase();
   return byName.get(key) ?? byName.get((ALIASES[key] ?? '').toLowerCase());
 }
+
+export interface ClassFamily {
+  base: CharacterClass;
+  /** What that base class can advance into. */
+  advanced: CharacterClass[];
+}
+
+/**
+ * The classes as the GAME groups them: seven base classes, each advancing into
+ * two or three others.
+ *
+ * The official site does not present this - its carousel is one flat run of 26
+ * - so both the grouping and this order come from the player, who plays it.
+ * Swordsman leads because the game lists it first.
+ */
+export const CLASS_FAMILIES: ClassFamily[] = [
+  'Swordsman',
+  'Musketeer',
+  'Magister',
+  'Puppeteer',
+  'Fighter',
+  'Assassin',
+  'Inventor',
+].map((name) => {
+  const base = byName.get(name.toLowerCase());
+  if (!base) throw new Error(`Unknown base class ${name}`);
+  return { base, advanced: CHARACTER_CLASSES.filter((c) => c.base === name) };
+});
