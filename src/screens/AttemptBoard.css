@@ -141,6 +141,7 @@
 }
 
 .board-grid {
+  border: 1px solid var(--line);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1px;
@@ -415,16 +416,34 @@
  * what that character runs and how often - the question you ask when you are
  * about to play one of them, rather than when you are reading the week.
  */
+/*
+ * The page is two readings of the same plan - by dungeon, then by character -
+ * so both get the same frame: a labelled heading, the same padding, the same
+ * gap. They were an edge-to-edge grid and an inset one, which read as two
+ * unrelated screens stacked.
+ */
+.board-section,
 .by-character {
-  padding: 20px 22px 28px;
+  padding: 22px 22px 26px;
   border-top: 1px solid var(--line);
 }
-.by-character-head {
-  margin: 0 0 12px;
-  font-size: 10px;
+.section-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: .22em;
   text-transform: uppercase;
+  color: var(--text-dim);
+}
+.section-sub {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--text-faint);
 }
 .by-character-grid {

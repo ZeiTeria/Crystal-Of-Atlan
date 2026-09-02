@@ -172,7 +172,7 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
   }
 
   return (
-    <div className="plan-screen">
+    <div className={activeView === 'log' ? 'plan-screen is-log' : 'plan-screen'}>
       <ErrorBanner message={error ?? relabelError} />
 
       {input.grid.length === 0 ? (

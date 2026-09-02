@@ -1,8 +1,17 @@
+/*
+ * Fills what the header leaves, rather than the 760px the design canvas
+ * happened to be drawn at - which left a band of empty page under it on any
+ * screen taller than the mock, and cut the roster short on any shorter one.
+ * The roster and the dungeon list scroll inside it.
+ */
 .quest-log-container {
   display: flex;
+  flex: 1;
+  min-height: 420px;
   background: var(--surface-1);
   border: 1px solid var(--line-strong);
-  height: 760px;
+  border-left: 0;
+  border-right: 0;
   overflow: hidden;
 }
 
@@ -446,4 +455,12 @@
   align-items: center;
   gap: 6px;
   cursor: pointer;
+}
+
+/* Only the log fills the height; the board is a long scrolling page. */
+.plan-screen.is-log {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }

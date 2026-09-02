@@ -205,7 +205,12 @@ export default function AttemptBoard({
         />
       )}
 
-      <div className={hoveredId ? 'board-grid is-picking' : 'board-grid'}>
+      <div className="board-section">
+        <h3 className="section-head">
+          By dungeon
+          <span className="section-sub">who runs each one, and what is left over</span>
+        </h3>
+        <div className={hoveredId ? 'board-grid is-picking' : 'board-grid'}>
         {dungeons.map((d) => {
           const mine = assignments.filter((a) => a.dungeonId === d.id);
           const used = mine.reduce((sum, a) => sum + a.runs, 0);
@@ -299,6 +304,7 @@ export default function AttemptBoard({
             </div>
           );
         })}
+        </div>
       </div>
 
       {/*
@@ -307,7 +313,10 @@ export default function AttemptBoard({
         is the one you ask when you sit down to actually play one of them.
       */}
       <div className="by-character">
-        <h3 className="by-character-head">Runs by character</h3>
+        <h3 className="section-head">
+          By character
+          <span className="section-sub">what each one runs, and how many times</span>
+        </h3>
         <div className="by-character-grid">
           {characters.map((c) => {
             const hue = getClassHue(c.class, c.name);

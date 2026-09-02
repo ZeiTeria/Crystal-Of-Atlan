@@ -40,28 +40,48 @@
   font-size: 12px;
 }
 
-.header-user {
+/*
+ * The signed-in user. The rule used to be written for `.header-user`, which
+ * this markup has never rendered - it is `.user-profile` - so the name sat
+ * unstyled and unaligned beside its avatar.
+ */
+.user-profile {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   color: var(--text);
+  line-height: 1;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-avatar {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--surface-2);
   border: 1px solid var(--line-strong);
   object-fit: cover;
+  flex: none;
 }
 
+/* A badge, not a word run onto the end of the name. */
 .admin-tag {
+  padding: 3px 6px;
   font-weight: 800;
   font-size: 9px;
   letter-spacing: 0.14em;
+  line-height: 1;
   color: var(--warn);
-  margin-left: 4px;
+  border: 1px solid var(--warn-wash);
 }
 
 .sign-out-btn {
@@ -188,4 +208,13 @@
   .header-reset {
     font-size: 11px;
   }
+}
+
+/* The shell is at least a screen tall, so a screen that wants to fill the
+   height has something to fill. */
+.app-layout {
+  min-height: 100vh;
+}
+.app-content {
+  min-height: 0;
 }
