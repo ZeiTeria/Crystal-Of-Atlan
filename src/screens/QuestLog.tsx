@@ -138,11 +138,13 @@ export default function QuestLog({
   );
 
   const cap = input.settings.goldCap;
-  const earned = cap - (input.goldHeadroom[selected.id] ?? cap);
-  const capped = earned >= cap;
-  const runsThisWeek = assignments
-    .filter((a) => a.characterId === selected.id)
-    .reduce((sum, a) => sum + a.runs, 0);
+  const mine = assignments.filter((a) => a.characterId === selected.id);
+  const runsThisWeek = mine.reduce((sum, a) => sum + a.runs, 0);
+  // What this character's PLAN earns, against the weekly cap. Not what it HAS
+  // earned: runs are never logged, so that figure was permanently zero and
+  // this meter was permanently empty.
+  const planned = mine.reduce((sum, a) => sum + a.goldTotal, 0);
+  const capped = planned >= cap;
   const hue = getClassHue(selected.class, selected.name);
 
   /*
@@ -213,10 +215,9 @@ export default function QuestLog({
           <div className="roster-list">
             {characters.map((c) => {
               const cHue = getClassHue(c.class, c.name);
-              const cRuns = assignments
-                .filter((a) => a.characterId === c.id)
-                .reduce((sum, a) => sum + a.runs, 0);
-              const cEarned = cap - (input.goldHeadroom[c.id] ?? cap);
+              const cMine = assignments.filter((a) => a.characterId === c.id);
+              const cRuns = cMine.reduce((sum, a) => sum + a.runs, 0);
+              const cEarned = cMine.reduce((sum, a) => sum + a.goldTotal, 0);
               const cParked = c.is_active === false;
               return (
                 <div
@@ -346,22 +347,22 @@ export default function QuestLog({
               <span className="qh-sub">
                 {parked
                   ? 'Parked — left out of the plan until you put it back.'
-                  : `${runsThisWeek} runs this week${capped ? ' · gold cap reached' : ''}`}
+                  : `${runsThisWeek} runs planned${capped ? ' · at the gold cap' : ''}`}
               </span>
             </div>
           </div>
           <div className="quest-header-right">
             <div className="qh-gold-line">
               <span className={capped ? 'qh-gold-val warning-text' : 'qh-gold-val'}>
-                {gold(earned)}
+                {gold(planned)}
               </span>
-              <span className="qh-gold-cap">/ {gold(cap)}</span>
+              <span className="qh-gold-cap">of {gold(cap)} cap</span>
             </div>
             <div className="qh-meter-bg">
               <div
                 className="qh-meter-fill"
                 style={{
-                  width: `${Math.min(100, (earned / cap) * 100)}%`,
+                  width: `${Math.min(100, (planned / cap) * 100)}%`,
                   background: capped ? 'var(--warn)' : hue,
                 }}
               />

@@ -288,6 +288,22 @@ describe('QuestLog cells', () => {
     expect(await screen.findByText(/not unlocked/i)).toBeDefined();
   });
 
+  it('shows the gold the plan earns, not the gold already earned', async () => {
+    // Runs are never logged, so "earned" is permanently zero - this used to
+    // read 0 of 1,000,000 with an empty meter for every character, forever.
+    renderLog({
+      assignments: [
+        { characterId: 'c1', dungeonId: 'd1', runs: 2, goldPerRun: 3, goldTotal: 6 },
+      ],
+    });
+    await screen.findByText(/2 runs planned/);
+    // Scoped to the header figure: the same total also appears on its row.
+    expect(document.querySelector('.qh-gold-val')?.textContent).toBe('6');
+    expect(document.querySelector('.qh-meter-fill')?.getAttribute('style')).not.toContain(
+      'width: 0%',
+    );
+  });
+
   it('marks a run whose gold figure is standing in', async () => {
     renderLog({
       input: anInput({ dungeons: [{ ...dungeon, goldEstimated: ['elite'] }] }),

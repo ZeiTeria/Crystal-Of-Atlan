@@ -19,7 +19,6 @@ import { solveOptimal } from '../engine/solver';
 import type { PlanInput, PlanResult, Tier } from '../engine/types';
 import { useMutation } from '../hooks/useMutation';
 import Button from '../ui/Button';
-import Countdown from '../ui/Countdown';
 import ErrorBanner from '../ui/ErrorBanner';
 import AddCharacterModal from './AddCharacterModal';
 import AttemptBoard from './AttemptBoard';
@@ -175,12 +174,6 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
 
   return (
     <div className="plan-screen">
-      <div className="plan-head">
-        <span className="plan-title">{activeView === 'board' ? 'Plan' : 'Character'}</span>
-        <span className="muted plan-countdown">
-          Resets in <Countdown settings={input.settings} />
-        </span>
-      </div>
       <ErrorBanner message={error ?? relabelError} />
 
       {input.grid.length === 0 ? (

@@ -17,7 +17,7 @@ export interface PlanRows {
   runs: Row<'runs'>[];
 }
 
-function toSettings(row: Row<'app_settings'>): Settings {
+export function toSettings(row: Row<'app_settings'>): Settings {
   return {
     goldCap: row.gold_cap_per_character,
     goldResetWeekday: row.gold_reset_weekday,

@@ -3,6 +3,10 @@ import { errorMessage } from './errorMessage';
 import { configError } from './lib/supabase';
 import { getSession, signOut, onAuthChange } from './lib/auth';
 import { loadProfile, type Profile } from './data/profile';
+import { loadAppSettings } from './data/roster';
+import { toSettings } from './data/loadPlanInput';
+import Countdown from './ui/Countdown';
+import type { PlanInput } from './engine/types';
 import PlanScreen from './screens/PlanScreen';
 import { PHONE, useMediaQuery } from './ui/useMediaQuery';
 import DungeonsScreen from './screens/DungeonsScreen';
@@ -27,6 +31,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isPhone = useMediaQuery(PHONE);
+  // The countdown belongs to the whole app, not to one screen: it was a strip
+  // under the header on every tab, repeating the tab's own name beside it.
+  const [resetSettings, setResetSettings] = useState<PlanInput['settings'] | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -48,6 +55,23 @@ export default function App() {
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      setResetSettings(null);
+      return;
+    }
+    let live = true;
+    loadAppSettings()
+      .then((row) => {
+        if (live) setResetSettings(toSettings(row));
+      })
+      // The countdown is not worth an error banner; the screens report their own.
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [session]);
 
   useEffect(() => {
     if (!session) {
@@ -109,6 +133,11 @@ export default function App() {
           )}
         </div>
         <div className="header-right">
+          {resetSettings && (
+            <span className="header-reset">
+              Resets in <Countdown settings={resetSettings} />
+            </span>
+          )}
           <div className="user-profile">
             {session.user.user_metadata?.avatar_url ? (
               <img src={session.user.user_metadata.avatar_url} alt="User Avatar" className="user-avatar" />

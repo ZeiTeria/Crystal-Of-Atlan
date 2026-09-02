@@ -308,24 +308,25 @@
   }
 }
 
-/* The plan's headline numbers. Tiles rather than a sentence: this screen is
-   made of tiles, and a paragraph of prose in the middle of it reads as a
-   leftover from a different design. */
+/*
+ * The plan's headline figures. Three of them, each a number with the thing it
+ * is measured against underneath - not four bare labels in a row with a
+ * sentence trailing after them.
+ */
 .board-ceiling {
-  border: 1px solid var(--line);
-  border-left: 0;
-  border-right: 0;
-  padding: 14px 22px;
-}
-.ceiling-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 28px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px 32px;
+  align-items: start;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 18px 22px;
 }
 .ceiling-stat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  min-width: 0;
 }
 .ceiling-label {
   font-size: 10px;
@@ -334,15 +335,44 @@
   text-transform: uppercase;
   color: var(--text-faint);
 }
-.ceiling-stat strong {
-  font-size: 20px;
+.ceiling-figure {
+  font-size: 30px;
   font-weight: 800;
+  line-height: 1.05;
   font-variant-numeric: tabular-nums;
 }
+.ceiling-gold .ceiling-figure {
+  color: var(--warn);
+}
+.ceiling-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+/* How much of what the caps allow this plan actually takes. */
+.ceiling-bar {
+  display: block;
+  height: 3px;
+  margin-top: 5px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.ceiling-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--warn);
+}
 .ceiling-note {
-  margin: 8px 0 0;
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
   font-size: 11px;
   color: var(--text-faint);
+}
+
+/* Runs planned for one character - the number the roster is scanned for. */
+.tile-runs strong {
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 /* The difficulty a character enters at - the key to the slot colours above. */

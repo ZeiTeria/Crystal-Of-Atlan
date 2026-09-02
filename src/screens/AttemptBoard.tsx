@@ -66,6 +66,9 @@ export default function AttemptBoard({
   // been deleted or parked.
   const shown = characters.find((c) => c.id === shownId) ?? characters[0];
 
+  // The binding ceiling: whichever cap runs out first.
+  const ceiling = Math.min(goldCeiling, attemptsCeiling);
+
   let totalLeftOver = 0;
   let totalRemaining = 0;
   for (const d of dungeons) {
@@ -101,12 +104,14 @@ export default function AttemptBoard({
         <div className="roster-tiles">
           {characters.map((c) => {
             const hue = getClassHue(c.class, c.name);
-            const runs = assignments
-              .filter((a) => a.characterId === c.id)
-              .reduce((sum, a) => sum + a.runs, 0);
+            const mine = assignments.filter((a) => a.characterId === c.id);
+            const runs = mine.reduce((sum, a) => sum + a.runs, 0);
             const cap = settings.goldCap;
-            const earned = cap - (input.goldHeadroom[c.id] ?? cap);
-            const capped = earned >= cap;
+            // The gold this character's PLAN earns, not what it has earned.
+            // Runs are never logged, so the second was permanently zero and
+            // every one of these meters sat empty.
+            const planned = mine.reduce((sum, a) => sum + a.goldTotal, 0);
+            const capped = planned >= cap;
             return (
               <div
                 key={c.id}
@@ -119,19 +124,21 @@ export default function AttemptBoard({
                   <Portrait name={c.name} hue={hue} dim={runs === 0} characterClass={c.class} />
                   <div className="tile-name-col">
                     <strong>{c.name}</strong>
-                    <span>{runs} runs planned</span>
+                    <span className="tile-runs">
+                      <strong style={{ color: runs > 0 ? hue : undefined }}>{runs}</strong> runs
+                    </span>
                   </div>
                 </div>
                 <div className="tile-bottom">
                   <div className="tile-gold-row">
-                    <span className={capped ? 'warning-text' : undefined}>{gold(earned)}</span>
-                    <span>{capped ? 'capped' : `${Math.round((earned / cap) * 100)}%`}</span>
+                    <span className={capped ? 'warning-text' : undefined}>{gold(planned)}</span>
+                    <span>{capped ? 'at cap' : `${Math.round((planned / cap) * 100)}% of cap`}</span>
                   </div>
                   <div className="tile-meter">
                     <div
                       className="meter-fill"
                       style={{
-                        width: `${Math.min(100, (earned / cap) * 100)}%`,
+                        width: `${Math.min(100, (planned / cap) * 100)}%`,
                         backgroundColor: capped ? 'var(--warn)' : hue,
                       }}
                     />
@@ -153,29 +160,40 @@ export default function AttemptBoard({
       </div>
 
       <div className="board-ceiling">
-        <div className="ceiling-stats">
-          <div className="ceiling-stat">
-            <span className="ceiling-label">Runs planned</span>
-            <strong>{totals.attempts}</strong>
-          </div>
-          <div className="ceiling-stat">
-            <span className="ceiling-label">Gold</span>
-            <strong>{gold(totals.gold)}</strong>
-          </div>
-          <div className="ceiling-stat">
-            <span className="ceiling-label">Ceiling</span>
-            <strong>{gold(Math.min(goldCeiling, attemptsCeiling))}</strong>
-          </div>
-          <div className="ceiling-stat">
-            <span className="ceiling-label">Quest pairs</span>
-            <strong>{totals.coverage}</strong>
-          </div>
+        <div className="ceiling-stat">
+          <span className="ceiling-label">Runs planned</span>
+          <strong className="ceiling-figure">{totals.attempts}</strong>
+          <span className="ceiling-sub">
+            over {dungeons.length} dungeons, {characters.length} characters
+          </span>
         </div>
+
+        <div className="ceiling-stat ceiling-gold">
+          <span className="ceiling-label">Gold</span>
+          <strong className="ceiling-figure">{gold(totals.gold)}</strong>
+          <span className="ceiling-sub">
+            of {gold(ceiling)} possible
+            {ceiling > 0 && ` · ${Math.round((totals.gold / ceiling) * 100)}%`}
+          </span>
+          <span className="ceiling-bar">
+            <span
+              className="ceiling-bar-fill"
+              style={{ width: `${ceiling > 0 ? Math.min(100, (totals.gold / ceiling) * 100) : 0}%` }}
+            />
+          </span>
+        </div>
+
+        <div className="ceiling-stat">
+          <span className="ceiling-label">Weekly quests</span>
+          <strong className="ceiling-figure">{totals.coverage}</strong>
+          <span className="ceiling-sub">character-dungeon pairs covered</span>
+        </div>
+
         {/* One element on purpose: the two ceilings only mean something read as
             one sentence, against each other. */}
         <p className="ceiling-note">
-          The caps allow at most {gold(Math.min(goldCeiling, attemptsCeiling))} (
-          {gold(goldCeiling)} by the gold cap, {gold(attemptsCeiling)} by attempts).
+          The caps allow at most {gold(ceiling)} ({gold(goldCeiling)} by the gold cap,{' '}
+          {gold(attemptsCeiling)} by attempts).
         </p>
       </div>
 
