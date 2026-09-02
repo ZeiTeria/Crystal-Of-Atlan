@@ -115,18 +115,17 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
       // mutation, so a failure here surfaces and refreshes like any other
       // rather than leaving a character that silently did not get its tiers.
       //
-      // Only tiers that DIFFER from the dungeon's default are written, and an
-      // explicit `none` against a default of elite is such a difference. A row
-      // that merely repeats the default would freeze today's value and stop
-      // this character following a later change to the catalogue.
-      const cells = solved.input.dungeons
-        .filter((d) => (tiers[d.id] ?? d.default_tier) !== d.default_tier)
-        .map((d) => ({
-          character_id: created.id,
-          dungeon_id: d.id,
-          tier: tiers[d.id] ?? d.default_tier,
-          min_runs: d.default_min_runs,
-        }));
+      // EVERY dungeon gets a row, including ones left exactly on the default.
+      // A dungeon's default is a template for making a character, not a live
+      // link to it: once the character exists its tiers are its own, and
+      // editing the catalogue later must not reach back and change what a
+      // player already told us about a character they have played.
+      const cells = solved.input.dungeons.map((d) => ({
+        character_id: created.id,
+        dungeon_id: d.id,
+        tier: tiers[d.id] ?? d.default_tier,
+        min_runs: d.default_min_runs,
+      }));
       if (cells.length > 0) await setGridCells(cells);
     });
   }

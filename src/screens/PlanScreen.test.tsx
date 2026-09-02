@@ -314,10 +314,10 @@ describe('PlanScreen', () => {
     expect(await screen.findAllByText('Mage')).toBeDefined();
   });
 
-  it('writes no grid rows for a tier that only repeats the dungeon default', async () => {
-    // A pair with no row already displays the dungeon's default, so writing it
-    // out would freeze today's value and stop the character following a later
-    // change to the catalogue.
+  it('writes a row for every dungeon, even ones left on the default', async () => {
+    // A dungeon's default is a template for MAKING a character, not a live link
+    // to it. Leaving a pair unwritten made a later catalogue edit reach back and
+    // change a character the player had already told us about.
     render(<PlanScreen />);
     await openAddForm('Rogue');
     fireEvent.click(screen.getByRole('button', { name: /add character/i }));
@@ -326,7 +326,11 @@ describe('PlanScreen', () => {
       // wants - and it is display-only either way.
       expect(vi.mocked(createCharacter)).toHaveBeenCalledWith('acc', 'Rogue', 'Sugariff');
     });
-    expect(vi.mocked(setGridCells)).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(vi.mocked(setGridCells)).toHaveBeenCalledWith([
+        { character_id: 'new', dungeon_id: 'd1', tier: 'elite', min_runs: 1 },
+      ]);
+    });
   });
 
   it('writes the tiers that differ from the defaults', async () => {

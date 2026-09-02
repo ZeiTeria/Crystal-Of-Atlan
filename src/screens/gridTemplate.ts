@@ -29,13 +29,12 @@ export const TIER_TEMPLATES = PAID_TIERS.map((t) => ({
 })).reverse(); // legend first: the strongest template is the one usually wanted
 
 /**
- * The cells to write for a chosen template, or an empty list when there is
- * nothing to write.
+ * The starting tiers for a chosen template, or an empty list for 'blank'.
  *
- * 'blank' returns nothing deliberately rather than writing the defaults out:
- * a pair with no row already displays the dungeon's defaults, so writing them
- * would only freeze today's values and stop the character following a later
- * change to the catalogue.
+ * This PREFILLS the add form; it is not what gets written. The screen writes a
+ * row for every dungeon whatever this returns, because a dungeon's default is a
+ * template for making a character rather than a live link to one - so 'blank'
+ * returning nothing just means "start the form on the dungeon defaults".
  *
  * A character copy takes what the SOURCE DISPLAYS, defaults included - copying
  * only its stored rows would leave the two matching by coincidence and diverging
