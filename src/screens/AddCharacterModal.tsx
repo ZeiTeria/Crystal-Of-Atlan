@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Dungeon, GridEntry, Tier } from '../engine/types';
-import { Portrait, getClassHue } from '../ui/Shared';
+import { Portrait } from '../ui/Shared';
+import { getClassHue } from '../ui/hues';
 import { TIER_TEMPLATES, templateCells } from './gridTemplate';
 import './AddCharacterModal.css';
 
@@ -87,16 +88,19 @@ export default function AddCharacterModal({
               <span className="ac-sub">Joins the roster with 0 gold this week</span>
             </div>
           </div>
-          <span className="ac-close" onClick={onClose}>&times;</span>
+          <button type="button" className="ac-close" aria-label="Close" onClick={onClose}>
+            &times;
+          </button>
         </div>
 
         <div className="ac-config-row">
           <div className="ac-input-group ac-border-right">
             <span className="ac-label">NAME</span>
-            <input 
-              className="ac-text-input" 
-              value={name} 
-              onChange={e => setName(e.target.value)} 
+            <input
+              className="ac-text-input"
+              aria-label="New character name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Character name"
               autoFocus
             />
@@ -135,14 +139,16 @@ export default function AddCharacterModal({
                 const cHue = getClassHue(c);
                 const isSelected = selectedClass === c;
                 return (
-                  <div 
+                  <button
+                    type="button"
                     key={c}
+                    aria-pressed={isSelected}
                     onClick={() => setSelectedClass(c)}
                     className={`ac-class-chip ${isSelected ? 'selected' : ''}`}
                     style={{ '--c-hue': cHue } as React.CSSProperties}
                   >
                     {c}
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -165,14 +171,17 @@ export default function AddCharacterModal({
                   {TIERS.map(t => {
                     const selected = tiers[d.id] === t;
                     return (
-                      <span 
+                      <button
+                        type="button"
                         key={t}
-                        onClick={() => setTiers(prev => ({ ...prev, [d.id]: t }))}
+                        aria-label={`${d.name} at ${t}`}
+                        aria-pressed={selected}
+                        onClick={() => setTiers((prev) => ({ ...prev, [d.id]: t }))}
                         className={`ac-segment ${selected ? 'selected' : ''}`}
                         style={selected ? { color: `var(--tier-${t})` } : {}}
                       >
                         {t}
-                      </span>
+                      </button>
                     );
                   })}
                 </div>
@@ -184,13 +193,16 @@ export default function AddCharacterModal({
         <div className="ac-footer">
           <span className="ac-count">{unlockedCount} of {dungeons.length} dungeons unlocked</span>
           <div className="ac-actions">
-            <span className="ac-cancel" onClick={onClose}>Cancel</span>
-            <button 
-              className="ac-submit" 
+            <button type="button" className="ac-cancel" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="ac-submit"
               disabled={!canAdd || submitting}
               onClick={() => void handleAdd()}
             >
-              ADD TO ROSTER
+              Add character
             </button>
           </div>
         </div>

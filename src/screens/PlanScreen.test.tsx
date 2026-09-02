@@ -3,12 +3,19 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlanScreen from './PlanScreen';
 import { loadPlanInput } from '../data/loadPlanInput';
-import { currentGameAccountId, listCharacters, type CharacterRow } from '../data/accounts';
+import {
+  createCharacter,
+  currentGameAccountId,
+  listCharacters,
+  type CharacterRow,
+} from '../data/accounts';
+import { setGridCells } from '../data/grid';
 import type { PlanInput } from '../engine/types';
 import { stubMatchMedia } from '../ui/testing/matchMedia';
 import { resetDensity } from '../ui/density';
 
 vi.mock('../data/loadPlanInput', () => ({ loadPlanInput: vi.fn() }));
+vi.mock('../data/grid', () => ({ setGridCell: vi.fn(), setGridCells: vi.fn() }));
 // The roster is read separately from the plan input: the input has already
 // dropped parked characters, and the log has to be able to unpark one.
 vi.mock('../data/accounts', () => ({
@@ -75,8 +82,17 @@ const MAGE: CharacterRow = {
 beforeEach(() => {
   vi.mocked(currentGameAccountId).mockResolvedValue('acc');
   vi.mocked(listCharacters).mockResolvedValue([MAGE]);
+  vi.mocked(createCharacter).mockResolvedValue({ ...MAGE, id: 'new', name: 'Rogue' });
+  vi.mocked(setGridCells).mockResolvedValue(undefined);
   vi.mocked(loadPlanInput).mockResolvedValue(anInput());
 });
+
+/** Opens the add form from the board and fills in a name. */
+async function openAddForm(name: string) {
+  await screen.findAllByText('Mage');
+  fireEvent.click(screen.getByRole('button', { name: /\+ add/i }));
+  fireEvent.change(await screen.findByLabelText('New character name'), { target: { value: name } });
+}
 
 /** An Error whose `.name` differs from `.message`, so a test can tell whether
  * the screen rendered `err.message` (clean) or `String(err)` (name-prefixed). */
@@ -229,6 +245,30 @@ describe('PlanScreen', () => {
     expect(await screen.findAllByText('Mage')).toBeDefined();
   });
 
+  it('writes no grid rows for a tier that only repeats the dungeon default', async () => {
+    // A pair with no row already displays the dungeon's default, so writing it
+    // out would freeze today's value and stop the character following a later
+    // change to the catalogue.
+    render(<PlanScreen />);
+    await openAddForm('Rogue');
+    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
+    await waitFor(() => {
+      expect(vi.mocked(createCharacter)).toHaveBeenCalledWith('acc', 'Rogue', 'Magister');
+    });
+    expect(vi.mocked(setGridCells)).not.toHaveBeenCalled();
+  });
+
+  it('writes the tiers that differ from the defaults', async () => {
+    render(<PlanScreen />);
+    await openAddForm('Rogue');
+    fireEvent.change(screen.getByLabelText('Template'), { target: { value: 'tier:legend' } });
+    fireEvent.click(screen.getByRole('button', { name: /add character/i }));
+    await waitFor(() => {
+      expect(vi.mocked(setGridCells)).toHaveBeenCalledWith([
+        { character_id: 'new', dungeon_id: 'd1', tier: 'legend', min_runs: 1 },
+      ]);
+    });
+  });
 });
 
 describe('PlanScreen on a phone', () => {

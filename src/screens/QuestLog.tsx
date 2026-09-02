@@ -11,7 +11,8 @@ import type { PlanAssignment, PlanInput, Tier } from '../engine/types';
 import Button from '../ui/Button';
 import CharacterPicker from '../ui/CharacterPicker';
 import InfoDot from '../ui/InfoDot';
-import { Portrait, getClassHue } from '../ui/Shared';
+import { Portrait } from '../ui/Shared';
+import { getClassHue } from '../ui/hues';
 import TierGem from '../ui/TierGem';
 import { PHONE, useMediaQuery } from '../ui/useMediaQuery';
 import { sortOrderPatches } from '../ui/reorder';
@@ -146,6 +147,7 @@ export default function QuestLog({
                   <button
                     type="button"
                     className="roster-item-content"
+                    aria-label={`Show ${c.name}`}
                     aria-current={c.id === selected.id ? 'true' : undefined}
                     onClick={() => setSelectedId(c.id)}
                   >
