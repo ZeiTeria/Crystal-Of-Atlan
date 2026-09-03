@@ -12,7 +12,7 @@ import {
 import { setGridCells, type GridRow } from '../data/grid';
 import type { PlanInput } from '../engine/types';
 import { stubMatchMedia } from '../ui/testing/matchMedia';
-import { resetDensity } from '../ui/density';
+
 
 vi.mock('../data/loadPlanInput', () => ({ loadPlanState: vi.fn() }));
 vi.mock('../data/grid', () => ({ setGridCell: vi.fn(), setGridCells: vi.fn() }));
@@ -29,7 +29,6 @@ vi.mock('../data/accounts', () => ({
 }));
 
 afterEach(() => {
-  resetDensity();
   vi.unstubAllGlobals();
   cleanup();
   vi.clearAllMocks();

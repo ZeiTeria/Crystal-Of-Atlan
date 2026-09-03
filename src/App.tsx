@@ -16,18 +16,18 @@ import { LogoMark } from './ui/Shared';
 import './App.css';
 import ErrorBanner from './ui/ErrorBanner';
 
-export type View = 'board' | 'log' | 'grid' | 'dungeons';
+export type View = 'board' | 'log' | 'dungeons';
 
 const TABS: { view: View; label: string; adminOnly?: boolean }[] = [
-  { view: 'board', label: 'Plan' },
   { view: 'log', label: 'Character' },
+  { view: 'board', label: 'Plan' },
   { view: 'dungeons', label: 'Dungeons', adminOnly: true },
 ];
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [view, setView] = useState<View>('board');
+  const [view, setView] = useState<View>('log');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isPhone = useMediaQuery(PHONE);

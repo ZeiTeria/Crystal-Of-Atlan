@@ -1,0 +1,28 @@
+.onboarding-popup {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 24px;
+  max-width: 480px;
+  width: 100%;
+}
+.onboarding-steps {
+  margin: 20px 0;
+  padding-left: 20px;
+}
+.onboarding-steps li {
+  margin-bottom: 16px;
+}
+.onboarding-steps li strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+.onboarding-steps li p {
+  margin: 0;
+  color: var(--text-muted);
+}
+.onboarding-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}

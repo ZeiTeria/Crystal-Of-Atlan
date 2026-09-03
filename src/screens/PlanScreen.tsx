@@ -24,6 +24,7 @@ import AddCharacterModal from './AddCharacterModal';
 import AttemptBoard from './AttemptBoard';
 import QuestLog from './QuestLog';
 import { describeConflict, describeReason, type Names } from './planText';
+import OnboardingPopup from '../ui/OnboardingPopup';
 
 interface Solved {
   input: PlanInput;
@@ -167,6 +168,7 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
         <h2>Plan</h2>
         <p className="muted">Add a character to plan for.</p>
         <Button onClick={() => setShowAddModal(true)}>Add character</Button>
+        {!showAddModal && <OnboardingPopup onClose={() => setShowAddModal(true)} />}
         {modal}
       </section>
     );

@@ -10,6 +10,7 @@ import { matrixColumns } from './columns';
 import { goldWarning, leftoverText } from './goldWarning';
 import { manualDaysLeft, manualWarning } from './manualPace';
 import { describeReason, gold, type Names } from './planText';
+import PublicDungeonTable from '../ui/PublicDungeonTable';
 import './AttemptBoard.css';
 
 interface AttemptBoardProps {
@@ -377,6 +378,8 @@ export default function AttemptBoard({
           })}
         </div>
       </div>
+
+      <PublicDungeonTable dungeons={dungeons} />
     </div>
   );
 }

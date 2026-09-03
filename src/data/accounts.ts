@@ -39,19 +39,6 @@ export async function currentGameAccountId(): Promise<string> {
     .single();
   if (created.error) throw created.error;
 
-  const newId = created.data.id;
-  // Slots 10 apart, matching nextSortOrder and the reorder's (i + 1) * 10, so
-  // seeded and later-added characters share one spacing scheme.
-  const seedClasses = ['Magister', 'Puppet Master', 'Swordsman', 'Musketeer', 'Alchemist', 'Fighter'];
-  await supabase.from('characters').insert(
-    [1, 2, 3, 4, 5, 6].map((n) => ({
-      game_account_id: newId,
-      name: `Character ${n}`,
-      class: seedClasses[n - 1],
-      sort_order: n * 10,
-    })),
-  );
-
   /*
    * Re-read the oldest row instead of returning `newId` here. This
    * function reads-then-creates, and two callers can both pass the empty

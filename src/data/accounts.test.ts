@@ -62,14 +62,37 @@ describe('currentGameAccountId', () => {
     fakeSupabase.from
       .mockImplementationOnce(() => selectChain([])) // nobody has an account yet
       .mockImplementationOnce(() => insertChain('newer-id')) // this caller's own insert
-      .mockImplementationOnce(() => ({ insert: vi.fn(() => Promise.resolve({ error: null })) })) // characters insert
       .mockImplementationOnce(() => selectChain([{ id: 'older-id' }])); // re-read: the other caller's insert landed first
     fakeSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
 
     const id = await currentGameAccountId();
 
     expect(id).toBe('older-id');
-    expect(fakeSupabase.from).toHaveBeenCalledTimes(4);
+    expect(fakeSupabase.from).toHaveBeenCalledTimes(3);
+  });
+
+  it('creates zero characters for a new account', async () => {
+    let characterInsertCalled = false;
+    fakeSupabase.from = vi.fn((table: string) => {
+      if (table === 'game_accounts') {
+        // Return empty first time, then insert chain, then return older-id on re-read
+        return selectChain([]); // This mock is simple, we just need to avoid throwing
+      }
+      if (table === 'characters') {
+        return { insert: vi.fn(() => { characterInsertCalled = true; return Promise.resolve({ error: null }); }) };
+      }
+      return { select: vi.fn() };
+    }) as any;
+
+    fakeSupabase.from
+      .mockImplementationOnce(() => selectChain([]))
+      .mockImplementationOnce(() => insertChain('newer-id'))
+      .mockImplementationOnce(() => selectChain([{ id: 'newer-id' }]));
+    
+    fakeSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
+
+    await currentGameAccountId();
+    expect(characterInsertCalled).toBe(false);
   });
 
   it('throws when no user is signed in and no account exists', async () => {
