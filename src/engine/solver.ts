@@ -40,7 +40,6 @@ function highs(): Promise<Highs> {
 }
 
 const runVar = (i: number) => `n${i}`;
-const coverVar = (i: number) => `y${i}`;
 
 interface Term {
   name: string;
@@ -90,11 +89,10 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
 
   const cells = buildCells(input);
   if (cells.length === 0) {
-    return { status: 'optimal', assignments: [], totals: { attempts: 0, coverage: 0, gold: 0 } };
+    return { status: 'optimal', assignments: [], totals: { attempts: 0, gold: 0 } };
   }
 
   const solver = await highs();
-  const coverageCells = cells.filter((c) => c.countsForCoverage);
 
   const rows: Row[] = [];
 
@@ -126,24 +124,7 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
     });
   }
 
-  // y <= n, so coverage can only be claimed where a run actually happens.
-  for (const cell of coverageCells) {
-    rows.push({
-      name: `cover_${rows.length}`,
-      terms: [
-        { name: coverVar(cell.index), coef: 1 },
-        { name: runVar(cell.index), coef: -1 },
-      ],
-      op: '<=',
-      rhs: 0,
-    });
-  }
-
   const attemptsObjective: Term[] = cells.map((c) => ({ name: runVar(c.index), coef: 1 }));
-  const coverageObjective: Term[] = coverageCells.map((c) => ({
-    name: coverVar(c.index),
-    coef: 1,
-  }));
   const goldObjective: Term[] = cells.map((c) => ({
     name: runVar(c.index),
     coef: c.goldPerRun,
@@ -160,15 +141,8 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
     for (const cell of cells) {
       lines.push(` ${cell.min} <= ${runVar(cell.index)} <= ${cell.max}`);
     }
-    for (const cell of coverageCells) {
-      lines.push(` 0 <= ${coverVar(cell.index)} <= 1`);
-    }
     lines.push('General');
     lines.push(` ${cells.map((c) => runVar(c.index)).join(' ')}`);
-    if (coverageCells.length > 0) {
-      lines.push('Binary');
-      lines.push(` ${coverageCells.map((c) => coverVar(c.index)).join(' ')}`);
-    }
     lines.push('End');
     return lines.join('\n');
   };
@@ -185,34 +159,18 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
     return { z: result.ObjectiveValue, vars };
   };
 
-  /**
-   * Pin a solved objective for the next pass.
-   *
-   * Rounded, and pinned with `>=` rather than `==`: every coefficient here is an
-   * integer so the true optimum is an integer, but the solver works in floating
-   * point and can return 44.999999998 for 45. An equality against that value is
-   * unsatisfiable by integers and the next pass would report a solvable week as
-   * impossible. Optimality already forbids exceeding the value, so `>=` pins it.
-   */
   const pin = (name: string, terms: Term[], z: number) => {
-    // A pass with no variables (e.g. no quest-coverage dungeons exist) has
-    // nothing to pin, and an empty constraint row is not a valid model.
     if (terms.length === 0) return;
     pins.push({ name: `pin_${name}`, terms, op: '>=', rhs: Math.round(z) });
   };
 
-  const attempts = solvePass('attempts', attemptsObjective);
-  pin('attempts', attemptsObjective, attempts.z);
+  const gold = solvePass('gold', goldObjective);
+  pin('gold', goldObjective, gold.z);
 
-  if (coverageObjective.length > 0) {
-    const coverage = solvePass('coverage', coverageObjective);
-    pin('coverage', coverageObjective, coverage.z);
-  }
-
-  const solution = solvePass('gold', goldObjective).vars;
+  const solution = solvePass('attempts', attemptsObjective).vars;
 
   const assignments: PlanAssignment[] = [];
-  const totals: PlanTotals = { attempts: 0, coverage: 0, gold: 0 };
+  const totals: PlanTotals = { attempts: 0, gold: 0 };
 
   for (const cell of cells) {
     const runs = solution[runVar(cell.index)] ?? 0;
@@ -227,7 +185,6 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
     });
     totals.attempts += runs;
     totals.gold += goldTotal;
-    if (cell.countsForCoverage) totals.coverage += 1;
   }
 
   assertFeasible(input, cells, assignments);

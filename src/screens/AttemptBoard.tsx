@@ -183,12 +183,6 @@ export default function AttemptBoard({
           </span>
         </div>
 
-        <div className="ceiling-stat">
-          <span className="ceiling-label">Weekly quests</span>
-          <strong className="ceiling-figure">{totals.coverage}</strong>
-          <span className="ceiling-sub">character-dungeon pairs covered</span>
-        </div>
-
         {/* One element on purpose: the two ceilings only mean something read as
             one sentence, against each other. */}
         <p className="ceiling-note">

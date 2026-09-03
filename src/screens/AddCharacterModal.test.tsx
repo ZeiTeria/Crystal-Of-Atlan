@@ -16,7 +16,6 @@ const abyss: Dungeon = {
   accountAttempts: 18,
   characterAttempts: 3,
   resetWeekday: 1,
-  questCoverage: false,
   gold: { solo: 1, story: 2, elite: 3, legend: 4 },
   default_tier: 'elite',
   default_min_runs: 1,

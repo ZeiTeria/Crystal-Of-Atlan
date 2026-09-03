@@ -15,7 +15,6 @@ export interface NewDungeon {
   account_attempts: number;
   character_attempts: number;
   reset_weekday: number;
-  quest_coverage: boolean;
   gold_solo: number;
   gold_story: number;
   gold_elite: number;

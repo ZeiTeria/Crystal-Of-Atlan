@@ -16,7 +16,6 @@ export function aDungeon(id: string, overrides: Partial<Dungeon> = {}): Dungeon 
     accountAttempts: 18,
     characterAttempts: 3,
     resetWeekday: 1,
-    questCoverage: false,
     gold: { solo: 10, story: 20, elite: 30, legend: 40 },
     default_tier: 'elite',
     default_min_runs: 1,

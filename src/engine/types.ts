@@ -14,8 +14,6 @@ export interface Dungeon {
   characterAttempts: number;
   /** ISO weekday this dungeon resets on. Monday = 1 ... Sunday = 7. */
   resetWeekday: number;
-  /** True when every character should get at least one run for the weekly quest. */
-  questCoverage: boolean;
   /** Gold for a single run at each difficulty. Whole gold, no decimals. */
   gold: Record<PaidTier, number>;
   /** The fallback tier a character has if they don't have an explicit entry in the grid. */
@@ -91,12 +89,10 @@ export interface PlanAssignment {
 }
 
 export interface PlanTotals {
-  /** Total runs across the whole plan. Objective 1. */
-  attempts: number;
-  /** Character-dungeon pairs covered at least once on quest dungeons. Objective 2. */
-  coverage: number;
-  /** Total gold. Objective 3. */
+  /** Total gold. Objective 1. */
   gold: number;
+  /** Total runs across the whole plan. Objective 2. */
+  attempts: number;
 }
 
 /** A hard requirement that cannot be met. Wording is the UI's job, not the engine's. */

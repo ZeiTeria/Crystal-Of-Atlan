@@ -41,7 +41,6 @@ const BLANK: NewDungeon = {
   account_attempts: 18,
   character_attempts: 3,
   reset_weekday: 1,
-  quest_coverage: true,
   gold_solo: 0,
   gold_story: 0,
   gold_elite: 0,
@@ -173,7 +172,6 @@ export default function DungeonsScreen() {
             <th>Account/wk</th>
             <th>Character/wk</th>
             <th>Resets</th>
-            <th>Quest</th>
             {GOLD_COLUMNS.map((c) => (
               <th key={c.key}>{c.label}</th>
             ))}
@@ -260,14 +258,6 @@ export default function DungeonsScreen() {
                     </option>
                   ))}
                 </select>
-              </td>
-              <td>
-                <input
-                  type="checkbox"
-                  aria-label={`${d.name} counts for the weekly quest`}
-                  checked={d.quest_coverage}
-                  onChange={(e) => void save(d.id, { quest_coverage: e.target.checked })}
-                />
               </td>
               {GOLD_COLUMNS.map((c) => (
                 <td key={c.key}>

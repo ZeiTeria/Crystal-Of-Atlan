@@ -16,7 +16,7 @@ describe('goldCapCeiling', () => {
 });
 
 describe('attemptCeiling', () => {
-  it('gives each dungeon attempts to its best-paying characters', () => {
+  it('gives each dungeon attempts to its best-paying characters', async () => {
     const input = anInput({
       characters: [aCharacter('rich'), aCharacter('poor')],
       dungeons: [aDungeon('d1', {
@@ -29,10 +29,10 @@ describe('attemptCeiling', () => {
       ],
     });
     // 3 legend runs (cap) + 1 solo run = 3010, ignoring the gold cap.
-    expect(attemptCeiling(input)).toBe(3010);
+    expect(await attemptCeiling(input)).toBe(3010);
   });
 
-  it('is a genuine upper bound on the true optimum', () => {
+  it('is a genuine upper bound on the true optimum', async () => {
     const input = anInput({
       characters: [aCharacter('c1')],
       dungeons: [aDungeon('d1', { accountAttempts: 18, characterAttempts: 3,
@@ -41,9 +41,24 @@ describe('attemptCeiling', () => {
     });
     const result = solveExhaustive(input);
     if (result.status !== 'optimal') throw new Error('expected optimal');
-    expect(result.totals.gold).toBeLessThanOrEqual(attemptCeiling(input));
+    expect(result.totals.gold).toBeLessThanOrEqual(await attemptCeiling(input));
     expect(result.totals.gold).toBe(600_000);       // gold cap allows only one run
-    expect(attemptCeiling(input)).toBe(1_800_000);  // attempts alone allow three
+    expect(await attemptCeiling(input)).toBe(1_800_000);  // attempts alone allow three
+  });
+  it('respects minimums when assigning attempts', async () => {
+    const input = anInput({
+      characters: [aCharacter('c1'), aCharacter('c2')],
+      dungeons: [aDungeon('d1', {
+        accountAttempts: 1, characterAttempts: 3,
+        gold: { solo: 10, story: 0, elite: 0, legend: 1000 },
+      })],
+      grid: [
+        { characterId: 'c1', dungeonId: 'd1', tier: 'solo', minRuns: 1 },
+        { characterId: 'c2', dungeonId: 'd1', tier: 'legend', minRuns: 0 },
+      ],
+    });
+    // With 1 account attempt and a mandatory run of 10 gold, it shouldn't take 1000.
+    expect(await attemptCeiling(input)).toBe(10);
   });
 });
 

@@ -70,7 +70,13 @@ function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
 }
 
 /** What the database actually holds for Mage in Abyss. */
-const storedRow: GridRow = { character_id: 'c1', dungeon_id: 'd1', tier: 'elite', min_runs: 2 };
+const storedRow: GridRow = {
+  character_id: 'c1',
+  dungeon_id: 'd1',
+  tier: 'elite',
+  min_runs: 2,
+  max_runs: null,
+};
 
 /** The screen above owns the write-then-refresh; here it is just the write. */
 const mutate = vi.fn(async (write: () => Promise<void>) => {

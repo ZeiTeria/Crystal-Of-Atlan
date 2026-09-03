@@ -71,7 +71,7 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
         reasons: explainCeiling(state.input, result),
         relaxed: noContention(state.input),
         goldCeiling: goldCapCeiling(state.input),
-        attemptsCeiling: attemptCeiling(state.input),
+        attemptsCeiling: await attemptCeiling(state.input),
       });
     } catch (err: unknown) {
       setSolved(null);

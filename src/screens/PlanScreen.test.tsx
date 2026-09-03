@@ -83,6 +83,7 @@ function aState(
       gold_reset_weekday: 1,
       reset_hour: 6,
       server_timezone: 'UTC',
+      stone_rate: 0.4,
       max_characters: rows.maxCharacters ?? 12,
     },
     characters: rows.characters ?? [MAGE],

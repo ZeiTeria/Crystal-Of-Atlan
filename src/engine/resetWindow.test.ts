@@ -134,6 +134,10 @@ describe('lastReset', () => {
         }
       }
     },
+    // 4,800 Intl-formatted resets per zone. This always ran close to the 5s
+    // default; it began tipping over once the ceiling started solving a real
+    // MILP and stole CPU from the other workers. Slow by nature, not flaky.
+    20_000,
   );
 });
 
@@ -192,5 +196,9 @@ describe('nextReset', () => {
         }
       }
     },
+    // 4,800 Intl-formatted resets per zone. This always ran close to the 5s
+    // default; it began tipping over once the ceiling started solving a real
+    // MILP and stole CPU from the other workers. Slow by nature, not flaky.
+    20_000,
   );
 });

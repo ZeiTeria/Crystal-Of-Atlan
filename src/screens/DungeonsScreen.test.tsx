@@ -32,7 +32,11 @@ const abyss = {
   account_attempts: 18,
   character_attempts: 3,
   reset_weekday: 1,
-  quest_coverage: true,
+  gold_solo_stone: 0,
+  gold_story_stone: 0,
+  gold_elite_stone: 0,
+  gold_legend_stone: 0,
+  manual: false,
   gold_solo: 100,
   gold_story: 200,
   gold_elite: 300,
@@ -68,6 +72,7 @@ beforeEach(() => {
     gold_reset_weekday: 1,
     reset_hour: 6,
     server_timezone: 'UTC',
+  stone_rate: 0.4,
     max_characters: 12,
   });
   vi.mocked(setMaxCharacters).mockResolvedValue(undefined);

@@ -1,5 +1,4 @@
-import { derivePlanInput, type Run, type Settings } from '../engine/counters';
-import { lastReset } from '../engine/resetWindow';
+import { derivePlanInput, type Settings } from '../engine/counters';
 import type { Character, Dungeon, GridEntry, PlanInput } from '../engine/types';
 import { fillGoldGaps } from '../engine/gold';
 import type { Database } from '../lib/database.types';
@@ -14,7 +13,6 @@ export interface PlanRows {
   characters: Row<'characters'>[];
   dungeons: Row<'dungeons'>[];
   grid: Row<'character_dungeon'>[];
-  runs: Row<'runs'>[];
 }
 
 export function toSettings(row: Row<'app_settings'>): Settings {
@@ -31,7 +29,7 @@ export function toSettings(row: Row<'app_settings'>): Settings {
  * without the network — every counter it reports is `derivePlanInput`'s work,
  * not this module's.
  */
-export function buildPlanInput(rows: PlanRows, now: Date): PlanInput {
+export function buildPlanInput(rows: PlanRows): PlanInput {
   const characters: Character[] = rows.characters
     .filter((c) => c.is_active !== false)
     .map((c) => ({ id: c.id, name: c.name, class: c.class }));
@@ -46,7 +44,6 @@ export function buildPlanInput(rows: PlanRows, now: Date): PlanInput {
       accountAttempts: d.account_attempts,
       characterAttempts: d.character_attempts,
       resetWeekday: d.reset_weekday,
-      questCoverage: d.quest_coverage,
       ...(() => {
         // Missing figures borrow from the tiers that have one, so a half-filled
         // catalogue still plans sensibly. Which ones were guessed is carried
@@ -92,41 +89,14 @@ export function buildPlanInput(rows: PlanRows, now: Date): PlanInput {
     }
   }
 
-  const runs: Run[] = rows.runs.map((r) => ({
-    characterId: r.character_id,
-    dungeonId: r.dungeon_id,
-    ranAt: new Date(r.ran_at),
-    goldEarned: r.gold_earned,
-  }));
-
-  const settings = toSettings(rows.settings);
   return derivePlanInput({
     characters,
     dungeons,
     grid,
-    runs,
-    settings,
-    now,
+    settings: toSettings(rows.settings),
   });
 }
 
-/**
- * The oldest instant any counter still cares about: each dungeon looks back to
- * its own reset, the gold cap to the global one, so the earliest of them bounds
- * the run log we have to read. Without this the query grows without limit.
- */
-function earliestBoundary(
-  settings: Settings,
-  dungeons: Pick<Row<'dungeons'>, 'reset_weekday'>[],
-  now: Date,
-): Date {
-  const { resetHour, timeZone } = settings;
-  const boundaries = [
-    lastReset(settings.goldResetWeekday, resetHour, timeZone, now),
-    ...dungeons.map((d) => lastReset(d.reset_weekday, resetHour, timeZone, now)),
-  ];
-  return new Date(Math.min(...boundaries.map((b) => b.getTime())));
-}
 
 /**
  * One account's stored state: what the engine needs, and the rows it came from.
@@ -152,10 +122,7 @@ export interface PlanState {
  * only picks which of their accounts to plan. An account they do not own simply
  * returns no characters.
  */
-export async function loadPlanState(
-  gameAccountId: string,
-  now: Date = new Date(),
-): Promise<PlanState> {
+export async function loadPlanState(gameAccountId: string): Promise<PlanState> {
   const [settingsResult, charactersResult, dungeonsResult] = await Promise.all([
     supabase.from('app_settings').select('*').eq('id', true).single(),
     supabase
@@ -180,40 +147,27 @@ export async function loadPlanState(
   // empty list is a query the client should never have to send.
   if (characterIds.length === 0) {
     return {
-      input: buildPlanInput(
-        { settings: settingsRow, characters, dungeons, grid: [], runs: [] },
-        now,
-      ),
+      input: buildPlanInput({ settings: settingsRow, characters, dungeons, grid: [] }),
       settings: settingsRow,
       characters,
       grid: [],
     };
   }
 
-  const since = earliestBoundary(toSettings(settingsRow), dungeons, now);
-  const [gridResult, runsResult] = await Promise.all([
-    supabase.from('character_dungeon').select('*').in('character_id', characterIds),
-    supabase
-      .from('runs')
-      .select('*')
-      .in('character_id', characterIds)
-      .gte('ran_at', since.toISOString()),
-  ]);
+  const gridResult = await supabase
+    .from('character_dungeon')
+    .select('*')
+    .in('character_id', characterIds);
 
   if (gridResult.error) throw gridResult.error;
-  if (runsResult.error) throw runsResult.error;
 
   return {
-    input: buildPlanInput(
-      {
-        settings: settingsRow,
-        characters,
-        dungeons,
-        grid: gridResult.data,
-        runs: runsResult.data,
-      },
-      now,
-    ),
+    input: buildPlanInput({
+      settings: settingsRow,
+      characters,
+      dungeons,
+      grid: gridResult.data,
+    }),
     settings: settingsRow,
     characters,
     grid: gridResult.data,

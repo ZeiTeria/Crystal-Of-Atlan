@@ -16,6 +16,7 @@ export interface Database {
           gold_reset_weekday: number;
           reset_hour: number;
           server_timezone: string;
+          stone_rate: number;
           /** Absent until migration 0010 has run, so read it defensively. */
           max_characters?: number;
         };
@@ -25,6 +26,7 @@ export interface Database {
           gold_reset_weekday?: number;
           reset_hour?: number;
           server_timezone?: string;
+          stone_rate?: number;
           max_characters?: number;
         };
         Update: {
@@ -33,6 +35,7 @@ export interface Database {
           gold_reset_weekday?: number;
           reset_hour?: number;
           server_timezone?: string;
+          stone_rate?: number;
           max_characters?: number;
         };
         Relationships: [];
@@ -113,7 +116,11 @@ export interface Database {
           account_attempts: number;
           character_attempts: number;
           reset_weekday: number;
-          quest_coverage: boolean;
+          gold_solo_stone: number;
+          gold_story_stone: number;
+          gold_elite_stone: number;
+          gold_legend_stone: number;
+          manual: boolean;
           gold_solo: number;
           gold_story: number;
           gold_elite: number;
@@ -131,7 +138,11 @@ export interface Database {
           account_attempts?: number;
           character_attempts?: number;
           reset_weekday?: number;
-          quest_coverage?: boolean;
+          gold_solo_stone?: number;
+          gold_story_stone?: number;
+          gold_elite_stone?: number;
+          gold_legend_stone?: number;
+          manual?: boolean;
           gold_solo?: number;
           gold_story?: number;
           gold_elite?: number;
@@ -149,7 +160,11 @@ export interface Database {
           account_attempts?: number;
           character_attempts?: number;
           reset_weekday?: number;
-          quest_coverage?: boolean;
+          gold_solo_stone?: number;
+          gold_story_stone?: number;
+          gold_elite_stone?: number;
+          gold_legend_stone?: number;
+          manual?: boolean;
           gold_solo?: number;
           gold_story?: number;
           gold_elite?: number;
@@ -169,18 +184,21 @@ export interface Database {
           dungeon_id: string;
           tier: 'none' | 'solo' | 'story' | 'elite' | 'legend';
           min_runs: number;
+          max_runs: number | null;
         };
         Insert: {
           character_id: string;
           dungeon_id: string;
           tier?: 'none' | 'solo' | 'story' | 'elite' | 'legend';
           min_runs?: number;
+          max_runs?: number | null;
         };
         Update: {
           character_id?: string;
           dungeon_id?: string;
           tier?: 'none' | 'solo' | 'story' | 'elite' | 'legend';
           min_runs?: number;
+          max_runs?: number | null;
         };
         Relationships: [];
       };

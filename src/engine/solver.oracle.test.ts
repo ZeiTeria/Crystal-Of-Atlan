@@ -27,7 +27,6 @@ function randomInput(seed: number): PlanInput {
     aDungeon(`d${i}`, {
       accountAttempts: int(1, 6),
       characterAttempts: int(1, 3),   // floor of 1, never 0
-      questCoverage: rand() < 0.5,
       gold: {
         // Includes values that divide 1,000,000 exactly and values just over
         // half of it — where a greedy or a sloppy bound goes wrong.

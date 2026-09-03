@@ -75,6 +75,6 @@ describe('solveOptimal', () => {
   it('handles an empty problem without crashing', async () => {
     const result = await solveOptimal(anInput({ characters: [], dungeons: [], grid: [] }));
     if (result.status !== 'optimal') throw new Error('expected optimal');
-    expect(result.totals).toEqual({ attempts: 0, coverage: 0, gold: 0 });
+    expect(result.totals).toEqual({ attempts: 0, gold: 0 });
   });
 });

@@ -2,11 +2,10 @@ import { buildCells, type Cell } from './cells';
 import { validate } from './validate';
 import type { PlanAssignment, PlanInput, PlanResult, PlanTotals } from './types';
 
-/** Lexicographic comparison: attempts, then coverage, then gold. */
+/** Lexicographic comparison: gold, then attempts. */
 function isBetter(a: PlanTotals, b: PlanTotals): boolean {
-  if (a.attempts !== b.attempts) return a.attempts > b.attempts;
-  if (a.coverage !== b.coverage) return a.coverage > b.coverage;
-  return a.gold > b.gold;
+  if (a.gold !== b.gold) return a.gold > b.gold;
+  return a.attempts > b.attempts;
 }
 
 interface Best {
@@ -51,7 +50,6 @@ function findBest(input: PlanInput, cells: Cell[]): Best | null {
 
       search(index + 1, {
         attempts: totals.attempts + runs,
-        coverage: totals.coverage + (cell.countsForCoverage && runs >= 1 ? 1 : 0),
         gold: totals.gold + gold,
       });
 
@@ -61,7 +59,7 @@ function findBest(input: PlanInput, cells: Cell[]): Best | null {
     }
   };
 
-  search(0, { attempts: 0, coverage: 0, gold: 0 });
+  search(0, { attempts: 0, gold: 0 });
   return best;
 }
 

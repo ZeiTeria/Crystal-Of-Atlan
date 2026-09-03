@@ -12,7 +12,6 @@ export interface Cell {
   /** Upper bound, already narrowed by both the character and the account cap. */
   max: number;
   /** True when a first run here earns weekly-quest coverage. */
-  countsForCoverage: boolean;
 }
 
 function isPaid(tier: Tier): tier is PaidTier {
@@ -44,7 +43,6 @@ export function buildCells(input: PlanInput): Cell[] {
       goldPerRun: dungeon.gold[entry.tier],
       min: Math.max(0, entry.minRuns),
       max,
-      countsForCoverage: dungeon.questCoverage,
     });
   }
 

@@ -57,9 +57,7 @@ describe('solveExhaustive', () => {
     expect(result.totals.gold).toBe(1_000_000);
   });
 
-  it('prefers more attempts over more gold', () => {
-    // 'cheap' pays nothing but costs nothing against the gold cap, so a plan
-    // that also runs it must win objective 1 despite tying on gold.
+  it('breaks ties on gold by preferring more attempts', () => {
     const input = anInput({
       characters: [aCharacter('c1')],
       dungeons: [
@@ -77,27 +75,6 @@ describe('solveExhaustive', () => {
     if (result.status !== 'optimal') throw new Error('expected optimal');
     expect(result.totals.attempts).toBe(2);
     expect(result.totals.gold).toBe(1000);
-  });
-
-  it('prefers quest coverage over gold once attempts tie', () => {
-    // One shared attempt slot; both plans spend it, but only one covers a
-    // second character on a quest dungeon.
-    const input = anInput({
-      characters: [aCharacter('c1'), aCharacter('c2')],
-      dungeons: [aDungeon('q', {
-        accountAttempts: 2, characterAttempts: 2, questCoverage: true,
-        gold: { solo: 0, story: 0, elite: 100, legend: 500 },
-      })],
-      grid: [
-        { characterId: 'c1', dungeonId: 'q', tier: 'legend', minRuns: 0 },
-        { characterId: 'c2', dungeonId: 'q', tier: 'elite', minRuns: 0 },
-      ],
-    });
-    const result = solveExhaustive(input);
-    if (result.status !== 'optimal') throw new Error('expected optimal');
-    expect(result.totals.attempts).toBe(2);
-    expect(result.totals.coverage).toBe(2);   // one run each, not two for c1
-    expect(result.totals.gold).toBe(600);     // 500 + 100, not 1000
   });
 
   it('honours a hard minimum even when it costs gold', () => {

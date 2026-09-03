@@ -1,4 +1,5 @@
 import { buildCells, type Cell } from './cells';
+import { solveOptimal } from './solver';
 import type { PlanInput, PlanResult } from './types';
 
 /** Why the plan cannot be improved. The UI turns these into sentences. */
@@ -23,24 +24,26 @@ function cellsByDungeon(cells: Cell[]): Map<string, Cell[]> {
 }
 
 /**
- * The most gold the attempts allow, ignoring the gold cap.
+ * The most gold the attempts allow, ignoring the weekly gold cap.
  *
- * Exact, not an estimate: drop the gold cap and no constraint spans dungeons,
- * so each dungeon independently hands its attempts to the best-paying
- * characters and a sorted greedy is provably optimal.
+ * Solved by the same MILP as the real plan, so it respects minimums - a greedy
+ * pass over the highest-paying cells does not, and would report a ceiling the
+ * minimums make unreachable.
+ *
+ * The cap is lifted by raising each character's headroom to a figure no
+ * assignment can reach, NOT by switching the constraint off in the solver.
+ * That distinction matters: `assertFeasible` still verifies every plan it is
+ * handed, this one included, so the ceiling cannot be produced by a path that
+ * skips verification.
  */
-export function attemptCeiling(input: PlanInput): number {
-  let total = 0;
-  for (const [dungeonId, cells] of cellsByDungeon(buildCells(input))) {
-    let left = input.accountAttemptsLeft[dungeonId] ?? 0;
-    for (const cell of [...cells].sort((a, b) => b.goldPerRun - a.goldPerRun)) {
-      if (left <= 0) break;
-      const runs = Math.min(cell.max, left);
-      total += runs * cell.goldPerRun;
-      left -= runs;
-    }
-  }
-  return total;
+export async function attemptCeiling(input: PlanInput): Promise<number> {
+  const unreachable = buildCells(input).reduce((sum, c) => sum + c.max * c.goldPerRun, 0);
+  const result = await solveOptimal({
+    ...input,
+    goldHeadroom: Object.fromEntries(input.characters.map((c) => [c.id, unreachable])),
+  });
+  if (result.status === 'infeasible') return 0;
+  return result.totals.gold;
 }
 
 /**

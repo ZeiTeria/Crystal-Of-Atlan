@@ -5,16 +5,13 @@ import type { Database } from '../lib/database.types';
 type Row<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Row'];
 
-// Fixed week: resets fire at 04:00 UTC, so with `NOW` on Friday the Monday
-// boundary is 08-31T04:00Z and the Thursday boundary is 09-03T04:00Z.
-const NOW = new Date('2026-09-04T12:00:00Z');
-
 const SETTINGS: Row<'app_settings'> = {
   id: true,
   gold_cap_per_character: 1000,
   gold_reset_weekday: 1,
   reset_hour: 4,
   server_timezone: 'UTC',
+  stone_rate: 0.4,
 };
 
 function aCharacterRow(id: string): Row<'characters'> {
@@ -28,7 +25,11 @@ function aDungeonRow(id: string, overrides: Partial<Row<'dungeons'>> = {}): Row<
     account_attempts: 18,
     character_attempts: 3,
     reset_weekday: 1,
-    quest_coverage: false,
+    gold_solo_stone: 0,
+    gold_story_stone: 0,
+    gold_elite_stone: 0,
+    gold_legend_stone: 0,
+    manual: false,
     gold_solo: 10,
     gold_story: 20,
     gold_elite: 30,
@@ -53,22 +54,8 @@ function aGridRow(
     dungeon_id: dungeonId,
     tier: 'elite',
     min_runs: 0,
+    max_runs: null,
     ...overrides,
-  };
-}
-
-function aRunRow(
-  characterId: string,
-  dungeonId: string,
-  ranAt: string,
-  goldEarned = 0,
-): Row<'runs'> {
-  return {
-    id: `${characterId}-${dungeonId}-${ranAt}`,
-    character_id: characterId,
-    dungeon_id: dungeonId,
-    ran_at: ranAt,
-    gold_earned: goldEarned,
   };
 }
 
@@ -78,7 +65,6 @@ function rows(parts: Partial<Omit<PlanRows, 'settings'>> = {}): PlanRows {
     characters: parts.characters ?? [],
     dungeons: parts.dungeons ?? [],
     grid: parts.grid ?? [],
-    runs: parts.runs ?? [],
   };
 }
 
@@ -90,7 +76,6 @@ describe('buildPlanInput', () => {
         dungeons: [aDungeonRow('d1'), aDungeonRow('d2')],
         grid: [aGridRow('c1', 'd1', { tier: 'none' }), aGridRow('c1', 'd2', { tier: 'solo' })],
       }),
-      NOW,
     );
 
     expect(input.grid).toEqual([
@@ -105,7 +90,6 @@ describe('buildPlanInput', () => {
         dungeons: [aDungeonRow('d1')],
         grid: [aGridRow('c1', 'd1'), aGridRow('stranger', 'd1'), aGridRow('c1', 'gone')],
       }),
-      NOW,
     );
 
     expect(input.grid).toEqual([
@@ -120,7 +104,6 @@ describe('buildPlanInput', () => {
         dungeons: [aDungeonRow('live'), aDungeonRow('retired', { is_active: false })],
         grid: [aGridRow('c1', 'live'), aGridRow('c1', 'retired')],
       }),
-      NOW,
     );
 
     expect(input.dungeons.map((d) => d.id)).toEqual(['live']);
@@ -139,7 +122,6 @@ describe('buildPlanInput', () => {
             account_attempts: 18,
             character_attempts: 2,
             reset_weekday: 4,
-            quest_coverage: true,
             gold_solo: 1,
             gold_story: 2,
             gold_elite: 3,
@@ -147,7 +129,6 @@ describe('buildPlanInput', () => {
           }),
         ],
       }),
-      NOW,
     );
 
     expect(input.dungeons).toEqual([
@@ -157,7 +138,6 @@ describe('buildPlanInput', () => {
         accountAttempts: 18,
         characterAttempts: 2,
         resetWeekday: 4,
-        questCoverage: true,
         gold: { solo: 1, story: 2, elite: 3, legend: 4 },
         default_tier: 'elite',
         default_min_runs: 1,
@@ -173,57 +153,13 @@ describe('buildPlanInput', () => {
     ]);
   });
 
-  it('counts each dungeon from its own reset, not a shared one', () => {
-    // Wednesday sits after the Monday boundary but before the Thursday one, so
-    // the same instant is inside one week and outside the other.
-    const wednesday = '2026-09-02T12:00:00Z';
-    const input = buildPlanInput(
-      rows({
-        characters: [aCharacterRow('c1')],
-        dungeons: [
-          aDungeonRow('mon', { reset_weekday: 1 }),
-          aDungeonRow('thu', { reset_weekday: 4 }),
-        ],
-        grid: [aGridRow('c1', 'mon'), aGridRow('c1', 'thu')],
-        runs: [aRunRow('c1', 'mon', wednesday), aRunRow('c1', 'thu', wednesday)],
-      }),
-      NOW,
-    );
-
-    expect(input.accountAttemptsLeft).toEqual({ mon: 17, thu: 18 });
-    expect(input.characterAttemptsLeft).toEqual({ c1: { mon: 2, thu: 3 } });
-  });
-
-  it('reduces gold headroom by this gold week only', () => {
-    const input = buildPlanInput(
-      rows({
-        characters: [aCharacterRow('c1')],
-        dungeons: [aDungeonRow('thu', { reset_weekday: 4 })],
-        grid: [aGridRow('c1', 'thu')],
-        runs: [
-          // Before the Monday gold reset: spent, but in the previous gold week.
-          aRunRow('c1', 'thu', '2026-08-30T10:00:00Z', 400),
-          // After it, and before the Thursday dungeon reset: gold counts even
-          // though the attempt no longer does.
-          aRunRow('c1', 'thu', '2026-09-02T10:00:00Z', 250),
-          aRunRow('c1', 'thu', '2026-09-04T10:00:00Z', 100),
-        ],
-      }),
-      NOW,
-    );
-
-    expect(input.goldHeadroom).toEqual({ c1: 650 });
-    expect(input.accountAttemptsLeft).toEqual({ thu: 17 });
-  });
-
   it('keeps a character that has no grid row at all', () => {
     const input = buildPlanInput(
       rows({
         characters: [aCharacterRow('c1'), aCharacterRow('c2')],
         dungeons: [aDungeonRow('d1', { default_tier: 'none' })],
-        grid: [{ character_id: 'c1', dungeon_id: 'd1', tier: 'legend', min_runs: 0 }],
+        grid: [{ character_id: 'c1', dungeon_id: 'd1', tier: 'legend', min_runs: 0, max_runs: null }],
       }),
-      NOW,
     );
 
     expect(input.characters.map((c) => c.id)).toEqual(['c1', 'c2']);
@@ -238,14 +174,14 @@ describe('buildPlanInput', () => {
         ...rows({
           characters: [aCharacterRow('c1')],
           dungeons: [aDungeonRow('d1')],
-          runs: [aRunRow('c1', 'd1', '2026-09-03T10:00:00Z', 500)],
         }),
-        // Gold resets on Thursday here, so the Thursday run is inside the week.
         settings: { ...SETTINGS, gold_cap_per_character: 900, gold_reset_weekday: 4 },
       },
-      NOW,
     );
 
-    expect(input.goldHeadroom).toEqual({ c1: 400 });
+    expect(input.goldHeadroom).toEqual({ c1: 900 });
+    // Nothing derived from the weekday is observable now that runs are gone,
+    // but the Countdown still reads it, so keep it pinned end to end.
+    expect(input.settings.goldResetWeekday).toBe(4);
   });
 });
