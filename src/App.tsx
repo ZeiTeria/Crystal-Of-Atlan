@@ -27,6 +27,7 @@ const TABS: { view: View; label: string; adminOnly?: boolean }[] = [
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [view, setView] = useState<View>('log');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,15 +77,23 @@ export default function App() {
   useEffect(() => {
     if (!session) {
       setProfile(null);
+      setProfileLoading(false);
       return;
     }
     let mounted = true;
+    setProfileLoading(true);
     loadProfile()
       .then((p) => {
-        if (mounted) setProfile(p);
+        if (mounted) {
+          setProfile(p);
+          setProfileLoading(false);
+        }
       })
       .catch((err: unknown) => {
-        if (mounted) setError(errorMessage(err));
+        if (mounted) {
+          setError(errorMessage(err));
+          setProfileLoading(false);
+        }
       });
     return () => {
       mounted = false;
@@ -104,6 +113,36 @@ export default function App() {
 
   if (!session) {
     return <LandingScreen error={error} />;
+  }
+
+  if (profileLoading) {
+    return <div className="app-container">Loading profile...</div>;
+  }
+
+  if (!profile?.is_admin) {
+    return (
+      <div className="app-layout">
+        <header className="app-header">
+          <div className="header-left">
+            <div className="brand">
+              <LogoMark />
+              <span className="brand-text">CRYSTAL OF ATLAN</span>
+            </div>
+          </div>
+          <div className="header-right">
+            <button type="button" className="sign-out-btn" onClick={() => void signOut()}>
+              Sign out
+            </button>
+          </div>
+        </header>
+        <div className="app-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+          <div style={{ textAlign: 'center' }}>
+            <h2>Under Development</h2>
+            <p>The website is under development. Only admins can access it right now.</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const tabs = TABS.filter((t) => !t.adminOnly || profile?.is_admin);
