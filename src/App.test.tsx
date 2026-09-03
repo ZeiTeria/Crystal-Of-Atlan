@@ -33,23 +33,22 @@ afterEach(() => {
 describe('App shell', () => {
   it('offers Discord sign-in when signed out', async () => {
     const { findByRole } = render(<App />);
-    expect(await findByRole('button', { name: /sign in with discord/i })).toBeDefined();
+    expect(await findByRole('button', { name: /admin sign in/i })).toBeDefined();
     expect(screen.queryByRole('button', { name: /^plan$/i })).toBeNull();
   });
 
   it('shows the plan first once signed in', async () => {
     currentSession = session;
-    currentProfile = { discord_username: 'zei', is_admin: false };
+    currentProfile = { discord_username: 'zei', is_admin: true };
     const { findByText } = render(<App />);
     expect(await findByText('plan screen')).toBeDefined();
   });
 
-  it('hides the dungeons tab from a non-admin', async () => {
+  it('shows under development screen to non-admin', async () => {
     currentSession = session;
     currentProfile = { discord_username: 'zei', is_admin: false };
     render(<App />);
-    expect(await screen.findByRole('button', { name: /^plan$/i })).toBeDefined();
-    expect(screen.queryByRole('button', { name: /^dungeons$/i })).toBeNull();
+    expect(await screen.findByText('Under Development')).toBeDefined();
   });
 
   it('shows the dungeons tab to an admin', async () => {
@@ -77,7 +76,7 @@ describe('App shell', () => {
   ])('renders exactly one navigation on %s', async (_label, isPhone, present, absent) => {
     stubMatchMedia(isPhone);
     currentSession = session;
-    currentProfile = { discord_username: 'zei', is_admin: false };
+    currentProfile = { discord_username: 'zei', is_admin: true };
     const { container } = render(<App />);
     await screen.findByText('plan screen');
 
