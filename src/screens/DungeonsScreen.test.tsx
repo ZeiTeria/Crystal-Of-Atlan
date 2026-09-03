@@ -88,6 +88,28 @@ describe('DungeonsScreen', () => {
     expect(await screen.findByDisplayValue('Abyss')).toBeDefined();
   });
 
+  /*
+   * The catalogue table is far wider than any viewport. Without a scroll
+   * container the whole PAGE scrolled sideways, so the wrapper is the fix and
+   * not decoration. jsdom does no layout, so this asserts the structure the CSS
+   * hangs on - not that it looks right.
+   */
+  it('keeps the wide table inside its own scroll container', async () => {
+    const { container } = render(<DungeonsScreen />);
+    await screen.findByDisplayValue('Abyss');
+
+    const table = container.querySelector('table.datatable');
+    expect(table).not.toBeNull();
+    expect(table?.parentElement?.className).toBe('datatable-scroll');
+  });
+
+  /* The stylesheet was imported nowhere, so every rule in it was dead. */
+  it('scopes the screen so its stylesheet can target it', async () => {
+    const { container } = render(<DungeonsScreen />);
+    await screen.findByDisplayValue('Abyss');
+    expect(container.querySelector('section.dungeons-screen')).not.toBeNull();
+  });
+
   it('creates a dungeon from the new-dungeon form', async () => {
     render(<DungeonsScreen />);
     await screen.findByDisplayValue('Abyss');

@@ -40,5 +40,14 @@ export function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(subscribe, getSnapshot, () => false);
 }
 
-/** One breakpoint, defined once, so the screens cannot disagree about it. */
-export const PHONE = '(max-width: 720px)';
+/*
+ * One breakpoint, defined once, so the screens cannot disagree about it.
+ *
+ * It MUST stay in step with the CSS media queries. It was 720px while every
+ * media query was 768px, and the 48px between them was a dead zone: App.css
+ * hid `.coa-tabs` at <=768 while this hook still reported "not phone", so the
+ * mobile tab bar was never rendered and the app had no navigation at all
+ * between 721px and 768px. Change this and you must change every
+ * `@media (max-width: ...)` with it.
+ */
+export const PHONE = '(max-width: 768px)';

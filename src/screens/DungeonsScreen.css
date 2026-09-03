@@ -26,3 +26,79 @@
   flex: 1;
   min-width: 220px;
 }
+
+/*
+ * The catalogue table is ~16 columns wide (four of them carrying two stacked
+ * gold inputs), so it is wider than any viewport. It scrolls inside
+ * `.datatable-scroll` - which already existed in DataTable.css and was wired to
+ * nothing - so the PAGE never scrolls sideways.
+ *
+ * Deliberately NO scroll-snap here. Snapping belongs to the two read-mostly
+ * matrices (`.matrix-scroll`), where a column is the unit you navigate by. This
+ * table is edited cell by cell, and mandatory snapping fights a click that
+ * lands mid-scroll.
+ */
+.dungeons-screen .datatable-scroll {
+  /* The sticky column's width, and therefore how far a scroll must clear it. */
+  --sticky-col: 160px;
+}
+
+/*
+ * Name stays put while the rest scrolls, otherwise you cannot tell which
+ * dungeon's gold you are typing into once the row scrolls off.
+ *
+ * The background must be --bg, not --surface: body sits on --bg and the table
+ * paints no ground of its own, so --surface would show as a lighter strip.
+ * The zebra band is a background-IMAGE (DataTable.css), so it still composites
+ * over this colour and striping survives under the sticky column.
+ */
+.dungeons-screen .datatable thead th:first-child,
+.dungeons-screen .datatable tbody td:first-child {
+  position: sticky;
+  left: 0;
+  min-width: var(--sticky-col);
+  background-color: var(--bg);
+  box-shadow: 1px 0 0 var(--line);
+}
+
+/* Above the body cells, so a scrolled row never paints over the header. */
+.dungeons-screen .datatable thead th:first-child {
+  z-index: 2;
+}
+.dungeons-screen .datatable tbody td:first-child {
+  z-index: 1;
+}
+
+/* Unbounded number inputs were a large part of the width. */
+.dungeons-screen .datatable input[type='number'] {
+  width: 72px;
+}
+
+.dungeons-screen .datatable input:not([type='number']):not([type='checkbox']) {
+  min-width: 120px;
+}
+
+@media (max-width: 768px) {
+  .dungeons-screen .datatable-scroll {
+    --sticky-col: 116px;
+  }
+
+  /* Genuinely tighter than the base --s2 --s3, which is 8px 12px. */
+  .dungeons-screen .datatable th,
+  .dungeons-screen .datatable td {
+    padding: var(--s1) var(--s2);
+  }
+
+  .dungeons-screen .datatable input[type='number'] {
+    width: 64px;
+  }
+
+  /* The touch target the rest of the app already uses for editable rows. */
+  .dungeons-screen .datatable input {
+    min-height: 40px;
+  }
+
+  .dungeons-screen .admin-setting {
+    margin: 10px 0 16px;
+  }
+}

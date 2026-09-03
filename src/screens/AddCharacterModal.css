@@ -107,10 +107,23 @@
   border-bottom-color: var(--accent);
 }
 
+/*
+ * The only part of the panel that scrolls, so it is the only part that may
+ * take the leftover height.
+ *
+ * `flex: 1` AND `min-height: 0` are both load-bearing. A flex item defaults to
+ * `min-height: auto`, which refuses to shrink below its content - so with a
+ * full dungeon list this section stayed at its natural height, overran the
+ * panel's `max-height: 90vh`, and pushed the footer (with the Add button) out
+ * of view while `.ac-tiers-list`'s `overflow-y: auto` never had a bounded
+ * parent to scroll inside. Removing either line brings that back.
+ */
 .ac-tiers-section {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex: 1;
+  min-height: 0;
 }
 
 .ac-tiers-header {
@@ -130,6 +143,8 @@
   flex-direction: column;
   padding: 0 28px 8px;
   overflow-y: auto;
+  /* Same reason as the section above: it is itself a flex child. */
+  min-height: 0;
 }
 
 .ac-tier-row {

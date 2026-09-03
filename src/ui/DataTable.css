@@ -408,7 +408,7 @@
 
 /* Below the breakpoint the wide tables that remain must not force the page
    sideways; they scroll inside their own container instead. */
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .app-container {
     padding: var(--s4) var(--s3);
   }

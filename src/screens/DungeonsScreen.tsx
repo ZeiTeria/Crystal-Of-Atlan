@@ -22,6 +22,7 @@ import {
 } from '../data/roster';
 import type { Tier } from '../engine/types';
 import ErrorBanner from '../ui/ErrorBanner';
+import './DungeonsScreen.css';
 
 const WEEKDAYS = [
   { value: 1, label: 'Monday' },
@@ -138,7 +139,7 @@ export default function DungeonsScreen() {
   if (loading) return <p>Loading catalogue...</p>;
 
   return (
-    <section>
+    <section className="dungeons-screen">
       <h2>Dungeons</h2>
       <ErrorBanner message={error} />
 
@@ -194,179 +195,181 @@ export default function DungeonsScreen() {
 
       {dungeons.length === 0 && <p className="muted">No dungeons in the catalogue yet.</p>}
 
-      <table className="datatable">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Group</th>
-            <th>Short</th>
-            <th>Account/wk</th>
-            <th>Character/wk</th>
-            <th>Resets</th>
-            {GOLD_COLUMNS.map((c) => (
-              <th key={c.key}>{c.label}</th>
-            ))}
-            <th>Active</th>
-            <th>Manual</th>
-            <th>Default Tier</th>
-            <th>Default Min</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {ordered.map((d) => (
-            <tr
-              key={d.id}
-              data-sortable-id={d.id}
-              className={activeId === d.id ? 'sorting' : undefined}
-            >
-              <td>
-                <input
-                  aria-label={`${d.name} name`}
-                  defaultValue={d.name}
-                  onBlur={(e) => {
-                    const name = e.target.value.trim();
-                    if (name !== '' && name !== d.name) void save(d.id, { name });
-                  }}
-                />
-              </td>
-              <td>
-                <input
-                  aria-label={`${d.name} short label`}
-                  defaultValue={d.short_name ?? ''}
-                  size={5}
-                  placeholder={suggestAbbreviation(d.name, d.group_name)}
-                  onBlur={(e) => {
-                    // Empty means "use the suggestion", so it stores null rather
-                    // than an empty string - a deliberate label is never
-                    // overwritten, and an absent one is never frozen.
-                    const next = e.target.value.trim();
-                    const value = next === '' ? null : next;
-                    if (value !== d.short_name) void save(d.id, { short_name: value });
-                  }}
-                />
-              </td>
-              <td>
-                <input
-                  aria-label={`${d.name} group`}
-                  defaultValue={d.group_name ?? ''}
-                  list="dungeon-groups"
-                  placeholder="none"
-                  onBlur={(e) => {
-                    // An emptied field stores null, never '': an empty-string
-                    // family would be treated as real and banded together with
-                    // every other ungrouped dungeon.
-                    const next = e.target.value.trim();
-                    const value = next === '' ? null : next;
-                    if (value !== d.group_name) void save(d.id, { group_name: value });
-                  }}
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  aria-label={`${d.name} account attempts`}
-                  defaultValue={d.account_attempts}
-                  onBlur={(e) => void save(d.id, { account_attempts: Number(e.target.value) })}
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  aria-label={`${d.name} character attempts`}
-                  defaultValue={d.character_attempts}
-                  onBlur={(e) => void save(d.id, { character_attempts: Number(e.target.value) })}
-                />
-              </td>
-              <td>
-                <select
-                  aria-label={`${d.name} reset weekday`}
-                  value={d.reset_weekday}
-                  onChange={(e) => void save(d.id, { reset_weekday: Number(e.target.value) })}
-                >
-                  {WEEKDAYS.map((w) => (
-                    <option key={w.value} value={w.value}>
-                      {w.label}
-                    </option>
-                  ))}
-                </select>
-              </td>
+      <div className="datatable-scroll">
+        <table className="datatable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Group</th>
+              <th>Short</th>
+              <th>Account/wk</th>
+              <th>Character/wk</th>
+              <th>Resets</th>
               {GOLD_COLUMNS.map((c) => (
-                <td key={c.key}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <input
-                      type="number"
-                      aria-label={`${d.name} ${c.label} gold base`}
-                      defaultValue={d[c.key as keyof typeof d] as number}
-                      title="Base gold"
-                      onFocus={(e) => e.target.select()}
-                      onBlur={(e) => void save(d.id, c.patch(Number(e.target.value)))}
-                    />
-                    <input
-                      type="number"
-                      aria-label={`${d.name} ${c.label} stone`}
-                      defaultValue={d[c.stoneKey as keyof typeof d] as number}
-                      title="Stone gold"
-                      onFocus={(e) => e.target.select()}
-                      onBlur={(e) => void save(d.id, c.stonePatch(Number(e.target.value)))}
-                    />
+                <th key={c.key}>{c.label}</th>
+              ))}
+              <th>Active</th>
+              <th>Manual</th>
+              <th>Default Tier</th>
+              <th>Default Min</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {ordered.map((d) => (
+              <tr
+                key={d.id}
+                data-sortable-id={d.id}
+                className={activeId === d.id ? 'sorting' : undefined}
+              >
+                <td>
+                  <input
+                    aria-label={`${d.name} name`}
+                    defaultValue={d.name}
+                    onBlur={(e) => {
+                      const name = e.target.value.trim();
+                      if (name !== '' && name !== d.name) void save(d.id, { name });
+                    }}
+                  />
+                </td>
+                <td>
+                  <input
+                    aria-label={`${d.name} short label`}
+                    defaultValue={d.short_name ?? ''}
+                    size={5}
+                    placeholder={suggestAbbreviation(d.name, d.group_name)}
+                    onBlur={(e) => {
+                      // Empty means "use the suggestion", so it stores null rather
+                      // than an empty string - a deliberate label is never
+                      // overwritten, and an absent one is never frozen.
+                      const next = e.target.value.trim();
+                      const value = next === '' ? null : next;
+                      if (value !== d.short_name) void save(d.id, { short_name: value });
+                    }}
+                  />
+                </td>
+                <td>
+                  <input
+                    aria-label={`${d.name} group`}
+                    defaultValue={d.group_name ?? ''}
+                    list="dungeon-groups"
+                    placeholder="none"
+                    onBlur={(e) => {
+                      // An emptied field stores null, never '': an empty-string
+                      // family would be treated as real and banded together with
+                      // every other ungrouped dungeon.
+                      const next = e.target.value.trim();
+                      const value = next === '' ? null : next;
+                      if (value !== d.group_name) void save(d.id, { group_name: value });
+                    }}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    aria-label={`${d.name} account attempts`}
+                    defaultValue={d.account_attempts}
+                    onBlur={(e) => void save(d.id, { account_attempts: Number(e.target.value) })}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    aria-label={`${d.name} character attempts`}
+                    defaultValue={d.character_attempts}
+                    onBlur={(e) => void save(d.id, { character_attempts: Number(e.target.value) })}
+                  />
+                </td>
+                <td>
+                  <select
+                    aria-label={`${d.name} reset weekday`}
+                    value={d.reset_weekday}
+                    onChange={(e) => void save(d.id, { reset_weekday: Number(e.target.value) })}
+                  >
+                    {WEEKDAYS.map((w) => (
+                      <option key={w.value} value={w.value}>
+                        {w.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                {GOLD_COLUMNS.map((c) => (
+                  <td key={c.key}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <input
+                        type="number"
+                        aria-label={`${d.name} ${c.label} gold base`}
+                        defaultValue={d[c.key as keyof typeof d] as number}
+                        title="Base gold"
+                        onFocus={(e) => e.target.select()}
+                        onBlur={(e) => void save(d.id, c.patch(Number(e.target.value)))}
+                      />
+                      <input
+                        type="number"
+                        aria-label={`${d.name} ${c.label} stone`}
+                        defaultValue={d[c.stoneKey as keyof typeof d] as number}
+                        title="Stone gold"
+                        onFocus={(e) => e.target.select()}
+                        onBlur={(e) => void save(d.id, c.stonePatch(Number(e.target.value)))}
+                      />
+                    </div>
+                  </td>
+                ))}
+                <td>
+                  <input
+                    type="checkbox"
+                    aria-label={`${d.name} active`}
+                    checked={d.is_active}
+                    onChange={(e) => void save(d.id, { is_active: e.target.checked })}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="checkbox"
+                    aria-label={`${d.name} manual`}
+                    checked={d.manual}
+                    onChange={(e) => void save(d.id, { manual: e.target.checked })}
+                  />
+                </td>
+                <td>
+                  <select
+                    aria-label={`${d.name} default tier`}
+                    value={d.default_tier}
+                    onChange={(e) => void save(d.id, { default_tier: e.target.value as Tier })}
+                  >
+                    {TIERS.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    aria-label={`${d.name} default min runs`}
+                    value={d.default_min_runs}
+                    min={0}
+                    max={d.character_attempts}
+                    onChange={(e) => void save(d.id, { default_min_runs: Number(e.target.value) })}
+                  />
+                </td>
+                <td>
+                  <div className="row-actions">
+                    <span {...handleProps(d.id, `Reorder ${d.name}`)}>⠿</span>
+                    <Button variant="outline"
+                      aria-label={`Delete ${d.name}`}
+                      onClick={() => void remove(d)}
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </td>
-              ))}
-              <td>
-                <input
-                  type="checkbox"
-                  aria-label={`${d.name} active`}
-                  checked={d.is_active}
-                  onChange={(e) => void save(d.id, { is_active: e.target.checked })}
-                />
-              </td>
-              <td>
-                <input
-                  type="checkbox"
-                  aria-label={`${d.name} manual`}
-                  checked={d.manual}
-                  onChange={(e) => void save(d.id, { manual: e.target.checked })}
-                />
-              </td>
-              <td>
-                <select
-                  aria-label={`${d.name} default tier`}
-                  value={d.default_tier}
-                  onChange={(e) => void save(d.id, { default_tier: e.target.value as Tier })}
-                >
-                  {TIERS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td>
-                <input
-                  type="number"
-                  aria-label={`${d.name} default min runs`}
-                  value={d.default_min_runs}
-                  min={0}
-                  max={d.character_attempts}
-                  onChange={(e) => void save(d.id, { default_min_runs: Number(e.target.value) })}
-                />
-              </td>
-              <td>
-                <div className="row-actions">
-                  <span {...handleProps(d.id, `Reorder ${d.name}`)}>⠿</span>
-                  <Button variant="outline"
-                    aria-label={`Delete ${d.name}`}
-                    onClick={() => void remove(d)}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <datalist id="dungeon-groups">
         {[...new Set(dungeons.map((d) => d.group_name).filter((g) => g !== null))].map((g) => (

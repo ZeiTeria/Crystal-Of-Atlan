@@ -20,6 +20,6 @@ describe('useMediaQuery', () => {
   });
 
   it('has one phone breakpoint, so screens cannot disagree about it', () => {
-    expect(PHONE).toBe('(max-width: 720px)');
+    expect(PHONE).toBe('(max-width: 768px)');
   });
 });
