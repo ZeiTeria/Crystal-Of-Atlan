@@ -16,6 +16,8 @@ export interface Dungeon {
   resetWeekday: number;
   /** Gold for a single run at each difficulty. Whole gold, no decimals. */
   gold: Record<PaidTier, number>;
+  /** Whether the dungeon is flagged manual (time-skippable vs not) */
+  manual: boolean;
   /** The fallback tier a character has if they don't have an explicit entry in the grid. */
   default_tier: Tier;
   /** The fallback min runs a character has if they don't have an explicit entry in the grid. */
@@ -55,6 +57,8 @@ export interface GridEntry {
   tier: Tier;
   /** Hard floor set by the user: this character must run this dungeon at least this often. */
   minRuns: number;
+  /** Hard ceiling set by the user (clamped on read to characterAttempts). */
+  maxRuns: number;
 }
 
 /**

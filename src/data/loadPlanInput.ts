@@ -54,8 +54,27 @@ export function buildPlanInput(rows: PlanRows): PlanInput {
           elite: d.gold_elite,
           legend: d.gold_legend,
         });
-        return { gold, goldEstimated: estimated, goldUnknown: unknown };
+
+        const stoneRate = rows.settings.stone_rate;
+        // Rounded, not left as a float: `Dungeon.gold` is documented as whole
+        // gold, `renderTerms` states LP coefficients are always integers (LP
+        // format rejects the exponent notation a small float can render as),
+        // and assertFeasible re-checks the plan in integer arithmetic.
+        const applyStone = (base: number, stone: number) => {
+          const premium = Math.max(0, stone - base);
+          return Math.round(base + stoneRate * premium);
+        };
+
+        const effectiveGold = {
+          solo: applyStone(gold.solo, d.gold_solo_stone),
+          story: applyStone(gold.story, d.gold_story_stone),
+          elite: applyStone(gold.elite, d.gold_elite_stone),
+          legend: applyStone(gold.legend, d.gold_legend_stone),
+        };
+
+        return { gold: effectiveGold, goldEstimated: estimated, goldUnknown: unknown };
       })(),
+      manual: d.manual,
       default_tier: d.default_tier,
       default_min_runs: d.default_min_runs,
       sort_order: d.sort_order,
@@ -64,11 +83,12 @@ export function buildPlanInput(rows: PlanRows): PlanInput {
     }));
 
   // Merge explicit grid rows over the dungeons' default tiers.
-  const explicitGrid = new Map<string, Pick<GridEntry, 'tier' | 'minRuns'>>();
+  const explicitGrid = new Map<string, Pick<GridEntry, 'tier' | 'minRuns' | 'maxRuns'>>();
   for (const g of rows.grid) {
     explicitGrid.set(`${g.character_id}|${g.dungeon_id}`, {
       tier: g.tier,
       minRuns: g.min_runs,
+      maxRuns: g.max_runs ?? Infinity, // We'll clamp below
     });
   }
 
@@ -79,11 +99,13 @@ export function buildPlanInput(rows: PlanRows): PlanInput {
       const tier = explicit?.tier ?? dungeon.default_tier;
       // tier `none` means not unlocked; the pair is dropped entirely
       if (tier !== 'none') {
+        const rawMax = explicit?.maxRuns ?? Infinity;
         grid.push({
           characterId: character.id,
           dungeonId: dungeon.id,
           tier,
           minRuns: explicit?.minRuns ?? dungeon.default_min_runs,
+          maxRuns: Math.min(rawMax, dungeon.characterAttempts),
         });
       }
     }

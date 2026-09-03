@@ -19,6 +19,11 @@ export interface NewDungeon {
   gold_story: number;
   gold_elite: number;
   gold_legend: number;
+  gold_solo_stone: number;
+  gold_story_stone: number;
+  gold_elite_stone: number;
+  gold_legend_stone: number;
+  manual: boolean;
   is_active: boolean;
   default_tier: Tier;
   default_min_runs: number;
@@ -47,7 +52,7 @@ export async function createDungeon(input: NewDungeon): Promise<DungeonRow> {
   return data;
 }
 
-export async function updateDungeon(id: string, patch: Partial<DungeonRow>): Promise<void> {
+export async function updateDungeon(id: string, patch: Omit<Partial<DungeonRow>, 'id'>): Promise<void> {
   const { error } = await supabase.from('dungeons').update(patch).eq('id', id);
   if (error) throw error;
 }

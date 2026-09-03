@@ -30,7 +30,7 @@ export async function listGrid(characterIds: string[]): Promise<GridRow[]> {
 export async function setGridCell(
   characterId: string,
   dungeonId: string,
-  cell: { tier: Tier; min_runs: number },
+  cell: { tier: Tier; min_runs: number; max_runs: number | null },
 ): Promise<void> {
   const { error } = await supabase
     .from('character_dungeon')
@@ -47,7 +47,7 @@ export async function setGridCell(
  * default rather than what the screen was showing.
  */
 export async function setGridCells(
-  cells: { character_id: string; dungeon_id: string; tier: Tier; min_runs: number }[],
+  cells: { character_id: string; dungeon_id: string; tier: Tier; min_runs: number; max_runs: number | null }[],
 ): Promise<void> {
   if (cells.length === 0) return;
   const { error } = await supabase

@@ -144,7 +144,7 @@ describe('DungeonsScreen', () => {
 
   it('saves an edited gold value as a number, not a string', async () => {
     render(<DungeonsScreen />);
-    const legend = await screen.findByLabelText('Abyss legend gold');
+    const legend = await screen.findByLabelText('Abyss legend gold base');
     fireEvent.change(legend, { target: { value: '999' } });
     fireEvent.blur(legend);
     await waitFor(() => {

@@ -8,6 +8,7 @@ import { getClassHue, getGroupHue } from '../ui/hues';
 import { PHONE, useMediaQuery } from '../ui/useMediaQuery';
 import { matrixColumns } from './columns';
 import { goldWarning, leftoverText } from './goldWarning';
+import { manualDaysLeft, manualWarning } from './manualPace';
 import { describeReason, gold, type Names } from './planText';
 import './AttemptBoard.css';
 
@@ -53,6 +54,8 @@ export default function AttemptBoard({
   const { characters, accountAttemptsLeft, settings } = input;
   // Same order as the Grid and the Dungeons tab: newest dungeon first.
   const dungeons = matrixColumns(input.dungeons);
+  // Day granularity, so it is computed once per render rather than ticked.
+  const manualDays = manualDaysLeft(dungeons, input.settings, new Date());
 
   // The tier a character enters a dungeon at, which is what decides whether the
   // gold figure behind its runs is real. loadPlanInput has already merged each
@@ -261,7 +264,10 @@ export default function AttemptBoard({
                   .map((a) => {
                     const character = characters.find((c) => c.id === a.characterId);
                     const tier = tierOf.get(`${a.characterId}:${d.id}`) ?? d.default_tier;
-                    const cellWarning = dungeonWarning ? null : goldWarning(d, tier);
+                    let cellWarning = dungeonWarning ? null : goldWarning(d, tier);
+                    const pace = manualWarning(manualDays.get(d.id), a.runs);
+                    if (pace) cellWarning = cellWarning ? `${cellWarning}\n\n${pace}` : pace;
+
                     return (
                       <div
                         key={a.characterId}

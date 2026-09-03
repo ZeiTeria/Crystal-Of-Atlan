@@ -125,6 +125,7 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
         dungeon_id: d.id,
         tier: tiers[d.id] ?? d.default_tier,
         min_runs: d.default_min_runs,
+        max_runs: null,
       }));
       if (cells.length > 0) await setGridCells(cells);
     });

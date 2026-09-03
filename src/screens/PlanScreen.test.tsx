@@ -50,13 +50,14 @@ const dungeon = {
   short_name: null,
   goldEstimated: [],
   goldUnknown: false,
+  manual: false,
 };
 
 function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
   return {
     characters: [{ id: 'c1', name: 'Mage', class: 'Magister' }],
     dungeons: [dungeon],
-    grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0 }],
+    grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0, maxRuns: 3 }],
     accountAttemptsLeft: { d1: 18 },
     characterAttemptsLeft: { c1: { d1: 3 } },
     goldHeadroom: { c1: 1_000_000 },
@@ -195,8 +196,8 @@ describe('PlanScreen', () => {
           { id: 'c2', name: 'Rogue', class: 'Fighter' },
         ],
         grid: [
-          { characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0 },
-          { characterId: 'c2', dungeonId: 'd1', tier: 'elite', minRuns: 0 },
+          { characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0, maxRuns: 3 },
+          { characterId: 'c2', dungeonId: 'd1', tier: 'elite', minRuns: 0, maxRuns: 3 },
         ],
         characterAttemptsLeft: { c1: { d1: 3 }, c2: { d1: 3 } },
         goldHeadroom: { c1: 1_000_000, c2: 1_000_000 },
@@ -229,7 +230,7 @@ describe('PlanScreen', () => {
   it('reports an impossible minimum instead of a plan', async () => {
     vi.mocked(loadPlanState).mockResolvedValue(
       aState({
-        grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'none', minRuns: 2 }],
+        grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'none', minRuns: 2, maxRuns: 3 }],
       }),
     );
     render(<PlanScreen />);
@@ -329,7 +330,7 @@ describe('PlanScreen', () => {
     });
     await waitFor(() => {
       expect(vi.mocked(setGridCells)).toHaveBeenCalledWith([
-        { character_id: 'new', dungeon_id: 'd1', tier: 'elite', min_runs: 1 },
+        { character_id: 'new', dungeon_id: 'd1', tier: 'elite', min_runs: 1, max_runs: null },
       ]);
     });
   });
@@ -341,7 +342,7 @@ describe('PlanScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: /add character/i }));
     await waitFor(() => {
       expect(vi.mocked(setGridCells)).toHaveBeenCalledWith([
-        { character_id: 'new', dungeon_id: 'd1', tier: 'legend', min_runs: 1 },
+        { character_id: 'new', dungeon_id: 'd1', tier: 'legend', min_runs: 1, max_runs: null },
       ]);
     });
   });

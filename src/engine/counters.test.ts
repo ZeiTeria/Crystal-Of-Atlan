@@ -13,8 +13,8 @@ const characters = [aCharacter('c1')];
 const monday = aDungeon('mon', { resetWeekday: 1, accountAttempts: 18, characterAttempts: 3 });
 const thursday = aDungeon('thu', { resetWeekday: 4, accountAttempts: 18, characterAttempts: 3 });
 const grid = [
-  { characterId: 'c1', dungeonId: 'mon', tier: 'elite' as const, minRuns: 0 },
-  { characterId: 'c1', dungeonId: 'thu', tier: 'elite' as const, minRuns: 0 },
+  { characterId: 'c1', dungeonId: 'mon', tier: 'elite' as const, minRuns: 0, maxRuns: 3 },
+  { characterId: 'c1', dungeonId: 'thu', tier: 'elite' as const, minRuns: 0, maxRuns: 3 },
 ];
 
 describe('derivePlanInput', () => {

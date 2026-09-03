@@ -154,6 +154,11 @@ describe.skipIf(catalogueSkip)(
         gold_story: 20,
         gold_elite: 30,
         gold_legend: 40,
+        gold_solo_stone: 0,
+        gold_story_stone: 0,
+        gold_elite_stone: 0,
+        gold_legend_stone: 0,
+        manual: false,
         is_active: true,
         default_tier: 'elite',
         default_min_runs: 1,
@@ -215,16 +220,21 @@ describe.skipIf(ownerSkip)(
           account_attempts: 18,
           character_attempts: 3,
           reset_weekday: 4,
-            gold_solo: 10,
+          gold_solo: 10,
           gold_story: 20,
           gold_elite: 30,
           gold_legend: 40,
+          gold_solo_stone: 0,
+          gold_story_stone: 0,
+          gold_elite_stone: 0,
+          gold_legend_stone: 0,
+          manual: false,
           is_active: true,
-        default_tier: 'elite',
-        default_min_runs: 1,
-        group_name: null,
-        short_name: null,
-      });
+          default_tier: 'elite',
+          default_min_runs: 1,
+          group_name: null,
+          short_name: null,
+        });
         ownDungeonId = created.id;
         dungeon = created;
       } else {
@@ -268,13 +278,13 @@ describe.skipIf(ownerSkip)(
       // omitting one inserts that column's schema default instead, which is how
       // a tier change used to silently reset the minimum to 0, and a minimum
       // change used to set the tier to 'none' - i.e. "cannot enter".
-      await setGridCell(characterId, dungeon.id, { tier: 'elite', min_runs: 1 });
+      await setGridCell(characterId, dungeon.id, { tier: 'elite', min_runs: 1, max_runs: null });
       const inserted = (await listGrid([characterId])).find((r) => r.dungeon_id === dungeon.id);
       expect(inserted?.tier).toBe('elite');
       expect(inserted?.min_runs).toBe(1);
 
       // The second write conflicts and updates.
-      await setGridCell(characterId, dungeon.id, { tier: 'elite', min_runs: 2 });
+      await setGridCell(characterId, dungeon.id, { tier: 'elite', min_runs: 2, max_runs: null });
       const updated = (await listGrid([characterId])).find((r) => r.dungeon_id === dungeon.id);
       expect(updated?.tier).toBe('elite');
       expect(updated?.min_runs).toBe(2);

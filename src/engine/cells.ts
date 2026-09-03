@@ -33,7 +33,7 @@ export function buildCells(input: PlanInput): Cell[] {
 
     const characterLeft = input.characterAttemptsLeft[entry.characterId]?.[entry.dungeonId] ?? 0;
     const accountLeft = input.accountAttemptsLeft[entry.dungeonId] ?? 0;
-    const max = Math.min(characterLeft, accountLeft);
+    const max = Math.min(characterLeft, accountLeft, entry.maxRuns);
     if (max <= 0 && entry.minRuns <= 0) continue;
 
     cells.push({

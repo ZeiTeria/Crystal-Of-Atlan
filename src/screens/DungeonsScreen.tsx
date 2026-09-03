@@ -17,6 +17,7 @@ import {
   loadAppSettings,
   maxCharacters as readMaxCharacters,
   setMaxCharacters,
+  setStoneRate,
   type AppSettingsRow,
 } from '../data/roster';
 import type { Tier } from '../engine/types';
@@ -45,6 +46,11 @@ const BLANK: NewDungeon = {
   gold_story: 0,
   gold_elite: 0,
   gold_legend: 0,
+  gold_solo_stone: 0,
+  gold_story_stone: 0,
+  gold_elite_stone: 0,
+  gold_legend_stone: 0,
+  manual: false,
   is_active: true,
   default_tier: 'elite',
   default_min_runs: 1,
@@ -54,10 +60,10 @@ const BLANK: NewDungeon = {
 // literal types widens to `{ [x: string]: number }`, which is not assignable to
 // `Partial<NewDungeon>` - so `{ [c.key]: n }` does not typecheck.
 const GOLD_COLUMNS = [
-  { key: 'gold_solo', label: 'solo', patch: (v: number): Partial<NewDungeon> => ({ gold_solo: v }) },
-  { key: 'gold_story', label: 'story', patch: (v: number): Partial<NewDungeon> => ({ gold_story: v }) },
-  { key: 'gold_elite', label: 'elite', patch: (v: number): Partial<NewDungeon> => ({ gold_elite: v }) },
-  { key: 'gold_legend', label: 'legend', patch: (v: number): Partial<NewDungeon> => ({ gold_legend: v }) },
+  { key: 'gold_solo', stoneKey: 'gold_solo_stone', label: 'solo', patch: (v: number): Partial<NewDungeon> => ({ gold_solo: v }), stonePatch: (v: number): Partial<NewDungeon> => ({ gold_solo_stone: v }) },
+  { key: 'gold_story', stoneKey: 'gold_story_stone', label: 'story', patch: (v: number): Partial<NewDungeon> => ({ gold_story: v }), stonePatch: (v: number): Partial<NewDungeon> => ({ gold_story_stone: v }) },
+  { key: 'gold_elite', stoneKey: 'gold_elite_stone', label: 'elite', patch: (v: number): Partial<NewDungeon> => ({ gold_elite: v }), stonePatch: (v: number): Partial<NewDungeon> => ({ gold_elite_stone: v }) },
+  { key: 'gold_legend', stoneKey: 'gold_legend_stone', label: 'legend', patch: (v: number): Partial<NewDungeon> => ({ gold_legend: v }), stonePatch: (v: number): Partial<NewDungeon> => ({ gold_legend_stone: v }) },
 ] as const;
 
 export default function DungeonsScreen() {
@@ -161,6 +167,31 @@ export default function DungeonsScreen() {
         </span>
       </div>
 
+      <div className="admin-setting">
+        <label htmlFor="stone-rate">Stone drop rate (estimate)</label>
+        <input
+          id="stone-rate"
+          type="number"
+          min={0}
+          max={1}
+          step={0.01}
+          key={settings?.stone_rate ?? 0.40}
+          defaultValue={settings?.stone_rate ?? 0.40}
+          disabled={busy}
+          onBlur={(e) => {
+            const next = Number(e.target.value);
+            if (Number.isNaN(next) || next < 0 || next > 1 || next === settings?.stone_rate) return;
+            void mutate(async () => {
+              await setStoneRate(next);
+              setSettings(await loadAppSettings());
+            });
+          }}
+        />
+        <span className="muted">
+          Used to blend the stone gold into the effective reward. An estimate only.
+        </span>
+      </div>
+
       {dungeons.length === 0 && <p className="muted">No dungeons in the catalogue yet.</p>}
 
       <table className="datatable">
@@ -176,6 +207,7 @@ export default function DungeonsScreen() {
               <th key={c.key}>{c.label}</th>
             ))}
             <th>Active</th>
+            <th>Manual</th>
             <th>Default Tier</th>
             <th>Default Min</th>
             <th />
@@ -261,15 +293,24 @@ export default function DungeonsScreen() {
               </td>
               {GOLD_COLUMNS.map((c) => (
                 <td key={c.key}>
-                  <input
-                    type="number"
-                    aria-label={`${d.name} ${c.label} gold`}
-                    defaultValue={d[c.key]}
-                    // 36 figures get typed into fields already holding a 0;
-                    // without this every one needs the 0 cleared first.
-                    onFocus={(e) => e.target.select()}
-                    onBlur={(e) => void save(d.id, c.patch(Number(e.target.value)))}
-                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <input
+                      type="number"
+                      aria-label={`${d.name} ${c.label} gold base`}
+                      defaultValue={d[c.key as keyof typeof d] as number}
+                      title="Base gold"
+                      onFocus={(e) => e.target.select()}
+                      onBlur={(e) => void save(d.id, c.patch(Number(e.target.value)))}
+                    />
+                    <input
+                      type="number"
+                      aria-label={`${d.name} ${c.label} stone`}
+                      defaultValue={d[c.stoneKey as keyof typeof d] as number}
+                      title="Stone gold"
+                      onFocus={(e) => e.target.select()}
+                      onBlur={(e) => void save(d.id, c.stonePatch(Number(e.target.value)))}
+                    />
+                  </div>
                 </td>
               ))}
               <td>
@@ -278,6 +319,14 @@ export default function DungeonsScreen() {
                   aria-label={`${d.name} active`}
                   checked={d.is_active}
                   onChange={(e) => void save(d.id, { is_active: e.target.checked })}
+                />
+              </td>
+              <td>
+                <input
+                  type="checkbox"
+                  aria-label={`${d.name} manual`}
+                  checked={d.manual}
+                  onChange={(e) => void save(d.id, { manual: e.target.checked })}
                 />
               </td>
               <td>

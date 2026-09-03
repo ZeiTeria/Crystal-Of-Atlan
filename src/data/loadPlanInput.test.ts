@@ -79,7 +79,7 @@ describe('buildPlanInput', () => {
     );
 
     expect(input.grid).toEqual([
-      { characterId: 'c1', dungeonId: 'd2', tier: 'solo', minRuns: 0 },
+      { characterId: 'c1', dungeonId: 'd2', tier: 'solo', minRuns: 0, maxRuns: 3 },
     ]);
   });
 
@@ -93,7 +93,7 @@ describe('buildPlanInput', () => {
     );
 
     expect(input.grid).toEqual([
-      { characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0 },
+      { characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0, maxRuns: 3 },
     ]);
   });
 
@@ -149,6 +149,7 @@ describe('buildPlanInput', () => {
         // Every tier has a figure in this fixture, so nothing was borrowed.
         goldEstimated: [],
         goldUnknown: false,
+        manual: false,
       },
     ]);
   });
@@ -183,5 +184,57 @@ describe('buildPlanInput', () => {
     // Nothing derived from the weekday is observable now that runs are gone,
     // but the Countdown still reads it, so keep it pinned end to end.
     expect(input.settings.goldResetWeekday).toBe(4);
+  });
+});
+
+describe('stone gold', () => {
+  const goldOf = (d: Partial<Row<'dungeons'>>) =>
+    buildPlanInput(
+      rows({ characters: [aCharacterRow('c1')], dungeons: [aDungeonRow('d1', d)] }),
+    ).dungeons[0]?.gold;
+
+  it('leaves a tier at its base when no stone figure is entered', () => {
+    // A blank stone field stores 0. Without the clamp, 0 - base is negative and
+    // the dungeon would price BELOW its own base.
+    expect(goldOf({ gold_elite: 30 })?.elite).toBe(30);
+  });
+
+  it('never prices a tier below its base when the stone figure is lower', () => {
+    // A typo, rather than a real premium.
+    expect(goldOf({ gold_elite: 30, gold_elite_stone: 5 })?.elite).toBe(30);
+  });
+
+  it('blends the premium at the configured rate, rounded to whole gold', () => {
+    // premium 101 at rate 0.4 is 40.4, so the tier is worth 70.4 before
+    // rounding. Gold must stay integral: the LP renderer states its
+    // coefficients are always integers, and assertFeasible re-checks the plan
+    // in integer arithmetic.
+    const gold = goldOf({ gold_elite: 30, gold_elite_stone: 131 })?.elite;
+    expect(gold).toBe(70);
+    expect(Number.isInteger(gold)).toBe(true);
+  });
+});
+
+describe('max runs', () => {
+  const maxOf = (max: number | null) =>
+    buildPlanInput(
+      rows({
+        characters: [aCharacterRow('c1')],
+        dungeons: [aDungeonRow('d1')],           // character_attempts: 3
+        grid: [aGridRow('c1', 'd1', { max_runs: max })],
+      }),
+    ).grid[0]?.maxRuns;
+
+  it('inherits the dungeon cap when no maximum is stored', () => {
+    expect(maxOf(null)).toBe(3);
+  });
+
+  it('clamps a stored maximum above the dungeon cap', () => {
+    // Lowering a dungeon's cap must not leave a stale higher figure in play.
+    expect(maxOf(99)).toBe(3);
+  });
+
+  it('keeps a stored maximum below the cap', () => {
+    expect(maxOf(1)).toBe(1);
   });
 });

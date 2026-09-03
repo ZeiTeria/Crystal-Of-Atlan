@@ -44,6 +44,7 @@ const dungeon = {
   short_name: null,
   goldEstimated: [],
   goldUnknown: false,
+  manual: false,
 };
 
 const mage: CharacterRow = {
@@ -60,7 +61,7 @@ function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
   return {
     characters: [{ id: 'c1', name: 'Mage', class: null }],
     dungeons: [dungeon],
-    grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 2 }],
+    grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 2, maxRuns: 3 }],
     accountAttemptsLeft: { d1: 18 },
     characterAttemptsLeft: { c1: { d1: 3 } },
     goldHeadroom: { c1: 1_000_000 },
@@ -160,7 +161,7 @@ describe('QuestLog cells', () => {
     await waitFor(() => {
       expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
         tier: 'none',
-        min_runs: 2,
+        min_runs: 2, max_runs: 3,
       });
     });
     expect(screen.getByLabelText('Mage minimum runs in Abyss').textContent).toBe('2');
@@ -189,7 +190,7 @@ describe('QuestLog cells', () => {
     await waitFor(() => {
       expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
         tier: 'legend',
-        min_runs: 2,
+        min_runs: 2, max_runs: 3,
       });
     });
   });
@@ -203,7 +204,7 @@ describe('QuestLog cells', () => {
     await waitFor(() => {
       expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
         tier: 'legend',
-        min_runs: 1,
+        min_runs: 1, max_runs: 3,
       });
     });
   });
@@ -219,7 +220,46 @@ describe('QuestLog cells', () => {
     await waitFor(() => {
       expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
         tier: 'elite',
-        min_runs: 2,
+        min_runs: 2, max_runs: 3,
+      });
+    });
+  });
+
+  it('drags the minimum down when the maximum steps below it', async () => {
+    // The pair moves together once it is equal, so a cell at 1/1 goes to 0/0
+    // rather than to an impossible minimum 1 / maximum 0.
+    renderLog({ gridRows: [{ ...storedRow, min_runs: 1, max_runs: 1 }] });
+    fireEvent.click(screen.getByRole('button', { name: /one fewer maximum run of abyss for mage/i }));
+    await waitFor(() => {
+      expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
+        tier: 'elite',
+        min_runs: 0, max_runs: 0,
+      });
+    });
+  });
+
+  it('drags the maximum up when the minimum steps above it', async () => {
+    // The same rule in the other direction: 1/1 goes to 2/2.
+    renderLog({ gridRows: [{ ...storedRow, min_runs: 1, max_runs: 1 }] });
+    fireEvent.click(screen.getByRole('button', { name: /one more minimum run of abyss for mage/i }));
+    await waitFor(() => {
+      expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
+        tier: 'elite',
+        min_runs: 2, max_runs: 2,
+      });
+    });
+  });
+
+  it('leaves the tier alone when the maximum reaches zero', async () => {
+    // Maximum 0 means "I do not want this character here this week". It is NOT
+    // tier `none`, which means the difficulty has not been cleared at all -
+    // writing `none` here would drop the pair from the planner permanently.
+    renderLog({ gridRows: [{ ...storedRow, min_runs: 0, max_runs: 1 }] });
+    fireEvent.click(screen.getByRole('button', { name: /one fewer maximum run of abyss for mage/i }));
+    await waitFor(() => {
+      expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
+        tier: 'elite',
+        min_runs: 0, max_runs: 0,
       });
     });
   });
@@ -233,7 +273,7 @@ describe('QuestLog cells', () => {
     await waitFor(() => {
       expect(vi.mocked(setGridCell)).toHaveBeenCalledExactlyOnceWith('c1', 'd1', {
         tier: 'elite',
-        min_runs: 1,
+        min_runs: 1, max_runs: 3,
       });
     });
   });
@@ -262,7 +302,7 @@ describe('QuestLog cells', () => {
     await waitFor(() => {
       expect(vi.mocked(setGridCell)).toHaveBeenCalledExactlyOnceWith('c1', 'd1', {
         tier: 'elite',
-        min_runs: 3,
+        min_runs: 3, max_runs: 3,
       });
     });
   });
@@ -528,7 +568,7 @@ describe('QuestLog one character at a time', () => {
     await waitFor(() => {
       expect(vi.mocked(setGridCell)).toHaveBeenCalledWith('c1', 'd1', {
         tier: 'legend',
-        min_runs: 2,
+        min_runs: 2, max_runs: 3,
       });
     });
   });

@@ -24,6 +24,7 @@ const abyss: Dungeon = {
   short_name: null,
   goldEstimated: [],
   goldUnknown: false,
+  manual: false,
 };
 
 const onAdd = vi.fn<(name: string, cls: string | null, tiers: Record<string, Tier>) => Promise<void>>();
@@ -191,7 +192,7 @@ describe('AddCharacterModal templates', () => {
   it('copies an existing character', async () => {
     renderModal({
       ...withTwo,
-      grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'story', minRuns: 3 }],
+      grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'story', minRuns: 3, maxRuns: 3 }],
     });
     fireEvent.change(screen.getByLabelText('Template'), { target: { value: 'char:c1' } });
     fireEvent.change(screen.getByLabelText('New character name'), { target: { value: 'Rogue' } });

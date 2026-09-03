@@ -22,6 +22,7 @@ import { sortOrderPatches } from '../ui/reorder';
 import { useSortableList } from '../ui/useSortableList';
 import { matrixColumns } from './columns';
 import { goldWarning } from './goldWarning';
+import { manualDaysLeft, manualWarning } from './manualPace';
 import { gold } from './planText';
 import './QuestLog.css';
 
@@ -89,6 +90,7 @@ export default function QuestLog({
   // Keyed by character AND dungeon: keyed by dungeon alone, switching character
   // mid-write showed the previous one's value on the new one's row.
   const [pending, setPending] = useState<Record<string, number>>({});
+  const [pendingMax, setPendingMax] = useState<Record<string, number>>({});
   const [pendingTier, setPendingTier] = useState<Record<string, Tier>>({});
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   useEffect(() => {
@@ -155,24 +157,26 @@ export default function QuestLog({
    * minimum to zero.
    */
 
-  /** Moves the number now; writes it once the clicking has stopped. */
-  function stepMinRuns(dungeonId: string, tier: Tier, next: number) {
+  /** Moves the numbers now; writes them once the clicking has stopped. */
+  function stepRuns(dungeonId: string, tier: Tier, nextMin: number, nextMax: number) {
     if (!selected) return;
     const characterId = selected.id;
     const key = `${characterId}:${dungeonId}`;
-    setPending((p) => ({ ...p, [key]: next }));
+    setPending((p) => ({ ...p, [key]: nextMin }));
+    setPendingMax((p) => ({ ...p, [key]: nextMax }));
 
     const running = timers.current[key];
     if (running) clearTimeout(running);
     timers.current[key] = setTimeout(() => {
       delete timers.current[key];
-      void mutate(() => setGridCell(characterId, dungeonId, { tier, min_runs: next })).finally(
-        () => {
-          // The refreshed props now carry this value, so the local one steps
-          // aside rather than shadowing a later change from anywhere else.
-          setPending(({ [key]: _dropped, ...rest }) => rest);
-        },
-      );
+      void mutate(() =>
+        setGridCell(characterId, dungeonId, { tier, min_runs: nextMin, max_runs: nextMax })
+      ).finally(() => {
+        // The refreshed props now carry this value, so the local one steps
+        // aside rather than shadowing a later change from anywhere else.
+        setPending(({ [key]: _dropped, ...rest }) => rest);
+        setPendingMax(({ [key]: _dropped, ...rest }) => rest);
+      });
     }, STEP_SETTLE_MS);
   }
 
@@ -183,14 +187,18 @@ export default function QuestLog({
    * rather than a run of clicks, and it changes the plan, so the sooner the
    * re-solve starts the sooner the board agrees with the log.
    */
-  function chooseTier(dungeonId: string, next: Tier, minRuns: number) {
+  function chooseTier(dungeonId: string, next: Tier, minRuns: number, maxRuns: number) {
     if (!selected) return;
     const characterId = selected.id;
     const key = `${characterId}:${dungeonId}`;
     setPendingTier((p) => ({ ...p, [key]: next }));
-    void mutate(() => setGridCell(characterId, dungeonId, { tier: next, min_runs: minRuns }))
-      .finally(() => setPendingTier(({ [key]: _dropped, ...rest }) => rest));
+    void mutate(() =>
+      setGridCell(characterId, dungeonId, { tier: next, min_runs: minRuns, max_runs: maxRuns })
+    ).finally(() => setPendingTier(({ [key]: _dropped, ...rest }) => rest));
   }
+
+  // Day granularity, so it is computed once per render rather than ticked.
+  const manualDays = manualDaysLeft(dungeons, input.settings, new Date());
 
   // Group order follows the column order, so the log and the board agree.
   const groups: { name: string; dungeons: typeof dungeons }[] = [];
@@ -411,6 +419,7 @@ export default function QuestLog({
                 const row = stored.get(key);
                 const tier = pendingTier[key] ?? row?.tier ?? d.default_tier;
                 const minRuns = pending[key] ?? row?.min_runs ?? d.default_min_runs;
+                const maxRuns = pendingMax[key] ?? row?.max_runs ?? d.characterAttempts;
                 const assignment = assignments.find(
                   (a) => a.characterId === selected.id && a.dungeonId === d.id,
                 );
@@ -420,7 +429,9 @@ export default function QuestLog({
                   .filter((a) => a.dungeonId === d.id)
                   .reduce((sum, a) => sum + a.runs, 0);
                 const remaining = input.accountAttemptsLeft[d.id] ?? 0;
-                const why = goldWarning(d, tier);
+                let why = goldWarning(d, tier);
+                const pace = manualWarning(manualDays.get(d.id), runs);
+                if (pace) why = why ? `${why}\n\n${pace}` : pace;
 
                 return (
                   <div key={d.id} className={`dungeon-row ${runs === 0 ? 'dimmed' : ''}`}>
@@ -444,7 +455,7 @@ export default function QuestLog({
                         // The minimum goes with the tier, untouched: a
                         // tier-only write would insert the schema default and
                         // silently reset it.
-                        onChange={(next) => chooseTier(d.id, next, minRuns)}
+                        onChange={(next) => chooseTier(d.id, next, minRuns, maxRuns)}
                       />
                     </div>
                     <div className="d-stepper">
@@ -453,7 +464,9 @@ export default function QuestLog({
                         className="stepper-btn"
                         aria-label={`One fewer minimum run of ${d.name} for ${selected.name}`}
                         disabled={parked || minRuns <= 0}
-                        onClick={() => stepMinRuns(d.id, tier, minRuns - 1)}
+                        onClick={() => {
+                          stepRuns(d.id, tier, minRuns - 1, maxRuns);
+                        }}
                       >
                         &minus;
                       </button>
@@ -469,7 +482,44 @@ export default function QuestLog({
                         className="stepper-btn"
                         aria-label={`One more minimum run of ${d.name} for ${selected.name}`}
                         disabled={parked || minRuns >= d.characterAttempts}
-                        onClick={() => stepMinRuns(d.id, tier, minRuns + 1)}
+                        onClick={() => {
+                          const nextMin = minRuns + 1;
+                          const nextMax = minRuns === maxRuns ? nextMin : maxRuns;
+                          stepRuns(d.id, tier, nextMin, nextMax);
+                        }}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="d-stepper">
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        aria-label={`One fewer maximum run of ${d.name} for ${selected.name}`}
+                        disabled={parked || maxRuns <= 0}
+                        onClick={() => {
+                          const nextMax = maxRuns - 1;
+                          const nextMin = minRuns === maxRuns ? nextMax : minRuns;
+                          stepRuns(d.id, tier, nextMin, nextMax);
+                        }}
+                      >
+                        &minus;
+                      </button>
+                      <span
+                        className="stepper-val"
+                        aria-label={`${selected.name} maximum runs in ${d.name}`}
+                        style={{ color: maxRuns > 0 ? hue : 'var(--text-disabled)' }}
+                      >
+                        {maxRuns}
+                      </span>
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        aria-label={`One more maximum run of ${d.name} for ${selected.name}`}
+                        disabled={parked || maxRuns >= d.characterAttempts}
+                        onClick={() => {
+                          stepRuns(d.id, tier, minRuns, maxRuns + 1);
+                        }}
                       >
                         +
                       </button>

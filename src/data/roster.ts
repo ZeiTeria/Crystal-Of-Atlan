@@ -33,6 +33,14 @@ export async function setMaxCharacters(value: number): Promise<void> {
   if (error) throw error;
 }
 
+export async function setStoneRate(value: number): Promise<void> {
+  const { error } = await supabase
+    .from('app_settings')
+    .update({ stone_rate: value })
+    .eq('id', true);
+  if (error) throw error;
+}
+
 /**
  * The name a character gets when its owner does not type one.
  *

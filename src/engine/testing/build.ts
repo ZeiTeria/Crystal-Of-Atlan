@@ -17,6 +17,7 @@ export function aDungeon(id: string, overrides: Partial<Dungeon> = {}): Dungeon 
     characterAttempts: 3,
     resetWeekday: 1,
     gold: { solo: 10, story: 20, elite: 30, legend: 40 },
+    manual: false,
     default_tier: 'elite',
     default_min_runs: 1,
     sort_order: 0,
@@ -35,7 +36,7 @@ export function aDungeon(id: string, overrides: Partial<Dungeon> = {}): Dungeon 
 export function anInput(parts: {
   characters: Character[];
   dungeons: Dungeon[];
-  grid: GridEntry[];
+  grid: (Omit<GridEntry, 'maxRuns'> & { maxRuns?: number })[];
   accountAttemptsLeft?: Record<string, number>;
   characterAttemptsLeft?: Record<string, Record<string, number>>;
   goldHeadroom?: Record<string, number>;
@@ -55,10 +56,15 @@ export function anInput(parts: {
   const goldHeadroom = parts.goldHeadroom
     ?? Object.fromEntries(characters.map((c) => [c.id, goldCap]));
 
+  const fullGrid: GridEntry[] = grid.map((g) => ({
+    ...g,
+    maxRuns: g.maxRuns ?? 3,
+  }));
+
   return {
     characters,
     dungeons,
-    grid,
+    grid: fullGrid,
     accountAttemptsLeft,
     characterAttemptsLeft,
     goldHeadroom,
