@@ -1,8 +1,10 @@
 .public-dungeon-table-container {
   margin-top: 48px;
+  overflow-x: auto;
 }
 .public-dungeon-table {
   width: 100%;
+  min-width: 460px;
   border-collapse: collapse;
   margin-top: 16px;
   font-variant-numeric: tabular-nums;

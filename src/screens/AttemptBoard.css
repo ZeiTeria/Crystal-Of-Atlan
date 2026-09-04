@@ -64,11 +64,18 @@
   flex: 1;
   display: flex;
   align-items: stretch;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
+/*
+ * A basis floor, not a bare `flex: 1`. Twelve tiles sharing the strip by ratio
+ * alone squeezed each one until the gold figure and its "% of cap" label ran
+ * into each other ("707,98871% of cap"). With a floor the tiles keep a legible
+ * width and .roster-tiles scrolls instead, which is why it is overflow-x:auto.
+ */
 .roster-tile {
-  flex: 1;
+  flex: 1 0 170px;
   padding: 18px 20px;
   border-right: 1px solid var(--line);
   display: flex;
@@ -112,6 +119,7 @@
 .tile-gold-row {
   display: flex;
   justify-content: space-between;
+  gap: 10px;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);
@@ -140,12 +148,27 @@
   color: var(--accent-light);
 }
 
+/*
+ * minmax(0, 1fr), never a bare 1fr: `1fr` is shorthand for minmax(auto, 1fr),
+ * and that `auto` floor is the column's min-content width, which a card full of
+ * a dungeon name and 18 attempt slots will not go below. Four of those came to
+ * 921px inside a 721px grid at 769px wide, and the whole page scrolled sideways.
+ * The zero floor lets a column actually shrink; the tablet rule below then keeps
+ * the cards readable rather than merely narrow.
+ */
 .board-grid {
   border: 1px solid var(--line);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
   background: var(--line);
+}
+
+/* Between the phone layout and a desktop wide enough for four, two fit. */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .board-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .board-card {
