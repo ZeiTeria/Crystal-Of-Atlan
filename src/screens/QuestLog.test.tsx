@@ -95,6 +95,7 @@ function renderLog(
     assignments?: PlanAssignment[];
     gridRows?: GridRow[];
     roster?: CharacterRow[];
+    onAddClick?: () => void;
   } = {},
 ) {
   return render(
@@ -105,6 +106,7 @@ function renderLog(
       roster={opts.roster ?? [mage]}
       mutate={mutate}
       relabel={relabel}
+      onAddClick={opts.onAddClick}
     />,
   );
 }
@@ -571,6 +573,23 @@ describe('QuestLog one character at a time', () => {
         min_runs: 2, max_runs: 3,
       });
     });
+  });
+
+  /*
+   * The bug this guards: every way to add a character lived in the roster,
+   * which is the desktop branch, and QuestLog's own "Add character" button
+   * only renders in the zero-character empty state. So on a phone, the moment
+   * you had one character you could never make a second. CharacterPicker's
+   * own tests cover the button; this covers the wiring, which is what broke.
+   */
+  it('offers a way to add a character from the phone tree', async () => {
+    const onAddClick = vi.fn();
+    stubMatchMedia(true);
+    renderLog({ roster: [mage], onAddClick });
+    await screen.findByLabelText('Mage tier in Abyss');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add character' }));
+    expect(onAddClick).toHaveBeenCalledOnce();
   });
 });
 

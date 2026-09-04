@@ -216,6 +216,7 @@ export default function QuestLog({
           characters={characters}
           selectedId={selected.id}
           onSelect={setSelectedId}
+          onAdd={onAddClick}
         />
       ) : (
         <div className="quest-sidebar">

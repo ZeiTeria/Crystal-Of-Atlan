@@ -29,3 +29,17 @@
   border-color: var(--accent);
   color: var(--accent-ink);
 }
+
+/*
+ * The add button carries .picker-tab too, so everything it shares with a tab -
+ * padding, radius, colour, the 40px touch target - is already set. Only the
+ * differences belong here: dashed to read as an affordance rather than a
+ * character, and the glyph's own metrics. .picker-tab's 0.1em letter-spacing
+ * is trailing space after the last character, which shoves a lone "+" visibly
+ * left of centre.
+ */
+.picker-add {
+  border-style: dashed;
+  font-size: 1rem;
+  letter-spacing: 0;
+}

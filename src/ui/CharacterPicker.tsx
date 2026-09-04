@@ -9,10 +9,12 @@ export default function CharacterPicker({
   characters,
   selectedId,
   onSelect,
+  onAdd,
 }: {
   characters: { id: string; name: string }[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onAdd?: () => void;
 }) {
   return (
     <div className="picker" role="tablist" aria-label="Character">
@@ -28,6 +30,11 @@ export default function CharacterPicker({
           {c.name}
         </button>
       ))}
+      {onAdd && (
+        <button type="button" className="picker-tab picker-add" onClick={onAdd} aria-label="Add character">
+          +
+        </button>
+      )}
     </div>
   );
 }
