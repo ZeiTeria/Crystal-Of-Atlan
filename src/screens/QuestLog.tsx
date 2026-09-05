@@ -448,6 +448,7 @@ export default function QuestLog({
                       </span>
                     </div>
                     <div className="d-tier">
+                      <span className="d-ctl-label">Difficulty</span>
                       <TierSelect
                         value={tier}
                         label={`${selected.name} tier in ${d.name}`}
@@ -459,7 +460,8 @@ export default function QuestLog({
                         onChange={(next) => chooseTier(d.id, next, minRuns, maxRuns)}
                       />
                     </div>
-                    <div className="d-stepper">
+                    <div className="d-stepper d-stepper-min">
+                      <span className="d-ctl-label">Min</span>
                       <button
                         type="button"
                         className="stepper-btn"
@@ -492,7 +494,8 @@ export default function QuestLog({
                         +
                       </button>
                     </div>
-                    <div className="d-stepper">
+                    <div className="d-stepper d-stepper-max">
+                      <span className="d-ctl-label">Max</span>
                       <button
                         type="button"
                         className="stepper-btn"
@@ -525,7 +528,10 @@ export default function QuestLog({
                         +
                       </button>
                     </div>
-                    <div className="d-gold">{runs > 0 ? gold(assignment?.goldTotal ?? 0) : '—'}</div>
+                    <div className="d-gold">
+                      <span className="d-ctl-label">Gold</span>
+                      <span>{runs > 0 ? gold(assignment?.goldTotal ?? 0) : '—'}</span>
+                    </div>
                   </div>
                 );
               })}

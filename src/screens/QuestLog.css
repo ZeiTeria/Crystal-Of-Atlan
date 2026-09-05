@@ -278,8 +278,29 @@
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Difficulty / Min / Max / Gold were four unlabelled controls: two identical
+ * steppers side by side with nothing saying which was which. The label is a
+ * flex child at `flex: 0 0 100%`, so it takes a line of its own above the
+ * control without needing a wrapper element - which also means the stepper's
+ * own button row is untouched, and the columns stay aligned because every row
+ * carries the same label text.
+ */
+.d-ctl-label {
+  flex: 0 0 100%;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
 .d-tier {
-  width: 64px;
+  width: 78px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
   font-weight: 800;
   font-size: 11px;
   text-transform: capitalize;
@@ -287,6 +308,7 @@
 
 .d-stepper {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px;
 }
@@ -319,10 +341,18 @@
 
 .d-gold {
   width: 88px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 3px;
   text-align: right;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);
+}
+
+.d-gold .d-ctl-label {
+  text-align: right;
 }
 
 
@@ -347,18 +377,40 @@
     padding: 10px 0;
     overflow: visible;
   }
+  /*
+   * The old rule gave each stepper `width: 100%` and right-aligned it, so a
+   * dungeon became four stacked lines with the whole left half of the screen
+   * empty. One grid instead: the name and its per-run line take the top row,
+   * and the four controls sit together underneath where they can be compared.
+   */
   .dungeon-row {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    grid-template-areas:
+      "info info gold"
+      "tier min  max";
+    gap: 12px 14px;
+    align-items: end;
+    padding: 16px 0;
   }
-  .d-stepper {
-    order: 4;
-    margin-top: 10px;
-    width: 100%;
-    justify-content: flex-end;
-  }
+  .dungeon-row-info { grid-area: info; }
+  /* Gold is a result, not a control, so it reads with the name rather than
+     sitting in the row of things you can change. */
   .d-gold {
-    order: 3;
-    text-align: right;
+    grid-area: gold;
+    width: auto;
+    align-self: start;
+  }
+  .d-tier {
+    grid-area: tier;
+    width: auto;
+    min-width: 72px;
+  }
+  .d-stepper-min { grid-area: min; }
+  .d-stepper-max { grid-area: max; }
+  .d-stepper {
+    width: auto;
+    justify-content: flex-start;
   }
 }
 

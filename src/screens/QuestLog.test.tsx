@@ -576,6 +576,22 @@ describe('QuestLog one character at a time', () => {
   });
 
   /*
+   * Two identical steppers sat side by side with nothing on screen saying
+   * which was the minimum and which the maximum, and the tier and gold
+   * columns were unlabelled too. The aria-labels were right the whole time,
+   * so only a test that reads what is VISIBLE catches this.
+   */
+  it('names every control in a dungeon row on screen, not just to a reader', async () => {
+    renderLog();
+    await screen.findByLabelText('Mage tier in Abyss');
+
+    const row = screen.getByText('Abyss').closest('.dungeon-row');
+    expect(row).not.toBeNull();
+    const labels = [...row!.querySelectorAll('.d-ctl-label')].map((n) => n.textContent);
+    expect(labels).toEqual(['Difficulty', 'Min', 'Max', 'Gold']);
+  });
+
+  /*
    * The bug this guards: every way to add a character lived in the roster,
    * which is the desktop branch, and QuestLog's own "Add character" button
    * only renders in the zero-character empty state. So on a phone, the moment
