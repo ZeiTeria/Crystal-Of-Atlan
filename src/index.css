@@ -85,8 +85,8 @@ p {
  * applied only where those pseudo-elements do not exist - Firefox.
  */
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 
 *::-webkit-scrollbar-track {
@@ -96,7 +96,8 @@ p {
 *::-webkit-scrollbar-thumb {
   background-color: var(--text-faint);
   border-radius: 999px;
-  border: 2px solid transparent;
+  /* 1px, not 2px: at a 6px track a 2px inset would leave a 2px thumb. */
+  border: 1px solid transparent;
   background-clip: padding-box;
 }
 
