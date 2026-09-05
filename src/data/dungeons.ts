@@ -58,11 +58,10 @@ export async function updateDungeon(id: string, patch: Omit<Partial<DungeonRow>,
 }
 
 /**
- * A hard delete. `runs.dungeon_id` and `character_dungeon.dungeon_id` both
- * cascade from `dungeons` (see `supabase/migrations/0001_init.sql`), so deleting
- * a dungeon silently destroys every logged run of it, for every character, with
- * no confirmation beyond the screen's own dialog — deactivate it instead, which
- * is why `is_active` exists.
+ * A hard delete. `character_dungeon.dungeon_id` cascades from `dungeons` (see
+ * `supabase/migrations/0001_init.sql`), so deleting a dungeon silently destroys
+ * every character's unlocked tier for it, with no confirmation beyond the
+ * screen's own dialog — deactivate it instead, which is why `is_active` exists.
  */
 export async function deleteDungeon(id: string): Promise<void> {
   const { error } = await supabase.from('dungeons').delete().eq('id', id);

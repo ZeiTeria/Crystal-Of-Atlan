@@ -465,11 +465,17 @@ describe('QuestLog roster management', () => {
     expect(mutate).toHaveBeenCalled();
   });
 
-  it('warns that deleting a character takes its runs with it', async () => {
+  /*
+   * The warning used to promise that "all its logged runs" go too. The runs
+   * table was emptied by 0009 and dropped by 0016, so that was a threat about
+   * data that cannot exist. It names what is actually destroyed now.
+   */
+  it('warns that deleting a character takes its unlocked tiers with it', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderLog();
     fireEvent.click(await screen.findByRole('button', { name: /delete mage/i }));
-    expect(confirmSpy.mock.calls[0]?.[0]).toMatch(/runs/i);
+    expect(confirmSpy.mock.calls[0]?.[0]).toMatch(/unlocked tiers/i);
+    expect(confirmSpy.mock.calls[0]?.[0]).not.toMatch(/logged runs/i);
     await waitFor(() => {
       expect(vi.mocked(deleteCharacter)).toHaveBeenCalledWith('c1');
     });
@@ -589,6 +595,33 @@ describe('QuestLog one character at a time', () => {
     expect(row).not.toBeNull();
     const labels = [...row!.querySelectorAll('.d-ctl-label')].map((n) => n.textContent);
     expect(labels).toEqual(['Difficulty', 'Min', 'Max', 'Gold']);
+  });
+
+  /*
+   * Reordering was the last roster action with no phone home. Rename, class,
+   * park and delete were always in the character header, which both trees
+   * render; only the drag grip was desktop-only, and a horizontal drag on the
+   * picker is already its scroll gesture.
+   */
+  it('reorders the roster from the phone tree', async () => {
+    stubMatchMedia(true);
+    renderLog({ roster: [mage, rogue] });
+    await screen.findByLabelText('Mage tier in Abyss');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move Mage later' }));
+    await waitFor(() => {
+      expect(vi.mocked(setCharacterOrder)).toHaveBeenCalledWith([
+        { id: 'c2', sort_order: 10 },
+        { id: 'c1', sort_order: 20 },
+      ]);
+    });
+  });
+
+  it('cannot move the first character earlier', async () => {
+    stubMatchMedia(true);
+    renderLog({ roster: [mage, rogue] });
+    await screen.findByLabelText('Mage tier in Abyss');
+    expect(screen.getByRole('button', { name: 'Move Mage earlier' })).toHaveProperty('disabled', true);
   });
 
   /*

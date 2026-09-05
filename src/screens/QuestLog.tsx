@@ -18,7 +18,7 @@ import { getClassHue } from '../ui/hues';
 import TierGem from '../ui/TierGem';
 import TierSelect from '../ui/TierSelect';
 import { PHONE, useMediaQuery } from '../ui/useMediaQuery';
-import { sortOrderPatches } from '../ui/reorder';
+import { reorder, sortOrderPatches } from '../ui/reorder';
 import { useSortableList } from '../ui/useSortableList';
 import { matrixColumns } from './columns';
 import { goldWarning } from './goldWarning';
@@ -118,6 +118,24 @@ export default function QuestLog({
     onReorder: (ids) => void write(() => setCharacterOrder(sortOrderPatches(ids))),
   });
   const characters = order.map((id) => byId.get(id)).filter((c) => c !== undefined);
+
+  /*
+   * Reorder for a phone. Dragging is a desktop affordance here: the picker is a
+   * horizontally SCROLLING strip, so a horizontal drag is already the scroll
+   * gesture and cannot also mean "move this character". Two buttons instead,
+   * going through the same reorder() the drag uses so the two can never
+   * disagree about what "one earlier" means.
+   */
+  const moveSelected = (id: string, delta: number) => {
+    const ids = characters.map((c) => c.id);
+    // `selected.id`, never `selectedId`: nothing is selected until you tap,
+    // and until then `selected` is characters[0] while `selectedId` is null.
+    const from = ids.indexOf(id);
+    if (from < 0) return;
+    const next = reorder(ids, from, from + delta);
+    if (next.every((id, i) => id === ids[i])) return;
+    void write(() => setCharacterOrder(sortOrderPatches(next)));
+  };
 
   // Falls back to the first rather than showing nothing when the selection
   // names a character that has since been deleted.
@@ -377,6 +395,29 @@ export default function QuestLog({
               />
             </div>
             <div className="qh-actions">
+              {isPhone && (
+                <span className="qh-reorder">
+                  <button
+                    type="button"
+                    className="qh-move"
+                    aria-label={`Move ${selected.name} earlier`}
+                    disabled={characters[0]?.id === selected.id}
+                    onClick={() => moveSelected(selected.id, -1)}
+                  >
+                    &lsaquo;
+                  </button>
+                  <span className="qh-move-label">Order</span>
+                  <button
+                    type="button"
+                    className="qh-move"
+                    aria-label={`Move ${selected.name} later`}
+                    disabled={characters[characters.length - 1]?.id === selected.id}
+                    onClick={() => moveSelected(selected.id, 1)}
+                  >
+                    &rsaquo;
+                  </button>
+                </span>
+              )}
               <label className="qh-park">
                 <input
                   type="checkbox"
@@ -393,7 +434,7 @@ export default function QuestLog({
                 aria-label={`Delete ${selected.name}`}
                 onClick={() => {
                   const ok = window.confirm(
-                    `Delete ${selected.name}? Its unlocked tiers and all its logged runs go too.`,
+                    `Delete ${selected.name}? Its unlocked tiers go too.`,
                   );
                   if (ok) void mutate(() => deleteCharacter(selected.id));
                 }}

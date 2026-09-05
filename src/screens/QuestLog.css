@@ -485,6 +485,41 @@
   cursor: pointer;
 }
 
+/* Phone-only: the desktop roster reorders by dragging its grip. */
+.qh-reorder {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.qh-move-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.qh-move {
+  width: 34px;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: 16px;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-control);
+  cursor: pointer;
+}
+
+.qh-move:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
 /* Only the log fills the height; the board is a long scrolling page. */
 .plan-screen.is-log {
   display: flex;

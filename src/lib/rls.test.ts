@@ -30,11 +30,10 @@ const TABLES = [
   'characters',
   'dungeons',
   'character_dungeon',
-  'runs',
 ] as const;
 
 /** The tables whose rows belong to exactly one user. */
-const OWNED_TABLES = ['game_accounts', 'characters', 'character_dungeon', 'runs'] as const;
+const OWNED_TABLES = ['game_accounts', 'characters', 'character_dungeon'] as const;
 
 const NETWORK_TIMEOUT = 30_000;
 

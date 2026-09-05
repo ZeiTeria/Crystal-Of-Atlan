@@ -124,7 +124,7 @@ export async function toggleCharacterActive(id: string, is_active: boolean): Pro
   if (error) throw error;
 }
 
-/** Grid rows and logged runs cascade from the character. */
+/** Grid rows cascade from the character. */
 export async function deleteCharacter(id: string): Promise<void> {
   const { error } = await supabase.from('characters').delete().eq('id', id);
   if (error) throw error;

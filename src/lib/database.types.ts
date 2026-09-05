@@ -202,30 +202,6 @@ export interface Database {
         };
         Relationships: [];
       };
-      runs: {
-        Row: {
-          id: string;
-          character_id: string;
-          dungeon_id: string;
-          ran_at: string;
-          gold_earned: number;
-        };
-        Insert: {
-          id?: string;
-          character_id: string;
-          dungeon_id: string;
-          ran_at?: string;
-          gold_earned: number;
-        };
-        Update: {
-          id?: string;
-          character_id?: string;
-          dungeon_id?: string;
-          ran_at?: string;
-          gold_earned?: number;
-        };
-        Relationships: [];
-      };
     };
     Views: Record<string, never>;
     Functions: {

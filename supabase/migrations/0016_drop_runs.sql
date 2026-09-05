@@ -1,0 +1,15 @@
+-- Drops the run-history table.
+--
+-- 0009 emptied it when the app stopped offering a Log button: this is a
+-- reference for how many runs a character needs and what they pay, not a
+-- tracker of what has been done. Nothing has read or written it since --
+-- the only mentions left in the app were a test asserting its own RLS policy
+-- and two comments describing the cascade.
+--
+-- Keeping it was not free: it carried an RLS policy and two foreign keys that
+-- every future schema change had to reason about, and a `delete character`
+-- confirmation that promised to destroy "logged runs" that cannot exist.
+--
+-- IRREVERSIBLE, though 0009 already deleted every row, so there is nothing
+-- left to lose. If logging is ever wanted again, recreate it from 0001_init.
+drop table if exists public.runs;
