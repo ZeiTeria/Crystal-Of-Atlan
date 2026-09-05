@@ -151,16 +151,23 @@ export default function AttemptBoard({
               </div>
             );
           })}
-          <button
-            type="button"
-            className="add-character-btn"
-            disabled={atCap}
-            title={atCap ? `The roster is full at ${maxCharacters} characters.` : undefined}
-            onClick={onAddClick}
-          >
-            {atCap ? `${characters.length} / ${maxCharacters}` : '+ Add'}
-          </button>
         </div>
+        {/*
+          * Outside .roster-tiles on purpose. It is an action, not a roster
+          * member, and inside the scroller it sat past all twelve tiles - to
+          * add a thirteenth character you had to scroll the roster to its end
+          * to find the button. Here it is always in view.
+          */}
+        <button
+          type="button"
+          className="add-character-btn"
+          disabled={atCap}
+          title={atCap ? `The roster is full at ${maxCharacters} characters.` : undefined}
+          onClick={onAddClick}
+        >
+          <span className="add-btn-main">{atCap ? 'Full' : '+ Add'}</span>
+          <span className="add-btn-count">{characters.length} / {maxCharacters}</span>
+        </button>
       </div>
 
       <div className="board-ceiling">

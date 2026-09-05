@@ -69,3 +69,44 @@ p {
     animation-duration: 0.01ms !important;
   }
 }
+
+/*
+ * One scrollbar treatment for the whole app. Ten containers scroll and none
+ * were styled, so Chrome on Windows drew a 15px light slab across a near-black
+ * UI. Deliberately NOT hidden: the roster strip keeps nine of twelve characters
+ * off-screen, so this bar is the affordance that says so - which is also why
+ * the thumb is --text-faint rather than a barely-there --line-strong.
+ *
+ * The two mechanisms are mutually exclusive, NOT complementary: measured in
+ * Chrome 152, setting `scrollbar-width` makes Chrome ignore every
+ * ::-webkit-scrollbar rule on that element. Writing both, as is commonly
+ * suggested, silently kills the webkit design. So webkit gets the styling it
+ * can express (rounded, inset, a hover state) and the standard properties are
+ * applied only where those pseudo-elements do not exist - Firefox.
+ */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--text-faint);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-dim);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-faint) transparent;
+  }
+}
