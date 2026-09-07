@@ -143,7 +143,8 @@ export default function GoldScreen() {
         4. Still unmeasured
       </h3>
       <ul className="gold-notes">
-        <li><strong>What rule does the gold potion follow?</strong> It pays about 6,644 on Duskfeather Lair, which is neither 10% of C nor any obvious share of the base. Run Heart Of Taboos with the potion as the only buff: it gains 3,322 if the potion scales with C, 4,367 if it scales with the base, and 6,644 if it is a flat amount per dungeon.</li>
+        <li><strong>How big is the gold potion, exactly?</strong> It has only ever been measured with the title also active, and its two readings disagree by 12 gold. Run Duskfeather Lair elite with the potion as the only buff, no stone: 86,138 means it is worth 6,638, 86,150 means 6,650, and anything else means it is not simply additive with the title.</li>
+        <li><strong>What rule does the potion follow?</strong> It pays about 13.3% of C on Duskfeather Lair, which is neither 10% of C nor any obvious share of the base. This CANNOT be answered on Duskfeather Lair - every candidate rule is calibrated there, so all of them predict the same number. What separates them is a dungeon with a different C-to-base ratio, and Queen Coronation has the most extreme one. Run it with the potion as the only buff, no stone: 48,458 if the potion scales with C, 49,628 if it scales with the base, 52,444 if it is flat per dungeon.</li>
         <li><strong>Story gold for six dungeons:</strong> Checkmate, Queen Coronation, Temple Of Fate, Apocalyptic Descent, Duskfeather Lair, The Deep Dive.</li>
         <li><strong>Does C change with difficulty?</strong> No story-tier C has been measured anywhere.</li>
         <li><strong>Kraken's Spine disagrees on the elite/story ratio.</strong> Heart Of Taboos and Shackled Psyche are both exactly 1.25; Kraken's Spine is 1.23149. At 1.25 its story figure would be 59,072 rather than the stored 59,960, so it is worth re-running.</li>
