@@ -8,6 +8,7 @@ export interface Settings {
   resetHour: number;
   /** The game server's timezone, e.g. 'Asia/Jakarta'. */
   timeZone: string;
+  abnormalSense: boolean;
 }
 
 /**
@@ -52,6 +53,7 @@ export function derivePlanInput(args: {
       goldResetWeekday: settings.goldResetWeekday,
       resetHour: settings.resetHour,
       timeZone: settings.timeZone,
+      abnormalSense: settings.abnormalSense,
     },
   };
 }

@@ -77,7 +77,7 @@ describe('noContention', () => {
   });
 
   it('is false when the account cap bites', () => {
-    const characters = ['c1', 'c2', 'c3'].map(aCharacter);
+    const characters = ['c1', 'c2', 'c3'].map((id) => aCharacter(id));
     const input = anInput({
       characters,
       dungeons: [aDungeon('d1', { accountAttempts: 5, characterAttempts: 3 })],
@@ -103,7 +103,7 @@ describe('noContention', () => {
 
 describe('explainCeiling', () => {
   it('names a dungeon whose account attempts ran out', () => {
-    const characters = ['c1', 'c2', 'c3'].map(aCharacter);
+    const characters = ['c1', 'c2', 'c3'].map((id) => aCharacter(id));
     const input = anInput({
       characters,
       dungeons: [aDungeon('d1', { accountAttempts: 5, characterAttempts: 3 })],

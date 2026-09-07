@@ -74,6 +74,7 @@ beforeEach(() => {
     reset_hour: 6,
     server_timezone: 'UTC',
   stone_rate: 0.4,
+  abnormal_sense: false,
     max_characters: 12,
   });
   vi.mocked(setMaxCharacters).mockResolvedValue(undefined);

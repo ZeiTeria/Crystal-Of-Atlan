@@ -9,6 +9,7 @@ import { PHONE, useMediaQuery } from '../ui/useMediaQuery';
 import { matrixColumns } from './columns';
 import { goldWarning, leftoverText } from './goldWarning';
 import { manualDaysLeft, manualWarning } from './manualPace';
+import { setAbnormalSense } from '../data/roster';
 import { describeReason, gold, type Names } from './planText';
 import PublicDungeonTable from '../ui/PublicDungeonTable';
 import './AttemptBoard.css';
@@ -25,6 +26,7 @@ interface AttemptBoardProps {
   atCap?: boolean;
   maxCharacters?: number;
   onAddClick?: () => void;
+  mutate?: (write: () => Promise<void>) => Promise<void>;
 }
 
 /**
@@ -44,6 +46,7 @@ export default function AttemptBoard({
   atCap,
   maxCharacters,
   onAddClick,
+  mutate,
 }: AttemptBoardProps) {
   const isPhone = useMediaQuery(PHONE);
   const [shownId, setShownId] = useState<string | null>(null);
@@ -103,6 +106,14 @@ export default function AttemptBoard({
               'Every remaining attempt is spent.'
             )}
           </span>
+          <label className="buff-toggle">
+            <input
+              type="checkbox"
+              checked={settings.abnormalSense}
+              onChange={(e) => void mutate?.(() => setAbnormalSense(e.target.checked))}
+            />
+            Abnormal sense (+5%, all characters)
+          </label>
         </div>
 
         <div className="roster-tiles">

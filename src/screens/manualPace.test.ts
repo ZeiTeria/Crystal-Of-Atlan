@@ -6,7 +6,7 @@ const SETTINGS = {
   goldCap: 1_000_000,
   goldResetWeekday: 1,
   resetHour: 6,
-  timeZone: 'UTC',
+  timeZone: 'UTC', abnormalSense: false,
 };
 
 // Friday. The next Monday 06:00 reset is 2d 18h away, which floors to 2.

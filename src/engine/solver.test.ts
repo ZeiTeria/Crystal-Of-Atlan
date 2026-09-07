@@ -24,7 +24,7 @@ describe('solveOptimal', () => {
 
   it('reaches characters x 1,000,000 when that ceiling is actually achievable', async () => {
     // Four characters, each able to earn exactly 1,000,000 from two dungeons.
-    const characters = ['c1', 'c2', 'c3', 'c4'].map(aCharacter);
+    const characters = ['c1', 'c2', 'c3', 'c4'].map((id) => aCharacter(id));
     const dungeons = [
       aDungeon('a', { accountAttempts: 8, characterAttempts: 2,
         gold: { solo: 0, story: 0, elite: 300_000, legend: 0 } }),
@@ -76,5 +76,34 @@ describe('solveOptimal', () => {
     const result = await solveOptimal(anInput({ characters: [], dungeons: [], grid: [] }));
     if (result.status !== 'optimal') throw new Error('expected optimal');
     expect(result.totals).toEqual({ attempts: 0, gold: 0 });
+  });
+
+  it('two characters on the same dungeon with different buffs get different goldPerRun', async () => {
+    const input = anInput({
+      characters: [
+        aCharacter('unbuffed', { buffPct: 0 }),
+        aCharacter('buffed', { buffPct: 0.17 }),
+      ],
+      dungeons: [
+        aDungeon('d1', { gold: { solo: 0, story: 0, elite: 100_000, legend: 0 }, goldC: 50_000 }),
+      ],
+      grid: [
+        { characterId: 'unbuffed', dungeonId: 'd1', tier: 'elite', minRuns: 1, maxRuns: 1 },
+        { characterId: 'buffed', dungeonId: 'd1', tier: 'elite', minRuns: 1, maxRuns: 1 },
+      ],
+    });
+    
+    // With maxRuns: 1 for both, they each run exactly once.
+    // unbuffed: 100,000 + 0 * 50,000 = 100,000
+    // buffed: 100,000 + 0.17 * 50,000 = 108,500
+    // total = 208,500
+    const result = await solveOptimal(input);
+    if (result.status !== 'optimal') throw new Error('expected optimal');
+    expect(result.totals.gold).toBe(208_500);
+
+    const unbuffedAssignment = result.assignments.find(a => a.characterId === 'unbuffed');
+    const buffedAssignment = result.assignments.find(a => a.characterId === 'buffed');
+    expect(unbuffedAssignment?.goldPerRun).toBe(100_000);
+    expect(buffedAssignment?.goldPerRun).toBe(108_500);
   });
 });

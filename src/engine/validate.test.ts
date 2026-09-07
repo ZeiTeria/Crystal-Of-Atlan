@@ -36,7 +36,7 @@ describe('validate', () => {
   });
 
   it('rejects minimums that together exceed the account cap', () => {
-    const characters = ['c1', 'c2', 'c3'].map(aCharacter);
+    const characters = ['c1', 'c2', 'c3'].map((id) => aCharacter(id));
     const input = anInput({
       characters,
       dungeons: [aDungeon('d1', { accountAttempts: 5, characterAttempts: 3 })],

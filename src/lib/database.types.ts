@@ -19,6 +19,7 @@ export interface Database {
           stone_rate: number;
           /** Absent until migration 0010 has run, so read it defensively. */
           max_characters?: number;
+          abnormal_sense: boolean;
         };
         Insert: {
           id?: boolean;
@@ -28,6 +29,7 @@ export interface Database {
           server_timezone?: string;
           stone_rate?: number;
           max_characters?: number;
+          abnormal_sense?: boolean;
         };
         Update: {
           id?: boolean;
@@ -37,6 +39,7 @@ export interface Database {
           server_timezone?: string;
           stone_rate?: number;
           max_characters?: number;
+          abnormal_sense?: boolean;
         };
         Relationships: [];
       };
@@ -90,6 +93,8 @@ export interface Database {
           class: string | null;
           sort_order: number;
           is_active: boolean;
+          has_title: boolean;
+          has_potion: boolean;
         };
         Insert: {
           id?: string;
@@ -98,6 +103,8 @@ export interface Database {
           class?: string | null;
           sort_order?: number;
           is_active?: boolean;
+          has_title?: boolean;
+          has_potion?: boolean;
         };
         Update: {
           id?: string;
@@ -106,6 +113,8 @@ export interface Database {
           class?: string | null;
           sort_order?: number;
           is_active?: boolean;
+          has_title?: boolean;
+          has_potion?: boolean;
         };
         Relationships: [];
       };

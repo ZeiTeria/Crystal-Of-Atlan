@@ -50,11 +50,12 @@ const dungeon = {
   goldEstimated: [],
   goldUnknown: false,
   manual: false,
+  goldC: 0,
 };
 
 function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
   return {
-    characters: [{ id: 'c1', name: 'Mage', class: 'Magister' }],
+    characters: [{ id: 'c1', name: 'Mage', class: 'Magister', buffPct: 0 }],
     dungeons: [dungeon],
     grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0, maxRuns: 3 }],
     accountAttemptsLeft: { d1: 18 },
@@ -65,6 +66,7 @@ function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
       goldResetWeekday: 1,
       resetHour: 6,
       timeZone: 'UTC',
+      abnormalSense: false,
     },
     ...overrides,
   };
@@ -85,6 +87,7 @@ function aState(
       server_timezone: 'UTC',
       stone_rate: 0.4,
       max_characters: rows.maxCharacters ?? 12,
+      abnormal_sense: false,
     },
     characters: rows.characters ?? [MAGE],
     grid: rows.grid ?? [],
@@ -98,6 +101,8 @@ const MAGE: CharacterRow = {
   class: 'Magister',
   sort_order: 10,
   is_active: true,
+  has_title: false,
+  has_potion: false,
 };
 
 beforeEach(() => {
@@ -191,8 +196,8 @@ describe('PlanScreen', () => {
     vi.mocked(loadPlanState).mockResolvedValue(
       aState({
         characters: [
-          { id: 'c1', name: 'Mage', class: 'Magister' },
-          { id: 'c2', name: 'Rogue', class: 'Fighter' },
+          { id: 'c1', name: 'Mage', class: 'Magister', buffPct: 0 },
+          { id: 'c2', name: 'Rogue', class: 'Fighter', buffPct: 0 },
         ],
         grid: [
           { characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 0, maxRuns: 3 },

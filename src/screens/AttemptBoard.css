@@ -609,3 +609,13 @@
     padding: 16px;
   }
 }
+
+/* Buff toggles. Shared shape with the roster's per-character ones in
+   QuestLog.css; both are a checkbox with a label beside it. */
+.buff-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 16px;
+  cursor: pointer;
+}

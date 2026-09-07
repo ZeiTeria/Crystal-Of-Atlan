@@ -24,6 +24,7 @@ const abyss: Dungeon = {
   short_name: null,
   goldEstimated: [],
   goldUnknown: false,
+  goldC: 0,
   manual: false,
 };
 

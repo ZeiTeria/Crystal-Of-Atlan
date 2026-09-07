@@ -213,6 +213,7 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
               atCap={atCap}
               maxCharacters={solved.maxCharacters}
               onAddClick={() => setShowAddModal(true)}
+              mutate={mutate}
             />
           ) : (
             <QuestLog

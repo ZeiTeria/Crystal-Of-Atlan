@@ -82,3 +82,25 @@ describe('fillGoldGaps unknown flag', () => {
     expect(fillGoldGaps(g(0, 0, 0, 0)).estimated).toEqual([]);
   });
 });
+
+import { goldPerRun } from './gold';
+
+describe('goldPerRun', () => {
+  const d = (goldC: number) => ({ gold: g(10, 20, 80500, 40), goldC });
+
+  it('buffPct 0 returns the unbuffed figure', () => {
+    expect(goldPerRun(d(50000), 'elite', 0)).toBe(80500);
+  });
+
+  it('0.17 on goldC 50000 adds exactly 8500', () => {
+    expect(goldPerRun(d(50000), 'elite', 0.17)).toBe(89000);
+  });
+
+  it('goldC 0 makes buffs a no-op', () => {
+    expect(goldPerRun(d(0), 'elite', 0.17)).toBe(80500);
+  });
+
+  it('result is always an integer', () => {
+    expect(goldPerRun(d(100), 'elite', 0.175)).toBe(80518);
+  });
+});

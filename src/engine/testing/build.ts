@@ -5,8 +5,8 @@ import type { Character, Dungeon, GridEntry, PlanInput } from '../types';
  * only has to state the thing it is actually about.
  */
 
-export function aCharacter(id: string): Character {
-  return { id, name: id.toUpperCase(), class: null };
+export function aCharacter(id: string, overrides: Partial<Character> = {}): Character {
+  return { id, name: id.toUpperCase(), class: null, buffPct: 0, ...overrides };
 }
 
 export function aDungeon(id: string, overrides: Partial<Dungeon> = {}): Dungeon {
@@ -17,6 +17,7 @@ export function aDungeon(id: string, overrides: Partial<Dungeon> = {}): Dungeon 
     characterAttempts: 3,
     resetWeekday: 1,
     gold: { solo: 10, story: 20, elite: 30, legend: 40 },
+    goldC: 0,
     manual: false,
     default_tier: 'elite',
     default_min_runs: 1,
@@ -73,6 +74,7 @@ export function anInput(parts: {
       goldResetWeekday: 1,
       resetHour: 6,
       timeZone: 'UTC',
+      abnormalSense: false,
     },
   };
 }

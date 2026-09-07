@@ -527,3 +527,15 @@
   flex: 1;
   min-height: 0;
 }
+
+/* The selected character's own buffs, beside their name in the roster header. */
+.buff-toggles {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.buff-toggles .buff-toggle {
+  margin-top: 0;
+  gap: 4px;
+}

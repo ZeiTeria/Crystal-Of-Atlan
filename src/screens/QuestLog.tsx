@@ -5,10 +5,12 @@ import {
   setCharacterClass,
   setCharacterOrder,
   toggleCharacterActive,
+  setCharacterBuffs,
   type CharacterRow,
 } from '../data/accounts';
 import { setGridCell, type GridRow } from '../data/grid';
 import type { PlanAssignment, PlanInput, Tier } from '../engine/types';
+import { goldPerRun } from '../engine/gold';
 import Button from '../ui/Button';
 import CharacterPicker from '../ui/CharacterPicker';
 import ClassPicker from '../ui/ClassPicker';
@@ -376,6 +378,24 @@ export default function QuestLog({
                   ? 'Parked — left out of the plan until you put it back.'
                   : `${runsThisWeek} runs planned${capped ? ' · at the gold cap' : ''}`}
               </span>
+              <div className="buff-toggles">
+                <label className="buff-toggle">
+                  <input
+                    type="checkbox"
+                    checked={selected.has_title ?? false}
+                    onChange={(e) => void mutate(() => setCharacterBuffs(selected.id, { has_title: e.target.checked }))}
+                  />
+                  Title (+2%)
+                </label>
+                <label className="buff-toggle">
+                  <input
+                    type="checkbox"
+                    checked={selected.has_potion ?? false}
+                    onChange={(e) => void mutate(() => setCharacterBuffs(selected.id, { has_potion: e.target.checked }))}
+                  />
+                  Gold potion (+10%)
+                </label>
+              </div>
             </div>
           </div>
           <div className="quest-header-right">
@@ -466,7 +486,9 @@ export default function QuestLog({
                   (a) => a.characterId === selected.id && a.dungeonId === d.id,
                 );
                 const runs = assignment?.runs ?? 0;
-                const perRun = tier === 'none' ? null : d.gold[tier];
+                const planCharacter = input.characters.find((c) => c.id === selected.id);
+                const buffPct = planCharacter?.buffPct ?? 0;
+                const perRun = tier === 'none' ? null : goldPerRun(d, tier, buffPct);
                 const usedAccountWide = assignments
                   .filter((a) => a.dungeonId === d.id)
                   .reduce((sum, a) => sum + a.runs, 0);

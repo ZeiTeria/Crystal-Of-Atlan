@@ -9,6 +9,7 @@ import {
   setCharacterClass,
   setCharacterOrder,
   toggleCharacterActive,
+  setCharacterBuffs,
   type CharacterRow,
 } from '../data/accounts';
 import type { PlanAssignment, PlanInput } from '../engine/types';
@@ -21,6 +22,7 @@ vi.mock('../data/accounts', () => ({
   deleteCharacter: vi.fn(),
   toggleCharacterActive: vi.fn(),
   setCharacterOrder: vi.fn(),
+  setCharacterBuffs: vi.fn(),
 }));
 
 afterEach(() => {
@@ -45,6 +47,7 @@ const dungeon = {
   goldEstimated: [],
   goldUnknown: false,
   manual: false,
+  goldC: 0,
 };
 
 const mage: CharacterRow = {
@@ -54,18 +57,20 @@ const mage: CharacterRow = {
   class: null,
   sort_order: 10,
   is_active: true,
+  has_title: false,
+  has_potion: false,
 };
 const rogue: CharacterRow = { ...mage, id: 'c2', name: 'Rogue', sort_order: 20 };
 
 function anInput(overrides: Partial<PlanInput> = {}): PlanInput {
   return {
-    characters: [{ id: 'c1', name: 'Mage', class: null }],
+    characters: [{ id: 'c1', name: 'Mage', class: null, buffPct: 0 }],
     dungeons: [dungeon],
     grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 2, maxRuns: 3 }],
     accountAttemptsLeft: { d1: 18 },
     characterAttemptsLeft: { c1: { d1: 3 } },
     goldHeadroom: { c1: 1_000_000 },
-    settings: { goldCap: 1_000_000, goldResetWeekday: 1, resetHour: 6, timeZone: 'UTC' },
+    settings: { goldCap: 1_000_000, goldResetWeekday: 1, resetHour: 6, timeZone: 'UTC', abnormalSense: false },
     ...overrides,
   };
 }
@@ -669,5 +674,26 @@ describe('QuestLog dungeon order', () => {
   it('still shows a dungeon that belongs to no family', async () => {
     renderLog({ input });
     expect(await screen.findByLabelText('Mage tier in Solo')).toBeDefined();
+  });
+});
+
+
+describe('QuestLog buff toggles', () => {
+  it('writes the title toggle for the selected character', async () => {
+    renderLog();
+    fireEvent.click(await screen.findByLabelText(/Title \(\+2%\)/i));
+    await waitFor(() => {
+      expect(vi.mocked(setCharacterBuffs)).toHaveBeenCalledWith('c1', { has_title: true });
+    });
+  });
+
+  it('writes the potion toggle separately from the title', async () => {
+    // Two checkboxes writing one row: sending both fields on either click would
+    // silently clobber whichever the user did not touch.
+    renderLog();
+    fireEvent.click(await screen.findByLabelText(/Gold potion \(\+10%\)/i));
+    await waitFor(() => {
+      expect(vi.mocked(setCharacterBuffs)).toHaveBeenCalledWith('c1', { has_potion: true });
+    });
   });
 });

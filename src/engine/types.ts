@@ -14,8 +14,10 @@ export interface Dungeon {
   characterAttempts: number;
   /** ISO weekday this dungeon resets on. Monday = 1 ... Sunday = 7. */
   resetWeekday: number;
-  /** Gold for a single run at each difficulty. Whole gold, no decimals. */
+  /** Gold for a single run at each difficulty (UNBUFFED). Whole gold, no decimals. */
   gold: Record<PaidTier, number>;
+  /** The buffable component of the clear reward. 0 means not measured yet (buffs do nothing). */
+  goldC: number;
   /** Whether the dungeon is flagged manual (time-skippable vs not) */
   manual: boolean;
   /** The fallback tier a character has if they don't have an explicit entry in the grid. */
@@ -49,6 +51,8 @@ export interface Character {
   id: string;
   name: string;
   class: string | null;
+  /** Sum of active buff percentages as a decimal, e.g. title + potion = 0.12. */
+  buffPct: number;
 }
 
 export interface GridEntry {
@@ -81,6 +85,7 @@ export interface PlanInput {
     goldResetWeekday: number;
     resetHour: number;
     timeZone: string;
+    abnormalSense: boolean;
   };
 }
 

@@ -24,6 +24,7 @@ function aDungeon(overrides: Partial<Dungeon> = {}): Dungeon {
     gold: { solo: 1000, story: 2000, elite: 3000, legend: 4000 },
     goldEstimated: [],
     goldUnknown: false,
+    goldC: 0,
     ...overrides,
   };
 }

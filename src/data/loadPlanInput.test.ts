@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildPlanInput, type PlanRows } from './loadPlanInput';
+import { buildCells } from '../engine/cells';
 import type { Database } from '../lib/database.types';
 
 type Row<T extends keyof Database['public']['Tables']> =
@@ -12,10 +13,11 @@ const SETTINGS: Row<'app_settings'> = {
   reset_hour: 4,
   server_timezone: 'UTC',
   stone_rate: 0.4,
+  abnormal_sense: false,
 };
 
 function aCharacterRow(id: string): Row<'characters'> {
-  return { id, game_account_id: 'acc', name: id.toUpperCase(), class: null, sort_order: 0, is_active: true };
+  return { id, game_account_id: 'acc', name: id.toUpperCase(), class: null, sort_order: 0, is_active: true, has_title: false, has_potion: false };
 }
 
 function aDungeonRow(id: string, overrides: Partial<Row<'dungeons'>> = {}): Row<'dungeons'> {
@@ -34,6 +36,7 @@ function aDungeonRow(id: string, overrides: Partial<Row<'dungeons'>> = {}): Row<
     gold_story: 20,
     gold_elite: 30,
     gold_legend: 40,
+    gold_c: 0,
     sort_order: 0,
     is_active: true,
     default_tier: 'elite',
@@ -139,6 +142,7 @@ describe('buildPlanInput', () => {
         characterAttempts: 2,
         resetWeekday: 4,
         gold: { solo: 1, story: 2, elite: 3, legend: 4 },
+        goldC: 0,
         default_tier: 'elite',
         default_min_runs: 1,
         // Display only - carried through so the screens can order and band
@@ -272,5 +276,100 @@ describe('max runs', () => {
 
   it('keeps a stored maximum below the cap', () => {
     expect(maxOf(1)).toBe(1);
+  });
+});
+
+describe('gold buffs', () => {
+  const buffPctOf = (
+    c: Partial<Row<'characters'>>,
+    abnormalSense: boolean = false
+  ) => {
+    const input = buildPlanInput({
+      ...rows({ characters: [{ ...aCharacterRow('c1'), ...c }] }),
+      settings: { ...SETTINGS, abnormal_sense: abnormalSense },
+    });
+    return input.characters[0]?.buffPct;
+  };
+
+  const goldOf = (d: Partial<Row<'dungeons'>>) =>
+    buildPlanInput(
+      rows({ characters: [aCharacterRow('c1')], dungeons: [aDungeonRow('d1', d)] }),
+    ).dungeons[0]?.gold;
+
+  it('a dungeon with gold_elite 80500 and gold_c 50000 yields an unbuffed Dungeon.gold.elite of 79500', () => {
+    const gold = goldOf({ gold_elite: 80500, gold_c: 50000, gold_elite_stone: 0 });
+    expect(gold?.elite).toBe(79500);
+  });
+
+  it('a character with has_title true and has_potion false gets buffPct 0.02', () => {
+    expect(buffPctOf({ has_title: true, has_potion: false })).toBe(0.02);
+  });
+
+  it('with both plus abnormal_sense on, 0.17 EXACTLY', () => {
+    expect(buffPctOf({ has_title: true, has_potion: true }, true)).toBe(0.17);
+  });
+});
+
+
+describe('buffs and the plan', () => {
+  const buffedDungeon = {
+    gold_solo: 0,
+    gold_story: 0,
+    gold_elite: 80500,
+    gold_legend: 0,
+    gold_elite_stone: 85500,
+    gold_c: 50000,
+  };
+
+  const priceFor = (c: Partial<Row<'characters'>>, abnormalSense = false) => {
+    const input = buildPlanInput({
+      ...rows({
+        characters: [{ ...aCharacterRow('c1'), ...c }],
+        dungeons: [aDungeonRow('d1', buffedDungeon)],
+      }),
+      settings: { ...SETTINGS, abnormal_sense: abnormalSense },
+    });
+    return buildCells(input).find((cell) => cell.dungeonId === 'd1')?.goldPerRun;
+  };
+
+  it('prices a migration-default character at exactly the stored catalogue figure', () => {
+    // THE invariant of this whole change. Every gold figure in the catalogue was
+    // recorded with the 2% title active, which is why the migration defaults
+    // has_title to true. So on the day it is applied, before anyone touches a
+    // toggle, gold per run must not move: the title that loadPlanInput subtracts
+    // is added straight back by the character's own buffPct.
+    //
+    // 80,500 stored, plus 0.4 of the 5,000 stone premium, is what the old code
+    // priced this run at. If this number ever changes, every existing plan has
+    // silently re-priced.
+    expect(priceFor({ has_title: true })).toBe(82500);
+  });
+
+  it('drops the run to its unbuffed worth when the title is off', () => {
+    // 2% of C = 50,000 is 1,000, so an untitled character earns exactly that less.
+    expect(priceFor({ has_title: false })).toBe(81500);
+  });
+
+  it('adds each buff as a percentage of C, not of the whole reward', () => {
+    // 17% of 50,000 is 8,500 - not 17% of 82,500, which would be 14,025.
+    expect(priceFor({ has_title: true, has_potion: true }, true)).toBe(90000);
+  });
+
+  it('prices the same dungeon differently for two characters', () => {
+    // Gold per run stopped being a property of the dungeon alone. If buildCells
+    // ever reverts to reading dungeon.gold directly, these two collapse to one
+    // number and the whole feature is silently dead.
+    const input = buildPlanInput({
+      ...rows({
+        characters: [
+          { ...aCharacterRow('c1'), has_title: true, has_potion: true },
+          { ...aCharacterRow('c2'), has_title: false, has_potion: false },
+        ],
+        dungeons: [aDungeonRow('d1', buffedDungeon)],
+      }),
+    });
+    const cells = buildCells(input);
+    expect(cells.find((c) => c.characterId === 'c1')?.goldPerRun).toBe(87500);
+    expect(cells.find((c) => c.characterId === 'c2')?.goldPerRun).toBe(81500);
   });
 });

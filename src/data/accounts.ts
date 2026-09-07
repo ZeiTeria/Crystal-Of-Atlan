@@ -124,6 +124,14 @@ export async function toggleCharacterActive(id: string, is_active: boolean): Pro
   if (error) throw error;
 }
 
+export async function setCharacterBuffs(
+  id: string,
+  patch: { has_title?: boolean; has_potion?: boolean }
+): Promise<void> {
+  const { error } = await supabase.from('characters').update(patch).eq('id', id);
+  if (error) throw error;
+}
+
 /** Grid rows cascade from the character. */
 export async function deleteCharacter(id: string): Promise<void> {
   const { error } = await supabase.from('characters').delete().eq('id', id);

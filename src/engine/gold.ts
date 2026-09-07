@@ -1,4 +1,4 @@
-import { PAID_TIERS, type PaidTier } from './types';
+import { PAID_TIERS, type Dungeon, type PaidTier } from './types';
 
 /**
  * Fills a dungeon's missing gold figures from the tiers that do have one.
@@ -81,4 +81,27 @@ export function stonePremium(
     if (gold[tier] > 0 && stone[tier] > gold[tier]) return stone[tier] - gold[tier];
   }
   return 0;
+}
+
+/**
+ * What one run of this dungeon is worth to one character, at one difficulty.
+ *
+ * Gold buffs multiply C and nothing else - not the rest of the clear reward and
+ * not the stone premium - and they add their percentages rather than compounding.
+ * `dungeon.gold` is the UNBUFFED figure, so the character's own buffs are what
+ * turns it into the gold they actually collect.
+ *
+ * Every caller that prices a run for a specific character goes through here.
+ * Reading `dungeon.gold` directly is what the buff toggles exist to stop, and a
+ * plan built that way would silently ignore every buff on the account.
+ *
+ * Rounded: `renderTerms` states LP coefficients are always integers, and
+ * assertFeasible re-checks the finished plan in integer arithmetic.
+ */
+export function goldPerRun(
+  dungeon: Pick<Dungeon, 'gold' | 'goldC'>,
+  tier: PaidTier,
+  buffPct: number,
+): number {
+  return Math.round(dungeon.gold[tier] + dungeon.goldC * buffPct);
 }

@@ -21,6 +21,7 @@ export function toSettings(row: Row<'app_settings'>): Settings {
     goldResetWeekday: row.gold_reset_weekday,
     resetHour: row.reset_hour,
     timeZone: row.server_timezone,
+    abnormalSense: row.abnormal_sense,
   };
 }
 
@@ -32,7 +33,13 @@ export function toSettings(row: Row<'app_settings'>): Settings {
 export function buildPlanInput(rows: PlanRows): PlanInput {
   const characters: Character[] = rows.characters
     .filter((c) => c.is_active !== false)
-    .map((c) => ({ id: c.id, name: c.name, class: c.class }));
+    .map((c) => {
+      const points =
+        2 * (c.has_title ? 1 : 0) +
+        10 * (c.has_potion ? 1 : 0) +
+        5 * (rows.settings.abnormal_sense ? 1 : 0);
+      return { id: c.id, name: c.name, class: c.class, buffPct: points / 100 };
+    });
 
   // An inactive dungeon is retired from planning, so it must not appear in the
   // catalogue, the grid, or any counter derived from them.
@@ -72,8 +79,11 @@ export function buildPlanInput(rows: PlanRows): PlanInput {
         // gold, `renderTerms` states LP coefficients are always integers (LP
         // format rejects the exponent notation a small float can render as),
         // and assertFeasible re-checks the plan in integer arithmetic.
-        const applyStone = (base: number) =>
-          base > 0 ? Math.round(base + stoneRate * premium) : base;
+        const applyStone = (base: number) => {
+          if (base <= 0) return base;
+          const unbuffedBase = Math.max(0, base - 0.02 * d.gold_c);
+          return Math.round(unbuffedBase + stoneRate * premium);
+        };
 
         const effectiveGold = {
           solo: applyStone(gold.solo),
@@ -82,7 +92,7 @@ export function buildPlanInput(rows: PlanRows): PlanInput {
           legend: applyStone(gold.legend),
         };
 
-        return { gold: effectiveGold, goldEstimated: estimated, goldUnknown: unknown };
+        return { gold: effectiveGold, goldC: d.gold_c, goldEstimated: estimated, goldUnknown: unknown };
       })(),
       manual: d.manual,
       default_tier: d.default_tier,

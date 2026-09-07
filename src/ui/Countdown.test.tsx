@@ -13,6 +13,7 @@ const SETTINGS = {
   goldResetWeekday: 1,
   resetHour: 6,
   timeZone: 'Asia/Singapore',
+  abnormalSense: false,
 };
 
 describe('Countdown', () => {

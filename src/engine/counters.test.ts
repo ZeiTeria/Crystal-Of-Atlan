@@ -7,6 +7,7 @@ const SETTINGS: Settings = {
   goldResetWeekday: 1,   // Monday
   resetHour: 6,
   timeZone: 'Asia/Singapore',
+  abnormalSense: false,
 };
 
 const characters = [aCharacter('c1')];
@@ -40,5 +41,23 @@ describe('derivePlanInput', () => {
     expect(input.accountAttemptsLeft.bad).toBe(0);
     expect(input.characterAttemptsLeft.c1?.bad).toBe(0);
     expect(input.goldHeadroom.c1).toBe(0);
+  });
+});
+
+
+describe('settings passthrough', () => {
+  it('carries abnormalSense into the plan input', () => {
+    // derivePlanInput copies `settings` field by field rather than spreading, so
+    // a new setting is silently dropped unless it is added here too. This one
+    // was: the Plan screen reads settings.abnormalSense to decide whether its
+    // checkbox is ticked, and with the field missing it rendered permanently
+    // unticked no matter what the account had saved.
+    const input = derivePlanInput({
+      characters,
+      dungeons: [monday],
+      grid: [grid[0]!],
+      settings: { ...SETTINGS, abnormalSense: true },
+    });
+    expect(input.settings.abnormalSense).toBe(true);
   });
 });

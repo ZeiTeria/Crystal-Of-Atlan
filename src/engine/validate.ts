@@ -1,3 +1,4 @@
+import { goldPerRun } from './gold';
 import type { Conflict, PlanInput } from './types';
 
 /**
@@ -13,11 +14,13 @@ export function validate(input: PlanInput): Conflict[] {
   const requiredPerDungeon = new Map<string, number>();
   const requiredGoldPerCharacter = new Map<string, number>();
   const dungeonById = new Map(input.dungeons.map((d) => [d.id, d]));
+  const characterById = new Map(input.characters.map((c) => [c.id, c]));
 
   for (const entry of input.grid) {
     if (entry.minRuns <= 0) continue;
     const dungeon = dungeonById.get(entry.dungeonId);
-    if (!dungeon) continue;
+    const character = characterById.get(entry.characterId);
+    if (!dungeon || !character) continue;
 
     if (entry.tier === 'none') {
       conflicts.push({
@@ -47,7 +50,7 @@ export function validate(input: PlanInput): Conflict[] {
     requiredGoldPerCharacter.set(
       entry.characterId,
       (requiredGoldPerCharacter.get(entry.characterId) ?? 0)
-        + entry.minRuns * dungeon.gold[entry.tier],
+        + entry.minRuns * goldPerRun(dungeon, entry.tier, character.buffPct),
     );
   }
 

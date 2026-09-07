@@ -1,3 +1,4 @@
+import { goldPerRun } from './gold';
 import type { PlanInput, Tier, PaidTier } from './types';
 
 /** One decision variable: how many times this character runs this dungeon. */
@@ -25,11 +26,13 @@ function isPaid(tier: Tier): tier is PaidTier {
  */
 export function buildCells(input: PlanInput): Cell[] {
   const dungeonById = new Map(input.dungeons.map((d) => [d.id, d]));
+  const characterById = new Map(input.characters.map((c) => [c.id, c]));
   const cells: Cell[] = [];
 
   for (const entry of input.grid) {
     const dungeon = dungeonById.get(entry.dungeonId);
-    if (!dungeon || !isPaid(entry.tier)) continue;
+    const character = characterById.get(entry.characterId);
+    if (!dungeon || !character || !isPaid(entry.tier)) continue;
 
     const characterLeft = input.characterAttemptsLeft[entry.characterId]?.[entry.dungeonId] ?? 0;
     const accountLeft = input.accountAttemptsLeft[entry.dungeonId] ?? 0;
@@ -40,7 +43,7 @@ export function buildCells(input: PlanInput): Cell[] {
       index: cells.length,
       characterId: entry.characterId,
       dungeonId: entry.dungeonId,
-      goldPerRun: dungeon.gold[entry.tier],
+      goldPerRun: goldPerRun(dungeon, entry.tier, character.buffPct),
       min: Math.max(0, entry.minRuns),
       max,
     });
