@@ -35,6 +35,7 @@ const BUFF_READINGS: BuffReading[] = [
   { buffs: 'abnormal sense', sum: '5%', observed: 82000, base: 82000, predicted: 82000 },
   { buffs: 'potion', sum: '10%', observed: 84500, base: 84500, predicted: 84500 },
   { buffs: 'title + potion (with stone)', sum: '12%', observed: 90500, base: 85500, predicted: 85500 },
+  { buffs: 'title + AS + potion (with stone)', sum: '17%', observed: 93000, base: 88000, predicted: 88000 },
   { buffs: 'title + potion (earlier reading)', sum: '12%', observed: 92138, base: 87138, predicted: 85500 },
   { buffs: 'title + AS + potion (earlier reading)', sum: '17%', observed: 89650, base: 89650, predicted: 88000 },
 ];
@@ -130,8 +131,9 @@ export default function GoldScreen() {
         several buffs at once. Title plus potion was later measured again in exactly the same
         configuration and came in at 90,500, matching the model to the gold - so the 92,138 above
         is a bad reading rather than evidence of a stacking bonus, and the 89,650 beside it is
-        almost certainly the same. Both are kept here rather than deleted, because they are what
-        a contaminated reading looks like.
+        almost certainly the same - all three buffs were later read at 93,000, matching the model
+        and not the 89,650. Both bad readings are kept here rather than deleted, because they are
+        what a contaminated reading looks like.
       </p>
 
       <h3 className="section-head">
@@ -143,7 +145,7 @@ export default function GoldScreen() {
         <li><strong>No buff touches a manual run</strong> - Duskfeather Lair paid 80,000 with the title, 80,000 without it, and 80,000 again with all three buffs active, every time with a stone.</li>
         <li><strong>Every buff is a percentage of the same C</strong> - measured one at a time, the title added 1,000, abnormal sense 2,500 and the potion 5,000 on Duskfeather Lair, and the potion added 2,000 on Queen Coronation. Four readings, four exact hits against C = 50,000 and C = 20,000.</li>
         <li><strong>Queen Coronation's C is confirmed twice over</strong> - it was derived from the title (400 being 2% of 20,000) and the potion independently agrees (2,000 being 10%).</li>
-        <li><strong>Buffs stack by adding their percentages</strong> - title and potion together behave as a flat 12%, giving 85,500 on Duskfeather Lair exactly as 2% + 10% predicts.</li>
+        <li><strong>Buffs stack by adding their percentages</strong> - title and potion together behave as a flat 12%, giving 85,500 on Duskfeather Lair exactly as 2% + 10% predicts, and all three together behave as 17%, predicted at 93,000 with a stone and read at 93,000. Every combination has now been checked.</li>
         <li><strong>The stone premium survives buffs</strong> - that same run paid 90,500 with a stone against 85,500 without, the same 5,000 as an unbuffed run.</li>
         <li><strong>Auto pays more than manual</strong> - Duskfeather Lair, title on: 80,500 auto against 75,000 manual.</li>
         <li><strong>The premium applies in manual too</strong> - Duskfeather Lair manual, 80,000 with a stone and 75,000 without.</li>
@@ -154,7 +156,6 @@ export default function GoldScreen() {
         4. Still unmeasured
       </h3>
       <ul className="gold-notes">
-        <li><strong>All three buffs at once has never been read cleanly.</strong> The only reading, 89,650, sits 1,650 above prediction - the same signature as the title-plus-potion reading since proven bad. Run Duskfeather Lair elite with all three: the model says 88,000 without a stone and 93,000 with one. That is the last combination left to check.</li>
         <li><strong>What went wrong in those two early readings?</strong> Not urgent - the model is confirmed without them - but the same configuration measured twice gave 90,500 and 92,138, so something varied between the runs. A different character is the obvious suspect, since buffs are per-character and a different title would carry a different percentage.</li>
         <li><strong>Story gold for six dungeons:</strong> Checkmate, Queen Coronation, Temple Of Fate, Apocalyptic Descent, Duskfeather Lair, The Deep Dive.</li>
         <li><strong>Does C change with difficulty?</strong> No story-tier C has been measured anywhere.</li>

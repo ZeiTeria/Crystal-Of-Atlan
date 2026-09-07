@@ -213,6 +213,42 @@ describe('stone gold', () => {
     expect(gold).toBe(70);
     expect(Number.isInteger(gold)).toBe(true);
   });
+
+  it('carries the premium onto a tier whose base was borrowed', () => {
+    // The Deep Dive in the live catalogue: elite is entered with its stone
+    // figure, legend is blank. `fillGoldGaps` hands legend elite's base, but
+    // gold_legend_stone stays 0 - so reading the premium per tier left legend
+    // pricing BELOW elite (75,000 against 77,000) on a dungeon where the two
+    // tiers are known to pay identically.
+    const gold = goldOf({
+      gold_solo: 0,
+      gold_story: 0,
+      gold_elite: 75000,
+      gold_legend: 0,
+      gold_elite_stone: 80000,
+    });
+    expect(gold?.elite).toBe(77000);
+    expect(gold?.legend).toBe(77000);
+  });
+
+  it('applies one premium across every tier, not one per tier', () => {
+    // Measured: the premium is a property of the dungeon, identical at story
+    // and elite on both dungeons where both are known.
+    const gold = goldOf({
+      gold_solo: 0,
+      gold_story: 40000,
+      gold_story_stone: 45000,
+      gold_elite: 50000,
+      gold_legend: 0,
+    });
+    expect(gold?.story).toBe(42000);
+    expect(gold?.elite).toBe(52000);
+  });
+
+  it('leaves a dungeon alone when no tier has both figures', () => {
+    // Nothing to borrow. An invented premium would be worse than none.
+    expect(goldOf({ gold_solo: 0, gold_story: 0, gold_elite: 50000, gold_legend: 0 })?.elite).toBe(50000);
+  });
 });
 
 describe('max runs', () => {

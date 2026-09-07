@@ -1,6 +1,6 @@
 import { derivePlanInput, type Settings } from '../engine/counters';
 import type { Character, Dungeon, GridEntry, PlanInput } from '../engine/types';
-import { fillGoldGaps } from '../engine/gold';
+import { fillGoldGaps, stonePremium } from '../engine/gold';
 import type { Database } from '../lib/database.types';
 import { supabase } from '../lib/supabase';
 
@@ -56,20 +56,30 @@ export function buildPlanInput(rows: PlanRows): PlanInput {
         });
 
         const stoneRate = rows.settings.stone_rate;
+        // One premium for the whole dungeon, not one per tier: it was measured
+        // as constant across difficulties, and reading it per tier meant a
+        // borrowed base kept none of it. See `stonePremium`.
+        const premium = stonePremium(
+          { solo: d.gold_solo, story: d.gold_story, elite: d.gold_elite, legend: d.gold_legend },
+          {
+            solo: d.gold_solo_stone,
+            story: d.gold_story_stone,
+            elite: d.gold_elite_stone,
+            legend: d.gold_legend_stone,
+          },
+        );
         // Rounded, not left as a float: `Dungeon.gold` is documented as whole
         // gold, `renderTerms` states LP coefficients are always integers (LP
         // format rejects the exponent notation a small float can render as),
         // and assertFeasible re-checks the plan in integer arithmetic.
-        const applyStone = (base: number, stone: number) => {
-          const premium = Math.max(0, stone - base);
-          return Math.round(base + stoneRate * premium);
-        };
+        const applyStone = (base: number) =>
+          base > 0 ? Math.round(base + stoneRate * premium) : base;
 
         const effectiveGold = {
-          solo: applyStone(gold.solo, d.gold_solo_stone),
-          story: applyStone(gold.story, d.gold_story_stone),
-          elite: applyStone(gold.elite, d.gold_elite_stone),
-          legend: applyStone(gold.legend, d.gold_legend_stone),
+          solo: applyStone(gold.solo),
+          story: applyStone(gold.story),
+          elite: applyStone(gold.elite),
+          legend: applyStone(gold.legend),
         };
 
         return { gold: effectiveGold, goldEstimated: estimated, goldUnknown: unknown };

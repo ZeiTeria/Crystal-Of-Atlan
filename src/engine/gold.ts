@@ -56,3 +56,29 @@ export function fillGoldGaps(gold: Record<PaidTier, number>): {
 
   return { gold: filled, estimated, unknown: false };
 }
+
+/**
+ * The dungeon's stone premium: the flat gold a stone adds to a clear.
+ *
+ * Measured, not assumed. The premium is the same at every difficulty - Kraken's
+ * Spine and Heart Of Taboos each pay 5,000 at story and at elite - and no buff
+ * touches it, so it is a property of the dungeon rather than of the tier.
+ *
+ * Reading it per tier is what made The Deep Dive price legend BELOW elite.
+ * `fillGoldGaps` gives legend elite's base, but `gold_legend_stone` is still 0,
+ * so `stone - base` came out negative, clamped to zero, and legend silently
+ * lost the 5,000 that elite keeps. Taking one premium for the whole dungeon
+ * removes that class of bug: a borrowed base now borrows its premium with it.
+ *
+ * Zero when no tier has both figures - the honest answer when the dungeon has
+ * never been run with a stone, and the same thing the old per-tier code did.
+ */
+export function stonePremium(
+  gold: Record<PaidTier, number>,
+  stone: Record<PaidTier, number>,
+): number {
+  for (const tier of PAID_TIERS) {
+    if (gold[tier] > 0 && stone[tier] > gold[tier]) return stone[tier] - gold[tier];
+  }
+  return 0;
+}
