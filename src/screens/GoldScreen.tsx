@@ -154,6 +154,7 @@ export default function GoldScreen() {
         4. Still unmeasured
       </h3>
       <ul className="gold-notes">
+        <li><strong>All three buffs at once has never been read cleanly.</strong> The only reading, 89,650, sits 1,650 above prediction - the same signature as the title-plus-potion reading since proven bad. Run Duskfeather Lair elite with all three: the model says 88,000 without a stone and 93,000 with one. That is the last combination left to check.</li>
         <li><strong>What went wrong in those two early readings?</strong> Not urgent - the model is confirmed without them - but the same configuration measured twice gave 90,500 and 92,138, so something varied between the runs. A different character is the obvious suspect, since buffs are per-character and a different title would carry a different percentage.</li>
         <li><strong>Story gold for six dungeons:</strong> Checkmate, Queen Coronation, Temple Of Fate, Apocalyptic Descent, Duskfeather Lair, The Deep Dive.</li>
         <li><strong>Does C change with difficulty?</strong> No story-tier C has been measured anywhere.</li>
