@@ -20,6 +20,22 @@ const GOLD_CONSTANTS: DungeonGold[] = [
   { dungeon: 'Shackled Psyche', mode: 'manual', base: 50000, c: null, premium: 5000 },
 ];
 
+type BuffReading = {
+  buffs: string;
+  sum: string;
+  observed: number;
+  base: number;
+  over: number | null;
+};
+
+const BUFF_READINGS: BuffReading[] = [
+  { buffs: 'none', sum: '0%', observed: 84500, base: 79500, over: null },
+  { buffs: 'title', sum: '2%', observed: 80500, base: 80500, over: 1000 },
+  { buffs: 'title + abnormal sense', sum: '7%', observed: 82000, base: 82000, over: 2500 },
+  { buffs: 'title + potion', sum: '12%', observed: 92138, base: 87138, over: 7638 },
+  { buffs: 'title + abnormal sense + potion', sum: '17%', observed: 89650, base: 89650, over: 10150 },
+];
+
 export default function GoldScreen() {
   return (
     <div className="gold-screen">
@@ -38,7 +54,7 @@ export default function GoldScreen() {
         <li>Elite and Legend always pay exactly the same.</li>
         <li>Auto pays more than manual and costs no time, so always timeskip when the dungeon allows it. Only The Deep Dive and Shackled Psyche force manual.</li>
         <li>No buff of any kind applies to a manual run, so B_manual is a constant.</li>
-        <li>The title and abnormal sense multiply the same C. The gold potion does NOT — it pays about 13.3% of C where 10% is expected, so it still needs its own rule.</li>
+        <li>C is derived from the title alone. How the other two buffs behave is NOT yet known - see the buff table below, they interact rather than simply adding.</li>
       </ul>
 
       <h3 className="section-head">
@@ -76,14 +92,46 @@ export default function GoldScreen() {
       </p>
 
       <h3 className="section-head">
+        Buff readings - Duskfeather Lair elite, auto
+      </h3>
+      <div className="gold-table-container">
+        <table className="gold-table">
+          <thead>
+            <tr>
+              <th>Buffs active</th>
+              <th className="num">Sum</th>
+              <th className="num">Observed</th>
+              <th className="num">Base</th>
+              <th className="num">Over 79,500</th>
+            </tr>
+          </thead>
+          <tbody>
+            {BUFF_READINGS.map((r) => (
+              <tr key={r.buffs}>
+                <td>{r.buffs}</td>
+                <td className="num">{r.sum}</td>
+                <td className="num">{r.observed.toLocaleString('en-US')}</td>
+                <td className="num">{r.base.toLocaleString('en-US')}</td>
+                <td className="num">{r.over === null ? '-' : r.over.toLocaleString('en-US')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="gold-tier-ref">
+        Base is the observed figure less the 5,000 stone premium where a stone dropped. If one
+        component were being multiplied, every row would imply the same C. They imply 50,000,
+        35,714, 63,650 and 59,706 - so the buffs interact and no model fits yet.
+      </p>
+
+      <h3 className="section-head">
         3. How this was established
       </h3>
       <ul className="gold-notes">
         <li><strong>The stone premium is flat and unbuffed</strong> - Temple Of Fate showed a 4,000 gap with the title on (105,720 vs 101,720) and the same 4,000 with it off (104,680 vs 100,680).</li>
         <li><strong>The title is 2% of C, not 2% of the reward</strong> - the title-off drops are not proportional to the bases (drops in a ratio of 2.08 where the bases are 1.93). Solving drop / 0.02 gives a C that lands on a multiple of 500 for all seven auto dungeons.</li>
         <li><strong>No buff touches a manual run</strong> - Duskfeather Lair paid 80,000 with the title, 80,000 without it, and 80,000 again with all three buffs active, every time with a stone.</li>
-        <li><strong>Abnormal sense multiplies the same C as the title</strong> - removing its 5% cost 2,500 on Duskfeather Lair, exactly 5% of C = 50,000.</li>
-        <li><strong>The gold potion does not share that component</strong> - it contributes about 6,650 on Duskfeather Lair, where 10% of C would be 5,000. Two independent readings (2+5+10 without a stone, 2+10 with one) agree on that figure.</li>
+        <li><strong>The buffs interact; they do not simply add</strong> - see the table below. Abnormal sense is worth 1,500 with the potion off and 2,512 with it on, and the potion is worth 6,638 or 7,650 depending on abnormal sense. No single shared component fits all five readings.</li>
         <li><strong>Auto pays more than manual</strong> - Duskfeather Lair, title on: 80,500 auto against 75,000 manual.</li>
         <li><strong>The premium applies in manual too</strong> - Duskfeather Lair manual, 80,000 with a stone and 75,000 without.</li>
         <li><strong>Elite and Legend are identical on every dungeon</strong> (confirmed in game).</li>
@@ -93,7 +141,7 @@ export default function GoldScreen() {
         4. Still unmeasured
       </h3>
       <ul className="gold-notes">
-        <li><strong>What rule does the gold potion follow?</strong> Abnormal sense is settled (it shares C); the potion is not. Run Heart Of Taboos with only the potion on: it gains 3,325 if the potion is a percentage of C, 4,371 if it is a percentage of the base, and 6,650 if it is a flat amount.</li>
+        <li><strong>What rule do abnormal sense and the gold potion follow?</strong> Every run so far except the baseline had the title active, so those two have only ever been measured through it and neither is pinned down. Run Duskfeather Lair elite without a stone and with ONE buff only: simple addition predicts 81,000 for abnormal sense alone and 86,138 for the potion alone.</li>
         <li><strong>Story gold for six dungeons:</strong> Checkmate, Queen Coronation, Temple Of Fate, Apocalyptic Descent, Duskfeather Lair, The Deep Dive.</li>
         <li><strong>Does C change with difficulty?</strong> No story-tier C has been measured anywhere.</li>
         <li><strong>Kraken's Spine disagrees on the elite/story ratio.</strong> Heart Of Taboos and Shackled Psyche are both exactly 1.25; Kraken's Spine is 1.23149. At 1.25 its story figure would be 59,072 rather than the stored 59,960, so it is worth re-running.</li>

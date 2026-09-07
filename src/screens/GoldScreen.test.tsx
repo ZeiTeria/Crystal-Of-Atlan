@@ -58,10 +58,24 @@ describe('GoldScreen', () => {
     expect(screen.getByText(/B_manual is a constant/i)).toBeDefined();
   });
 
-  it('separates the potion from the two buffs that share C', () => {
+  it('records that the buffs interact rather than adding', () => {
     render(<GoldScreen />);
-    expect(screen.getByText(/Abnormal sense multiplies the same C/i)).toBeDefined();
-    expect(screen.getByText(/gold potion does not share that component/i)).toBeDefined();
+    expect(screen.getByText(/The buffs interact; they do not simply add/i)).toBeDefined();
+  });
+
+  it('lists every buff combination measured, with its implied base', () => {
+    render(<GoldScreen />);
+    // The point of the table is that one buff reads differently depending on
+    // which others are on, so each row has to carry its own base.
+    const row = (label: string) =>
+      screen
+        .getAllByRole('row')
+        .find((r) => r.textContent?.trim().startsWith(label))!
+        .querySelectorAll('td');
+
+    expect(row('title + potion')[3]?.textContent).toBe('87,138');
+    expect(row('title + abnormal sense + potion')[3]?.textContent).toBe('89,650');
+    expect(row('title + abnormal sense')[4]?.textContent).toBe('2,500');
   });
 
   it('states that elite and legend pay the same', () => {
