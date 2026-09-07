@@ -37,6 +37,8 @@ export default function GoldScreen() {
         <li>C is the only part a buff multiplies. It is roughly half the reward but not a fixed fraction, so it has to be measured per dungeon.</li>
         <li>Elite and Legend always pay exactly the same.</li>
         <li>Auto pays more than manual and costs no time, so always timeskip when the dungeon allows it. Only The Deep Dive and Shackled Psyche force manual.</li>
+        <li>No buff of any kind applies to a manual run, so B_manual is a constant.</li>
+        <li>The title and abnormal sense multiply the same C. The gold potion does NOT — it pays about 13.3% of C where 10% is expected, so it still needs its own rule.</li>
       </ul>
 
       <h3 className="section-head">
@@ -79,7 +81,9 @@ export default function GoldScreen() {
       <ul className="gold-notes">
         <li><strong>The stone premium is flat and unbuffed</strong> - Temple Of Fate showed a 4,000 gap with the title on (105,720 vs 101,720) and the same 4,000 with it off (104,680 vs 100,680).</li>
         <li><strong>The title is 2% of C, not 2% of the reward</strong> - the title-off drops are not proportional to the bases (drops in a ratio of 2.08 where the bases are 1.93). Solving drop / 0.02 gives a C that lands on a multiple of 500 for all seven auto dungeons.</li>
-        <li><strong>The title does nothing on manual runs</strong> - Duskfeather Lair paid 80,000 with the title and 80,000 without, both with a stone.</li>
+        <li><strong>No buff touches a manual run</strong> - Duskfeather Lair paid 80,000 with the title, 80,000 without it, and 80,000 again with all three buffs active, every time with a stone.</li>
+        <li><strong>Abnormal sense multiplies the same C as the title</strong> - removing its 5% cost 2,500 on Duskfeather Lair, exactly 5% of C = 50,000.</li>
+        <li><strong>The gold potion does not share that component</strong> - it contributes about 6,650 on Duskfeather Lair, where 10% of C would be 5,000. Two independent readings (2+5+10 without a stone, 2+10 with one) agree on that figure.</li>
         <li><strong>Auto pays more than manual</strong> - Duskfeather Lair, title on: 80,500 auto against 75,000 manual.</li>
         <li><strong>The premium applies in manual too</strong> - Duskfeather Lair manual, 80,000 with a stone and 75,000 without.</li>
         <li><strong>Elite and Legend are identical on every dungeon</strong> (confirmed in game).</li>
@@ -89,7 +93,7 @@ export default function GoldScreen() {
         4. Still unmeasured
       </h3>
       <ul className="gold-notes">
-        <li><strong>Do the other two buffs (abnormal sense +5%, potion) multiply the same C?</strong> Run Temple Of Fate with abnormal sense off and the title on: a drop of exactly 2,600 confirms it.</li>
+        <li><strong>What rule does the gold potion follow?</strong> Abnormal sense is settled (it shares C); the potion is not. Run Heart Of Taboos with only the potion on: it gains 3,325 if the potion is a percentage of C, 4,371 if it is a percentage of the base, and 6,650 if it is a flat amount.</li>
         <li><strong>Story gold for six dungeons:</strong> Checkmate, Queen Coronation, Temple Of Fate, Apocalyptic Descent, Duskfeather Lair, The Deep Dive.</li>
         <li><strong>Does C change with difficulty?</strong> No story-tier C has been measured anywhere.</li>
         <li><strong>Kraken's Spine disagrees on the elite/story ratio.</strong> Heart Of Taboos and Shackled Psyche are both exactly 1.25; Kraken's Spine is 1.23149. At 1.25 its story figure would be 59,072 rather than the stored 59,960, so it is worth re-running.</li>

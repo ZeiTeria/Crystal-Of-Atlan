@@ -52,6 +52,18 @@ describe('GoldScreen', () => {
     expect(shackledRow?.textContent).toContain('manual');
   });
 
+  it('records that no buff applies to a manual run', () => {
+    render(<GoldScreen />);
+    expect(screen.getByText(/No buff touches a manual run/i)).toBeDefined();
+    expect(screen.getByText(/B_manual is a constant/i)).toBeDefined();
+  });
+
+  it('separates the potion from the two buffs that share C', () => {
+    render(<GoldScreen />);
+    expect(screen.getByText(/Abnormal sense multiplies the same C/i)).toBeDefined();
+    expect(screen.getByText(/gold potion does not share that component/i)).toBeDefined();
+  });
+
   it('states that elite and legend pay the same', () => {
     render(<GoldScreen />);
     const match1 = screen.queryByText(/Elite and Legend always pay exactly the same/i);
