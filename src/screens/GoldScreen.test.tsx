@@ -61,7 +61,8 @@ describe('GoldScreen', () => {
   it('records that all three buffs are percentages of one component', () => {
     render(<GoldScreen />);
     expect(screen.getByText(/Every buff is a percentage of the same C/i)).toBeDefined();
-    expect(screen.getByText(/Queen Coronation's C is confirmed twice over/i)).toBeDefined();
+    expect(screen.getByText(/Buffs stack by adding their percentages/i)).toBeDefined();
+    expect(screen.getByText(/The stone premium survives buffs/i)).toBeDefined();
   });
 
   it('lists every buff combination measured, with its implied base', () => {
@@ -74,17 +75,21 @@ describe('GoldScreen', () => {
         .find((r) => r.textContent?.trim().startsWith(label))!
         .querySelectorAll('td');
 
-    expect(row('title + potion')[3]?.textContent).toBe('87,138');
-    expect(row('title + abnormal sense + potion')[3]?.textContent).toBe('89,650');
+    // The confirming two-buff run and the bad reading of the SAME configuration
+    // sit side by side; the table is worthless if they are ever merged.
+    expect(row('title + potion (with stone)')[3]?.textContent).toBe('85,500');
+    expect(row('title + potion (earlier reading)')[3]?.textContent).toBe('87,138');
     // Abnormal sense was measured ALONE: mislabelling this row as title+AS is
     // what produced a retracted claim, so the buff column is asserted too.
     expect(row('abnormal sense')[0]?.textContent).toBe('abnormal sense');
     expect(row('abnormal sense')[1]?.textContent).toBe('5%');
-    expect(row('abnormal sense')[4]?.textContent).toBe('2,500');
+    expect(row('abnormal sense')[4]?.textContent).toBe('82,000');
     // The three single-buff rows are the evidence for the whole model, so each
     // is pinned to C = 50,000 times its own percentage.
-    expect(row('title')[4]?.textContent).toBe('1,000');
-    expect(row('potion')[4]?.textContent).toBe('5,000');
+    expect(row('title')[4]?.textContent).toBe('80,500');
+    expect(row('potion')[4]?.textContent).toBe('84,500');
+    // A row whose base misses the prediction must say so, not hide it.
+    expect(row('title + potion (earlier reading)')[4]?.textContent).toContain('off 1,638');
   });
 
   it('states that elite and legend pay the same', () => {
