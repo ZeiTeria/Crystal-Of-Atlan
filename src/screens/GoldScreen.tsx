@@ -31,7 +31,7 @@ type BuffReading = {
 const BUFF_READINGS: BuffReading[] = [
   { buffs: 'none', sum: '0%', observed: 84500, base: 79500, over: null },
   { buffs: 'title', sum: '2%', observed: 80500, base: 80500, over: 1000 },
-  { buffs: 'title + abnormal sense', sum: '7%', observed: 82000, base: 82000, over: 2500 },
+  { buffs: 'abnormal sense', sum: '5%', observed: 82000, base: 82000, over: 2500 },
   { buffs: 'title + potion', sum: '12%', observed: 92138, base: 87138, over: 7638 },
   { buffs: 'title + abnormal sense + potion', sum: '17%', observed: 89650, base: 89650, over: 10150 },
 ];
@@ -45,7 +45,7 @@ export default function GoldScreen() {
       <div className="gold-formula-block">
         <div className="formula-line">one run  =  base(tier, mode)  +  stone premium (only when a stone drops)</div>
         <br />
-        <div className="formula-line">base, auto mode    =  B  +  C x (sum of active buff percentages)</div>
+        <div className="formula-line">base, auto mode    =  B  +  C x (title% + abnormal sense%)  +  potion (rule not yet known)</div>
         <div className="formula-line">base, manual mode  =  B_manual        &lt;- buffs do NOT apply</div>
       </div>
       <ul className="gold-notes">
@@ -54,7 +54,7 @@ export default function GoldScreen() {
         <li>Elite and Legend always pay exactly the same.</li>
         <li>Auto pays more than manual and costs no time, so always timeskip when the dungeon allows it. Only The Deep Dive and Shackled Psyche force manual.</li>
         <li>No buff of any kind applies to a manual run, so B_manual is a constant.</li>
-        <li>C is derived from the title alone. How the other two buffs behave is NOT yet known - see the buff table below, they interact rather than simply adding.</li>
+        <li>The title and abnormal sense both multiply C, and each was measured on its own: 2% of 50,000 is 1,000 and 5% is 2,500, both exact. The gold potion does NOT follow that rule - it pays about 13.3% of C where 10% is expected.</li>
       </ul>
 
       <h3 className="section-head">
@@ -119,9 +119,10 @@ export default function GoldScreen() {
         </table>
       </div>
       <p className="gold-tier-ref">
-        Base is the observed figure less the 5,000 stone premium where a stone dropped. If one
-        component were being multiplied, every row would imply the same C. They imply 50,000,
-        35,714, 63,650 and 59,706 - so the buffs interact and no model fits yet.
+        Base is the observed figure less the 5,000 stone premium where a stone dropped. The title
+        and abnormal sense rows, each measured with no other buff active, both imply C = 50,000
+        exactly. The two potion rows do not, which is how we know the potion follows a different
+        rule rather than simply being a bigger share of the same component.
       </p>
 
       <h3 className="section-head">
@@ -131,7 +132,8 @@ export default function GoldScreen() {
         <li><strong>The stone premium is flat and unbuffed</strong> - Temple Of Fate showed a 4,000 gap with the title on (105,720 vs 101,720) and the same 4,000 with it off (104,680 vs 100,680).</li>
         <li><strong>The title is 2% of C, not 2% of the reward</strong> - the title-off drops are not proportional to the bases (drops in a ratio of 2.08 where the bases are 1.93). Solving drop / 0.02 gives a C that lands on a multiple of 500 for all seven auto dungeons.</li>
         <li><strong>No buff touches a manual run</strong> - Duskfeather Lair paid 80,000 with the title, 80,000 without it, and 80,000 again with all three buffs active, every time with a stone.</li>
-        <li><strong>The buffs interact; they do not simply add</strong> - see the table below. Abnormal sense is worth 1,500 with the potion off and 2,512 with it on, and the potion is worth 6,638 or 7,650 depending on abnormal sense. No single shared component fits all five readings.</li>
+        <li><strong>The title and abnormal sense share one component</strong> - each measured alone on Duskfeather Lair, the title added exactly 1,000 and abnormal sense exactly 2,500, which is 2% and 5% of the same C = 50,000.</li>
+        <li><strong>The gold potion does not</strong> - it contributes 6,638 measured against the title and 6,650 measured against title plus abnormal sense, where 10% of C would be 5,000. The two readings leave a 12 gold residual that no part of the model accounts for.</li>
         <li><strong>Auto pays more than manual</strong> - Duskfeather Lair, title on: 80,500 auto against 75,000 manual.</li>
         <li><strong>The premium applies in manual too</strong> - Duskfeather Lair manual, 80,000 with a stone and 75,000 without.</li>
         <li><strong>Elite and Legend are identical on every dungeon</strong> (confirmed in game).</li>
@@ -141,7 +143,7 @@ export default function GoldScreen() {
         4. Still unmeasured
       </h3>
       <ul className="gold-notes">
-        <li><strong>What rule do abnormal sense and the gold potion follow?</strong> Every run so far except the baseline had the title active, so those two have only ever been measured through it and neither is pinned down. Run Duskfeather Lair elite without a stone and with ONE buff only: simple addition predicts 81,000 for abnormal sense alone and 86,138 for the potion alone.</li>
+        <li><strong>What rule does the gold potion follow?</strong> It pays about 6,644 on Duskfeather Lair, which is neither 10% of C nor any obvious share of the base. Run Heart Of Taboos with the potion as the only buff: it gains 3,322 if the potion scales with C, 4,367 if it scales with the base, and 6,644 if it is a flat amount per dungeon.</li>
         <li><strong>Story gold for six dungeons:</strong> Checkmate, Queen Coronation, Temple Of Fate, Apocalyptic Descent, Duskfeather Lair, The Deep Dive.</li>
         <li><strong>Does C change with difficulty?</strong> No story-tier C has been measured anywhere.</li>
         <li><strong>Kraken's Spine disagrees on the elite/story ratio.</strong> Heart Of Taboos and Shackled Psyche are both exactly 1.25; Kraken's Spine is 1.23149. At 1.25 its story figure would be 59,072 rather than the stored 59,960, so it is worth re-running.</li>

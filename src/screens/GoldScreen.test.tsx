@@ -58,9 +58,10 @@ describe('GoldScreen', () => {
     expect(screen.getByText(/B_manual is a constant/i)).toBeDefined();
   });
 
-  it('records that the buffs interact rather than adding', () => {
+  it('separates the potion from the two buffs that share C', () => {
     render(<GoldScreen />);
-    expect(screen.getByText(/The buffs interact; they do not simply add/i)).toBeDefined();
+    expect(screen.getByText(/title and abnormal sense share one component/i)).toBeDefined();
+    expect(screen.getByText(/contributes 6,638 measured against the title/i)).toBeDefined();
   });
 
   it('lists every buff combination measured, with its implied base', () => {
@@ -75,7 +76,11 @@ describe('GoldScreen', () => {
 
     expect(row('title + potion')[3]?.textContent).toBe('87,138');
     expect(row('title + abnormal sense + potion')[3]?.textContent).toBe('89,650');
-    expect(row('title + abnormal sense')[4]?.textContent).toBe('2,500');
+    // Abnormal sense was measured ALONE: mislabelling this row as title+AS is
+    // what produced a retracted claim, so the buff column is asserted too.
+    expect(row('abnormal sense')[0]?.textContent).toBe('abnormal sense');
+    expect(row('abnormal sense')[1]?.textContent).toBe('5%');
+    expect(row('abnormal sense')[4]?.textContent).toBe('2,500');
   });
 
   it('states that elite and legend pay the same', () => {
