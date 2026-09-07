@@ -58,10 +58,10 @@ describe('GoldScreen', () => {
     expect(screen.getByText(/B_manual is a constant/i)).toBeDefined();
   });
 
-  it('separates the potion from the two buffs that share C', () => {
+  it('records that all three buffs are percentages of one component', () => {
     render(<GoldScreen />);
-    expect(screen.getByText(/title and abnormal sense share one component/i)).toBeDefined();
-    expect(screen.getByText(/contributes 6,638 measured against the title/i)).toBeDefined();
+    expect(screen.getByText(/Every buff is a percentage of the same C/i)).toBeDefined();
+    expect(screen.getByText(/Queen Coronation's C is confirmed twice over/i)).toBeDefined();
   });
 
   it('lists every buff combination measured, with its implied base', () => {
@@ -81,6 +81,10 @@ describe('GoldScreen', () => {
     expect(row('abnormal sense')[0]?.textContent).toBe('abnormal sense');
     expect(row('abnormal sense')[1]?.textContent).toBe('5%');
     expect(row('abnormal sense')[4]?.textContent).toBe('2,500');
+    // The three single-buff rows are the evidence for the whole model, so each
+    // is pinned to C = 50,000 times its own percentage.
+    expect(row('title')[4]?.textContent).toBe('1,000');
+    expect(row('potion')[4]?.textContent).toBe('5,000');
   });
 
   it('states that elite and legend pay the same', () => {

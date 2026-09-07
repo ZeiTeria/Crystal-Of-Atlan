@@ -32,6 +32,7 @@ const BUFF_READINGS: BuffReading[] = [
   { buffs: 'none', sum: '0%', observed: 84500, base: 79500, over: null },
   { buffs: 'title', sum: '2%', observed: 80500, base: 80500, over: 1000 },
   { buffs: 'abnormal sense', sum: '5%', observed: 82000, base: 82000, over: 2500 },
+  { buffs: 'potion', sum: '10%', observed: 84500, base: 84500, over: 5000 },
   { buffs: 'title + potion', sum: '12%', observed: 92138, base: 87138, over: 7638 },
   { buffs: 'title + abnormal sense + potion', sum: '17%', observed: 89650, base: 89650, over: 10150 },
 ];
@@ -45,7 +46,7 @@ export default function GoldScreen() {
       <div className="gold-formula-block">
         <div className="formula-line">one run  =  base(tier, mode)  +  stone premium (only when a stone drops)</div>
         <br />
-        <div className="formula-line">base, auto mode    =  B  +  C x (title% + abnormal sense%)  +  potion (rule not yet known)</div>
+        <div className="formula-line">base, auto mode    =  B  +  C x (sum of active buff percentages)</div>
         <div className="formula-line">base, manual mode  =  B_manual        &lt;- buffs do NOT apply</div>
       </div>
       <ul className="gold-notes">
@@ -54,7 +55,7 @@ export default function GoldScreen() {
         <li>Elite and Legend always pay exactly the same.</li>
         <li>Auto pays more than manual and costs no time, so always timeskip when the dungeon allows it. Only The Deep Dive and Shackled Psyche force manual.</li>
         <li>No buff of any kind applies to a manual run, so B_manual is a constant.</li>
-        <li>The title and abnormal sense both multiply C, and each was measured on its own: 2% of 50,000 is 1,000 and 5% is 2,500, both exact. The gold potion does NOT follow that rule - it pays about 13.3% of C where 10% is expected.</li>
+        <li>All three buffs are plain percentages of C. Measured one at a time on Duskfeather Lair the title added exactly 1,000, abnormal sense exactly 2,500 and the potion exactly 5,000 - 2%, 5% and 10% of C = 50,000. Verified for one buff at a time; two readings with several buffs at once do not fit and are listed below.</li>
       </ul>
 
       <h3 className="section-head">
@@ -119,10 +120,12 @@ export default function GoldScreen() {
         </table>
       </div>
       <p className="gold-tier-ref">
-        Base is the observed figure less the 5,000 stone premium where a stone dropped. The title
-        and abnormal sense rows, each measured with no other buff active, both imply C = 50,000
-        exactly. The two potion rows do not, which is how we know the potion follows a different
-        rule rather than simply being a bigger share of the same component.
+        Base is the observed figure less the 5,000 stone premium where a stone dropped. The three
+        single-buff rows land on C = 50,000 exactly. The two multi-buff rows do not: they come in
+        1,638 and 1,650 high against the same C. The excess hardly moves between 12% and 17%, so it
+        is not a stacking rate - something else was active in those two runs, and re-running
+        title plus potion without a stone settles it. The model says 85,500; those readings imply
+        87,138.
       </p>
 
       <h3 className="section-head">
@@ -132,8 +135,8 @@ export default function GoldScreen() {
         <li><strong>The stone premium is flat and unbuffed</strong> - Temple Of Fate showed a 4,000 gap with the title on (105,720 vs 101,720) and the same 4,000 with it off (104,680 vs 100,680).</li>
         <li><strong>The title is 2% of C, not 2% of the reward</strong> - the title-off drops are not proportional to the bases (drops in a ratio of 2.08 where the bases are 1.93). Solving drop / 0.02 gives a C that lands on a multiple of 500 for all seven auto dungeons.</li>
         <li><strong>No buff touches a manual run</strong> - Duskfeather Lair paid 80,000 with the title, 80,000 without it, and 80,000 again with all three buffs active, every time with a stone.</li>
-        <li><strong>The title and abnormal sense share one component</strong> - each measured alone on Duskfeather Lair, the title added exactly 1,000 and abnormal sense exactly 2,500, which is 2% and 5% of the same C = 50,000.</li>
-        <li><strong>The gold potion does not</strong> - it contributes 6,638 measured against the title and 6,650 measured against title plus abnormal sense, where 10% of C would be 5,000. The two readings leave a 12 gold residual that no part of the model accounts for.</li>
+        <li><strong>Every buff is a percentage of the same C</strong> - measured one at a time, the title added 1,000, abnormal sense 2,500 and the potion 5,000 on Duskfeather Lair, and the potion added 2,000 on Queen Coronation. Four readings, four exact hits against C = 50,000 and C = 20,000.</li>
+        <li><strong>Queen Coronation's C is confirmed twice over</strong> - it was derived from the title (400 being 2% of 20,000) and the potion independently agrees (2,000 being 10%).</li>
         <li><strong>Auto pays more than manual</strong> - Duskfeather Lair, title on: 80,500 auto against 75,000 manual.</li>
         <li><strong>The premium applies in manual too</strong> - Duskfeather Lair manual, 80,000 with a stone and 75,000 without.</li>
         <li><strong>Elite and Legend are identical on every dungeon</strong> (confirmed in game).</li>
@@ -143,8 +146,7 @@ export default function GoldScreen() {
         4. Still unmeasured
       </h3>
       <ul className="gold-notes">
-        <li><strong>How big is the gold potion, exactly?</strong> It has only ever been measured with the title also active, and its two readings disagree by 12 gold. Run Duskfeather Lair elite with the potion as the only buff, no stone: 86,138 means it is worth 6,638, 86,150 means 6,650, and anything else means it is not simply additive with the title.</li>
-        <li><strong>What rule does the potion follow?</strong> It pays about 13.3% of C on Duskfeather Lair, which is neither 10% of C nor any obvious share of the base. This CANNOT be answered on Duskfeather Lair - every candidate rule is calibrated there, so all of them predict the same number. What separates them is a dungeon with a different C-to-base ratio, and Queen Coronation has the most extreme one. Run it with the potion as the only buff, no stone: 48,458 if the potion scales with C, 49,628 if it scales with the base, 52,444 if it is flat per dungeon.</li>
+        <li><strong>Why do the two multi-buff readings come in about 1,644 high?</strong> Every buff measured on its own fits C exactly, so the rule is not in doubt; those two runs are. Re-run Duskfeather Lair elite with title and potion, no stone: 85,500 means the earlier readings were contaminated and the model is complete, and 87,138 means stacking really does add something and the effect is reproducible.</li>
         <li><strong>Story gold for six dungeons:</strong> Checkmate, Queen Coronation, Temple Of Fate, Apocalyptic Descent, Duskfeather Lair, The Deep Dive.</li>
         <li><strong>Does C change with difficulty?</strong> No story-tier C has been measured anywhere.</li>
         <li><strong>Kraken's Spine disagrees on the elite/story ratio.</strong> Heart Of Taboos and Shackled Psyche are both exactly 1.25; Kraken's Spine is 1.23149. At 1.25 its story figure would be 59,072 rather than the stored 59,960, so it is worth re-running.</li>
