@@ -125,6 +125,7 @@ export interface Database {
           gold_story: number;
           gold_elite: number;
           gold_legend: number;
+          gold_c: number;
           sort_order: number;
           is_active: boolean;
           default_tier: 'none' | 'solo' | 'story' | 'elite' | 'legend';
@@ -147,6 +148,7 @@ export interface Database {
           gold_story?: number;
           gold_elite?: number;
           gold_legend?: number;
+          gold_c?: number;
           sort_order?: number;
           is_active?: boolean;
           default_tier?: 'none' | 'solo' | 'story' | 'elite' | 'legend';
@@ -169,6 +171,7 @@ export interface Database {
           gold_story?: number;
           gold_elite?: number;
           gold_legend?: number;
+          gold_c?: number;
           sort_order?: number;
           is_active?: boolean;
           default_tier?: 'none' | 'solo' | 'story' | 'elite' | 'legend';

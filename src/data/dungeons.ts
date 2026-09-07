@@ -19,6 +19,7 @@ export interface NewDungeon {
   gold_story: number;
   gold_elite: number;
   gold_legend: number;
+  gold_c: number;
   gold_solo_stone: number;
   gold_story_stone: number;
   gold_elite_stone: number;

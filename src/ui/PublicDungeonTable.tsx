@@ -41,7 +41,6 @@ export default function PublicDungeonTable({ dungeons }: PublicDungeonTableProps
               </td>
               {PAID_TIERS.map(t => {
                 const value = d.gold[t];
-                const isEstimated = d.goldEstimated.includes(t);
                 const isUnknown = d.goldUnknown;
 
                 if (isUnknown) {
@@ -51,7 +50,6 @@ export default function PublicDungeonTable({ dungeons }: PublicDungeonTableProps
                 return (
                   <td key={t}>
                     {gold(value)}
-                    {isEstimated && <span className="estimated-mark" title="Estimated from nearest tier">*</span>}
                   </td>
                 );
               })}
@@ -60,7 +58,7 @@ export default function PublicDungeonTable({ dungeons }: PublicDungeonTableProps
         </tbody>
       </table>
       <p className="muted table-footnote">
-        * Figure is estimated from another tier. Figures include an estimate for stone drops.
+        Figures include an estimate for stone drops.
       </p>
     </div>
   );

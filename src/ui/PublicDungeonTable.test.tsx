@@ -41,12 +41,19 @@ describe('PublicDungeonTable', () => {
     expect(screen.getByText('4,000')).toBeDefined();
   });
 
-  it('marks the tiers whose figure was borrowed from another tier', () => {
-    // fillGoldGaps borrows a missing base from the nearest tier that has one.
-    // A reader has to be able to tell those apart from a measured figure.
+  it('does not mark tiers even when goldEstimated is non-empty', () => {
+    // The asterisk is removed, so it should not render even if estimated.
     render(<PublicDungeonTable dungeons={[aDungeon({ goldEstimated: ['story', 'legend'] })]} />);
 
-    expect(screen.getAllByText('*')).toHaveLength(2);
+    expect(screen.queryByTitle('Estimated from nearest tier')).toBeNull();
+    // The figures themselves must still be there - a component that rendered
+    // nothing at all would also pass the assertion above.
+    expect(screen.getByText('4,000')).toBeDefined();
+  });
+
+  it('does not explain a mark it no longer renders', () => {
+    render(<PublicDungeonTable dungeons={[aDungeon({ goldEstimated: ['story'] })]} />);
+    expect(screen.queryByText(/estimated from another tier/i)).toBeNull();
   });
 
   it('shows a dash rather than a figure when the dungeon has no gold at all', () => {

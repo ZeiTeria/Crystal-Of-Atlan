@@ -26,10 +26,6 @@
   align-items: center;
   gap: 8px;
 }
-.estimated-mark {
-  color: var(--text-muted);
-  margin-left: 4px;
-}
 
 .public-dungeon-table-container .table-footnote {
   margin-top: 12px;

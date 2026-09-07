@@ -23,7 +23,7 @@ const TABS: { view: View; label: string; adminOnly?: boolean }[] = [
   { view: 'log', label: 'Character' },
   { view: 'board', label: 'Plan' },
   { view: 'dungeons', label: 'Dungeons', adminOnly: true },
-  { view: 'gold', label: 'Gold' },
+  { view: 'gold', label: 'Gold', adminOnly: true },
 ];
 
 export default function App() {
@@ -197,7 +197,7 @@ export default function App() {
       <div className="app-content">
         {(view === 'board' || view === 'log') && <PlanScreen activeView={view} />}
         {view === 'dungeons' && profile?.is_admin && <DungeonsScreen />}
-        {view === 'gold' && <GoldScreen />}
+        {view === 'gold' && profile?.is_admin && <GoldScreen />}
       </div>
       
       {isPhone && (

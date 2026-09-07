@@ -41,6 +41,7 @@ const abyss = {
   gold_story: 200,
   gold_elite: 300,
   gold_legend: 400,
+  gold_c: 0,
   sort_order: 0,
   is_active: true,
   default_tier: 'elite' as const,
@@ -164,13 +165,33 @@ describe('DungeonsScreen', () => {
     });
   });
 
-  it('saves an edited gold value as a number, not a string', async () => {
+  it('saves an edited elite / legend base gold value to both columns', async () => {
     render(<DungeonsScreen />);
-    const legend = await screen.findByLabelText('Abyss legend gold base');
-    fireEvent.change(legend, { target: { value: '999' } });
-    fireEvent.blur(legend);
+    const input = await screen.findByLabelText('Abyss elite / legend gold base');
+    fireEvent.change(input, { target: { value: '999' } });
+    fireEvent.blur(input);
     await waitFor(() => {
-      expect(vi.mocked(updateDungeon)).toHaveBeenCalledWith('d1', { gold_legend: 999 });
+      expect(vi.mocked(updateDungeon)).toHaveBeenCalledWith('d1', { gold_elite: 999, gold_legend: 999 });
+    });
+  });
+
+  it('saves an edited elite / legend stone gold value to both stone columns', async () => {
+    render(<DungeonsScreen />);
+    const input = await screen.findByLabelText('Abyss elite / legend stone');
+    fireEvent.change(input, { target: { value: '444' } });
+    fireEvent.blur(input);
+    await waitFor(() => {
+      expect(vi.mocked(updateDungeon)).toHaveBeenCalledWith('d1', { gold_elite_stone: 444, gold_legend_stone: 444 });
+    });
+  });
+
+  it('saves an edited C value', async () => {
+    render(<DungeonsScreen />);
+    const input = await screen.findByLabelText('Abyss C');
+    fireEvent.change(input, { target: { value: '777' } });
+    fireEvent.blur(input);
+    await waitFor(() => {
+      expect(vi.mocked(updateDungeon)).toHaveBeenCalledWith('d1', { gold_c: 777 });
     });
   });
 

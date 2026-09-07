@@ -47,6 +47,7 @@ const BLANK: NewDungeon = {
   gold_story: 0,
   gold_elite: 0,
   gold_legend: 0,
+  gold_c: 0,
   gold_solo_stone: 0,
   gold_story_stone: 0,
   gold_elite_stone: 0,
@@ -63,8 +64,7 @@ const BLANK: NewDungeon = {
 const GOLD_COLUMNS = [
   { key: 'gold_solo', stoneKey: 'gold_solo_stone', label: 'solo', patch: (v: number): Partial<NewDungeon> => ({ gold_solo: v }), stonePatch: (v: number): Partial<NewDungeon> => ({ gold_solo_stone: v }) },
   { key: 'gold_story', stoneKey: 'gold_story_stone', label: 'story', patch: (v: number): Partial<NewDungeon> => ({ gold_story: v }), stonePatch: (v: number): Partial<NewDungeon> => ({ gold_story_stone: v }) },
-  { key: 'gold_elite', stoneKey: 'gold_elite_stone', label: 'elite', patch: (v: number): Partial<NewDungeon> => ({ gold_elite: v }), stonePatch: (v: number): Partial<NewDungeon> => ({ gold_elite_stone: v }) },
-  { key: 'gold_legend', stoneKey: 'gold_legend_stone', label: 'legend', patch: (v: number): Partial<NewDungeon> => ({ gold_legend: v }), stonePatch: (v: number): Partial<NewDungeon> => ({ gold_legend_stone: v }) },
+  { key: 'gold_elite', stoneKey: 'gold_elite_stone', label: 'elite / legend', patch: (v: number): Partial<NewDungeon> => ({ gold_elite: v, gold_legend: v }), stonePatch: (v: number): Partial<NewDungeon> => ({ gold_elite_stone: v, gold_legend_stone: v }) },
 ] as const;
 
 export default function DungeonsScreen() {
@@ -208,6 +208,7 @@ export default function DungeonsScreen() {
               {GOLD_COLUMNS.map((c) => (
                 <th key={c.key}>{c.label}</th>
               ))}
+              <th title="The buffable component of a dungeon's clear reward. Gold buffs multiply this part only; the rest of the reward and the stone premium are never buffed.">C</th>
               <th>Active</th>
               <th>Manual</th>
               <th>Default Tier</th>
@@ -315,6 +316,15 @@ export default function DungeonsScreen() {
                     </div>
                   </td>
                 ))}
+                <td>
+                  <input
+                    type="number"
+                    aria-label={`${d.name} C`}
+                    defaultValue={d.gold_c}
+                    onFocus={(e) => e.target.select()}
+                    onBlur={(e) => void save(d.id, { gold_c: Number(e.target.value) })}
+                  />
+                </td>
                 <td>
                   <input
                     type="checkbox"
