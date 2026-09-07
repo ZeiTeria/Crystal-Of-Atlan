@@ -1,0 +1,88 @@
+.gold-screen {
+  padding: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.gold-screen .section-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 32px 0 16px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.gold-screen .section-head:first-child {
+  margin-top: 0;
+}
+
+.gold-formula-block {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  padding: 16px;
+  margin-bottom: 16px;
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+  overflow-x: auto;
+}
+
+.gold-formula-block .formula-line {
+  white-space: pre;
+}
+
+.gold-notes {
+  margin: 0 0 24px 0;
+  padding-left: 20px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.gold-notes li {
+  margin-bottom: 8px;
+}
+
+.gold-table-container {
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.gold-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  min-width: 480px;
+}
+
+.gold-table th,
+.gold-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+
+.gold-table th {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+
+.gold-table th.num,
+.gold-table td.num {
+  text-align: right;
+}
+
+.gold-tier-ref {
+  margin: 8px 0;
+  color: var(--text);
+  line-height: 1.5;
+}

@@ -15,13 +15,15 @@ import LandingScreen from './screens/LandingScreen';
 import { LogoMark } from './ui/Shared';
 import './App.css';
 import ErrorBanner from './ui/ErrorBanner';
+import GoldScreen from './screens/GoldScreen';
 
-export type View = 'board' | 'log' | 'dungeons';
+export type View = 'board' | 'log' | 'dungeons' | 'gold';
 
 const TABS: { view: View; label: string; adminOnly?: boolean }[] = [
   { view: 'log', label: 'Character' },
   { view: 'board', label: 'Plan' },
   { view: 'dungeons', label: 'Dungeons', adminOnly: true },
+  { view: 'gold', label: 'Gold' },
 ];
 
 export default function App() {
@@ -195,6 +197,7 @@ export default function App() {
       <div className="app-content">
         {(view === 'board' || view === 'log') && <PlanScreen activeView={view} />}
         {view === 'dungeons' && profile?.is_admin && <DungeonsScreen />}
+        {view === 'gold' && <GoldScreen />}
       </div>
       
       {isPhone && (
