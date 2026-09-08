@@ -54,15 +54,6 @@ describe('describeConflict', () => {
     ).toBe('Abyss: your minimums require 21 runs but only 18 attempts exist.');
   });
 
-  it('reports minimums above the gold cap', () => {
-    expect(
-      describeConflict(
-        { kind: 'minimums-exceed-gold-cap', characterId: 'c1', requiredGold: 1200000, headroom: 1000000 },
-        names,
-      ),
-    ).toBe("Mage's minimums would earn 1,200,000 gold but only 1,000,000 fits under the cap.");
-  });
-
   it('reports the catch-all', () => {
     expect(describeConflict({ kind: 'no-feasible-plan' }, names)).toBe(
       'No plan satisfies every requirement.',

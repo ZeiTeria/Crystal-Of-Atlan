@@ -50,19 +50,6 @@ describe('validate', () => {
     ]);
   });
 
-  it('rejects minimums whose gold exceeds the character headroom', () => {
-    const input = anInput({
-      characters: [aCharacter('c1')],
-      dungeons: [aDungeon('d1', { gold: { solo: 0, story: 0, elite: 400_000, legend: 0 } })],
-      grid: [{ characterId: 'c1', dungeonId: 'd1', tier: 'elite', minRuns: 3 }],
-      goldHeadroom: { c1: 1_000_000 },
-    });
-    expect(validate(input)).toEqual([
-      { kind: 'minimums-exceed-gold-cap', characterId: 'c1',
-        requiredGold: 1_200_000, headroom: 1_000_000 },
-    ]);
-  });
-
   it('reports every conflict at once rather than stopping at the first', () => {
     const input = anInput({
       characters: [aCharacter('c1'), aCharacter('c2')],

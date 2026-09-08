@@ -112,15 +112,18 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
 
   // One row per character: the weekly gold cap.
   for (const character of input.characters) {
-    const terms = cells
-      .filter((c) => c.characterId === character.id)
-      .map((c) => ({ name: runVar(c.index), coef: c.goldPerRun }));
-    if (terms.length === 0) continue;
+    const charCells = cells.filter((c) => c.characterId === character.id);
+    if (charCells.length === 0) continue;
+    
+    const terms = charCells.map((c) => ({ name: runVar(c.index), coef: c.goldPerRun }));
+    const requiredGold = charCells.reduce((sum, c) => sum + c.min * c.goldPerRun, 0);
+    const headroom = input.goldHeadroom[character.id] ?? 0;
+    
     rows.push({
       name: `gold_${rows.length}`,
       terms,
       op: '<=',
-      rhs: input.goldHeadroom[character.id] ?? 0,
+      rhs: Math.max(headroom, requiredGold),
     });
   }
 
@@ -237,11 +240,16 @@ function assertFeasible(
     const earned = assignments
       .filter((a) => a.characterId === character.id)
       .reduce((sum, a) => sum + a.goldTotal, 0);
+    
+    const charCells = cells.filter((c) => c.characterId === character.id);
+    const requiredGold = charCells.reduce((sum, c) => sum + c.min * c.goldPerRun, 0);
     const headroom = input.goldHeadroom[character.id] ?? 0;
-    if (earned > headroom) {
+    const effectiveCap = Math.max(headroom, requiredGold);
+
+    if (earned > effectiveCap) {
       throw new SolverNotOptimalError(
         'verify',
-        `character ${character.id} earned ${earned} gold against a ${headroom} cap`,
+        `character ${character.id} earned ${earned} gold against a ${effectiveCap} cap`,
       );
     }
   }

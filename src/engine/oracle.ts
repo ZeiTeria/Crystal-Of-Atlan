@@ -23,7 +23,15 @@ interface Best {
  */
 function findBest(input: PlanInput, cells: Cell[]): Best | null {
   const accountLeft: Record<string, number> = { ...input.accountAttemptsLeft };
-  const goldLeft: Record<string, number> = { ...input.goldHeadroom };
+  
+  const goldLeft: Record<string, number> = {};
+  for (const c of input.characters) {
+    const charCells = cells.filter((cell) => cell.characterId === c.id);
+    const requiredGold = charCells.reduce((sum, cell) => sum + cell.min * cell.goldPerRun, 0);
+    const headroom = input.goldHeadroom[c.id] ?? 0;
+    goldLeft[c.id] = Math.max(headroom, requiredGold);
+  }
+  
   const current = new Array<number>(cells.length).fill(0);
   let best: Best | null = null;
 

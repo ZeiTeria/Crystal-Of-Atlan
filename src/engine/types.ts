@@ -111,8 +111,6 @@ export type Conflict =
       required: number; available: number }
   | { kind: 'minimums-exceed-account-cap'; dungeonId: string;
       required: number; available: number }
-  | { kind: 'minimums-exceed-gold-cap'; characterId: string;
-      requiredGold: number; headroom: number }
   | { kind: 'no-feasible-plan' };
 
 export type PlanResult =

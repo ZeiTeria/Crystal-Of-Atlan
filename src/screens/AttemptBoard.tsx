@@ -147,7 +147,7 @@ export default function AttemptBoard({
                 <div className="tile-bottom">
                   <div className="tile-gold-row">
                     <span className={capped ? 'warning-text' : undefined}>{gold(planned)}</span>
-                    <span>{capped ? 'at cap' : `${Math.round((planned / cap) * 100)}% of cap`}</span>
+                    <span>{planned > cap ? 'over cap' : capped ? 'at cap' : `${Math.round((planned / cap) * 100)}% of cap`}</span>
                   </div>
                   <div className="tile-meter">
                     <div

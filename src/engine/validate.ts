@@ -61,12 +61,8 @@ export function validate(input: PlanInput): Conflict[] {
     }
   }
 
-  for (const [characterId, requiredGold] of requiredGoldPerCharacter) {
-    const headroom = input.goldHeadroom[characterId] ?? 0;
-    if (requiredGold > headroom) {
-      conflicts.push({ kind: 'minimums-exceed-gold-cap', characterId, requiredGold, headroom });
-    }
-  }
+  // The gold cap is no longer a hard conflict for minimums. 
+  // If minimums exceed the gold cap, the solver will just allow it and stop assigning extra runs.
 
   return conflicts;
 }

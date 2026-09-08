@@ -376,7 +376,7 @@ export default function QuestLog({
               <span className="qh-sub">
                 {parked
                   ? 'Parked — left out of the plan until you put it back.'
-                  : `${runsThisWeek} runs planned${capped ? ' · at the gold cap' : ''}`}
+                  : `${runsThisWeek} runs planned${planned > cap ? ' · over the gold cap' : capped ? ' · at the gold cap' : ''}`}
               </span>
               <div className="buff-toggles">
                 <label className="buff-toggle">

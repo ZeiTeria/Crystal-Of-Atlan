@@ -42,11 +42,7 @@ export function describeConflict(conflict: Conflict, names: Names): string {
         `${names.dungeon(conflict.dungeonId)}: your minimums require ${conflict.required} runs ` +
         `but only ${conflict.available} attempts exist.`
       );
-    case 'minimums-exceed-gold-cap':
-      return (
-        `${names.character(conflict.characterId)}'s minimums would earn ` +
-        `${gold(conflict.requiredGold)} gold but only ${gold(conflict.headroom)} fits under the cap.`
-      );
+
     case 'no-feasible-plan':
       return 'No plan satisfies every requirement.';
   }
