@@ -40,8 +40,9 @@ describe('manualWarning', () => {
   });
 
   it('warns when more runs are planned than there are days to make them', () => {
-    const warning = manualWarning(2, 3);
-    expect(warning).toContain('2d');
-    expect(warning).toContain('3 runs');
+    // The message no longer names the run count, so the days left is all there
+    // is left to pin. `manualDaysLeft` above is what decides WHEN this fires;
+    // this only checks the number it fires with.
+    expect(manualWarning(2, 3)).toContain('2d');
   });
 });

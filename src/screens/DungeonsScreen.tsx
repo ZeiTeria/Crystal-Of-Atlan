@@ -140,7 +140,10 @@ export default function DungeonsScreen() {
 
   return (
     <section className="dungeons-screen">
-      <h2>Dungeons</h2>
+      <div className="dungeons-header">
+        <h2>Dungeons</h2>
+        <div className="header-decoration"></div>
+      </div>
       <ErrorBanner message={error} />
 
       <div className="admin-setting">
@@ -387,7 +390,10 @@ export default function DungeonsScreen() {
         ))}
       </datalist>
 
-      <h3>Add a dungeon</h3>
+      <div className="dungeons-header">
+        <h3>Add New Dungeon</h3>
+        <div className="header-decoration"></div>
+      </div>
       <p className="muted">
         Gold values can be filled in later; the name is the only thing needed to create one.
       </p>
@@ -421,7 +427,7 @@ export default function DungeonsScreen() {
           disabled={busy || draft.name.trim() === ''}
           onClick={() => void add()}
         >
-          Add dungeon
+          Add Dungeon
         </Button>
       </div>
     </section>

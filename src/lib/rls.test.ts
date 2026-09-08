@@ -206,6 +206,58 @@ describe.skipIf(!configured)('row level security', () => {
     expect(data).toEqual([{ id: bUserId }]);
   });
 
+
+  it('refuses B approving itself', { timeout: NETWORK_TIMEOUT }, async () => {
+    // The whole point of 0019. B holds a column grant on `is_approved`, so the
+    // only thing standing between B and access to the site is
+    // `profiles_approve_admin`. A policy filters rather than raises, so the
+    // proof is the row count and then the re-read.
+    const before = await b.from('profiles').select('is_approved').eq('id', bUserId).single();
+    expect(before.error).toBeNull();
+
+    const attempt = await b
+      .from('profiles')
+      .update({ is_approved: true })
+      .eq('id', bUserId)
+      .select();
+    expect(attempt.error !== null || attempt.data?.length === 0).toBe(true);
+
+    const after = await b.from('profiles').select('is_approved').eq('id', bUserId).single();
+    expect(after.error).toBeNull();
+    expect(after.data?.is_approved).toBe(before.data?.is_approved);
+  });
+
+  it('refuses B approving somebody else', { timeout: NETWORK_TIMEOUT }, async () => {
+    const attempt = await b
+      .from('profiles')
+      .update({ is_approved: true })
+      .eq('id', aUserId)
+      .select();
+    expect(attempt.error !== null || attempt.data?.length === 0).toBe(true);
+  });
+
+  it('refuses B promoting itself to admin', { timeout: NETWORK_TIMEOUT }, async () => {
+    // 0015 revoked UPDATE on this table so that nobody could run
+    //   update profiles set is_admin = true where id = auth.uid()
+    // against the public key. 0019 re-grants it for `is_approved` and ONLY
+    // `is_approved`, so this must be refused by the column list before any
+    // policy is consulted.
+    const attempt = await b.from('profiles').update({ is_admin: true }).eq('id', bUserId).select();
+
+    // Put B back BEFORE asserting, unconditionally. A bare assertion here
+    // aborts the test on the one outcome that matters - the escalation
+    // succeeding - and would leave a live admin behind in the database. These
+    // two accounts are non-admin by contract: every other test in this file
+    // reads `b` as an ordinary user.
+    await b.from('profiles').update({ is_admin: false }).eq('id', bUserId);
+
+    expect(attempt.error).not.toBeNull();
+
+    const after = await b.from('profiles').select('is_admin').eq('id', bUserId).single();
+    expect(after.error).toBeNull();
+    expect(after.data?.is_admin).toBe(false);
+  });
+
   it('shows B nothing in any owner-scoped table', { timeout: NETWORK_TIMEOUT }, async () => {
     // B owns nothing, and A owns rows in each of these right now, so any table
     // that lost its policy — or had row level security switched off — returns

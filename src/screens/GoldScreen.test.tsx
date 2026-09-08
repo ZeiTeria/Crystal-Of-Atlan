@@ -10,8 +10,8 @@ describe('GoldScreen', () => {
     render(<GoldScreen />);
     expect(screen.getByText(/1\. The formula/i)).toBeDefined();
     expect(screen.getByText(/2\. Measured constants/i)).toBeDefined();
-    expect(screen.getByText(/3\. How this was established/i)).toBeDefined();
-    expect(screen.getByText(/4\. Still unmeasured/i)).toBeDefined();
+    expect(screen.getByText(/3\. How We Figured This Out/i)).toBeDefined();
+    expect(screen.getByText(/4\. What We Still Need to Measure/i)).toBeDefined();
   });
 
   it('renders a constants row for all nine dungeons', () => {
@@ -27,7 +27,7 @@ describe('GoldScreen', () => {
     expect(screen.getByText('Shackled Psyche')).toBeDefined();
   });
 
-  it("shows 52,000 as Temple Of Fate's C and 8,000 as Queen Coronation's premium", () => {
+  it("redacts C but keeps each dungeon's stone bonus on its own row", () => {
     render(<GoldScreen />);
     // Read the cells out of their own row: asserting the numbers appear
     // somewhere on the page would pass even if they landed on the wrong dungeon.
@@ -37,8 +37,15 @@ describe('GoldScreen', () => {
         .find((r) => r.textContent?.includes(name))!
         .querySelectorAll('td');
 
-    expect(cells('Temple Of Fate')[3]?.textContent).toBe('52,000');
+    // C is redacted for the auto dungeons and genuinely absent for the manual
+    // ones, and those are different facts: a blanket redaction would hide that
+    // no manual C has ever been measured.
+    expect(cells('Temple Of Fate')[3]?.textContent).toBe('███');
+    expect(cells('The Deep Dive')[3]?.textContent).toBe('n/a');
+
+    // The stone bonus is still published, and still has to land on its own row.
     expect(cells('Queen Coronation')[4]?.textContent).toBe('8,000');
+    expect(cells('Temple Of Fate')[4]?.textContent).toBe('4,000');
   });
 
   it('marks The Deep Dive and Shackled Psyche as manual', () => {
@@ -54,15 +61,15 @@ describe('GoldScreen', () => {
 
   it('records that no buff applies to a manual run', () => {
     render(<GoldScreen />);
-    expect(screen.getByText(/No buff touches a manual run/i)).toBeDefined();
-    expect(screen.getByText(/B_manual is a constant/i)).toBeDefined();
+    expect(screen.getByText(/Buffs don't affect manual runs/i)).toBeDefined();
+    expect(screen.getByText(/B_manual a constant/i)).toBeDefined();
   });
 
   it('records that all three buffs are percentages of one component', () => {
     render(<GoldScreen />);
-    expect(screen.getByText(/Every buff is a percentage of the same C/i)).toBeDefined();
-    expect(screen.getByText(/Buffs stack by adding their percentages/i)).toBeDefined();
-    expect(screen.getByText(/The stone premium survives buffs/i)).toBeDefined();
+    expect(screen.getByText(/All buffs multiply the same C/i)).toBeDefined();
+    expect(screen.getByText(/Buffs stack additively/i)).toBeDefined();
+    expect(screen.getByText(/Stone bonuses still apply in manual/i)).toBeDefined();
   });
 
   it('lists every buff combination measured, with its implied base', () => {
@@ -94,8 +101,8 @@ describe('GoldScreen', () => {
 
   it('states that elite and legend pay the same', () => {
     render(<GoldScreen />);
-    const match1 = screen.queryByText(/Elite and Legend always pay exactly the same/i);
-    const match2 = screen.queryByText(/Elite and Legend are identical on every dungeon/i);
+    const match1 = screen.queryByText(/Elite.* and .*Legend.* difficulties pay exactly the same/i);
+    const match2 = screen.queryByText(/Elite and Legend pay the same/i);
     expect(match1 || match2).toBeTruthy();
   });
 });

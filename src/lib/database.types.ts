@@ -48,18 +48,21 @@ export interface Database {
           id: string;
           discord_username: string | null;
           is_admin: boolean;
+          is_approved: boolean;
           created_at: string;
         };
         Insert: {
           id: string;
           discord_username?: string | null;
           is_admin?: boolean;
+          is_approved?: boolean;
           created_at?: string;
         };
         Update: {
           id?: string;
           discord_username?: string | null;
           is_admin?: boolean;
+          is_approved?: boolean;
           created_at?: string;
         };
         Relationships: [];

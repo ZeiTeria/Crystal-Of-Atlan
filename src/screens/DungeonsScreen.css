@@ -1,104 +1,331 @@
-/* An admin setting on the Dungeons screen: a fact about the game, not a
-   constant, so it is edited rather than deployed. */
+/* 
+  Sleek, Modern Space-Age UI Styles for Dungeons Screen 
+*/
+
+.dungeons-screen {
+  --primary-accent: #00E5FF;
+  --primary-accent-dim: rgba(0, 229, 255, 0.2);
+  --bg-panel: rgba(16, 24, 39, 0.7);
+  --border-light: rgba(255, 255, 255, 0.08);
+  --text-main: #F3F4F6;
+  --text-muted: #9CA3AF;
+  
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+  padding: 24px;
+  border-radius: 16px;
+  color: var(--text-main);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.dungeons-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.dungeons-header h2, .dungeons-header h3 {
+  margin: 0;
+  font-weight: 300;
+  letter-spacing: 1px;
+  color: #fff;
+}
+
+.header-decoration {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--primary-accent), transparent);
+  opacity: 0.5;
+}
+
+/* Admin setting cards - Glassmorphism */
 .admin-setting {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
-  margin: 12px 0 20px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  font-size: 12px;
+  gap: 16px;
+  margin: 0 0 20px;
+  padding: 16px 24px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
+
+.admin-setting:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
 .admin-setting label {
-  font-weight: 800;
+  font-weight: 500;
+  color: #E5E7EB;
+  font-size: 14px;
 }
+
 .admin-setting input {
-  width: 72px;
-  padding: 5px 8px;
-  background: var(--surface-2);
-  border: 1px solid var(--line-strong);
-  color: var(--text);
+  width: 90px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-light);
+  color: var(--primary-accent);
   font: inherit;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  border-radius: 8px;
+  transition: all 0.3s ease;
 }
+
+.admin-setting input:focus {
+  outline: none;
+  border-color: var(--primary-accent);
+  background: rgba(0, 229, 255, 0.05);
+  box-shadow: 0 0 0 3px var(--primary-accent-dim);
+}
+
 .admin-setting .muted {
   flex: 1;
   min-width: 220px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
-/*
- * The catalogue table is ~16 columns wide (four of them carrying two stacked
- * gold inputs), so it is wider than any viewport. It scrolls inside
- * `.datatable-scroll` - which already existed in DataTable.css and was wired to
- * nothing - so the PAGE never scrolls sideways.
- *
- * Deliberately NO scroll-snap here. Snapping belongs to the two read-mostly
- * matrices (`.matrix-scroll`), where a column is the unit you navigate by. This
- * table is edited cell by cell, and mandatory snapping fights a click that
- * lands mid-scroll.
- */
+/* Datatable modifications */
 .dungeons-screen .datatable-scroll {
-  /* The sticky column's width, and therefore how far a scroll must clear it. */
-  --sticky-col: 160px;
+  --sticky-col: 180px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--bg-panel);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow-x: auto;
+  margin-top: 24px;
+  margin-bottom: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-/*
- * Name stays put while the rest scrolls, otherwise you cannot tell which
- * dungeon's gold you are typing into once the row scrolls off.
- *
- * The background must be --bg, not --surface: body sits on --bg and the table
- * paints no ground of its own, so --surface would show as a lighter strip.
- * The zebra band is a background-IMAGE (DataTable.css), so it still composites
- * over this colour and striping survives under the sticky column.
- */
+.dungeons-screen .datatable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.dungeons-screen .datatable th {
+  background: rgba(255, 255, 255, 0.03);
+  color: #94A3B8;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  padding: 16px 14px;
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+
+.dungeons-screen .datatable td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: transparent;
+  vertical-align: middle;
+}
+
+.dungeons-screen .datatable tbody tr {
+  transition: background 0.2s ease;
+}
+
+.dungeons-screen .datatable tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Sticky column styling */
 .dungeons-screen .datatable thead th:first-child,
 .dungeons-screen .datatable tbody td:first-child {
   position: sticky;
   left: 0;
   min-width: var(--sticky-col);
-  background-color: var(--bg);
-  box-shadow: 1px 0 0 var(--line);
+  background-color: rgba(15, 23, 42, 0.95);
+  box-shadow: 1px 0 0 var(--border-light);
 }
 
-/* Above the body cells, so a scrolled row never paints over the header. */
 .dungeons-screen .datatable thead th:first-child {
-  z-index: 2;
+  z-index: 3;
 }
 .dungeons-screen .datatable tbody td:first-child {
-  z-index: 1;
+  z-index: 2;
 }
 
-/* Unbounded number inputs were a large part of the width. */
+/* Inputs within datatable */
+.dungeons-screen .datatable input:not([type='checkbox']),
+.dungeons-screen .datatable select {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid transparent;
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
 .dungeons-screen .datatable input[type='number'] {
-  width: 72px;
+  width: 85px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
 }
 
 .dungeons-screen .datatable input:not([type='number']):not([type='checkbox']) {
-  min-width: 120px;
+  min-width: 130px;
+}
+
+.dungeons-screen .datatable input:hover:not([type='checkbox']),
+.dungeons-screen .datatable select:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dungeons-screen .datatable input:focus,
+.dungeons-screen .datatable select:focus {
+  outline: none;
+  background: rgba(0, 0, 0, 0.4);
+  border-color: var(--primary-accent);
+  box-shadow: 0 0 0 2px var(--primary-accent-dim);
+}
+
+/* Custom checkbox */
+.dungeons-screen .datatable input[type='checkbox'] {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+  position: relative;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.dungeons-screen .datatable input[type='checkbox']:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.dungeons-screen .datatable input[type='checkbox']:checked {
+  background: var(--primary-accent);
+  border-color: var(--primary-accent);
+}
+
+.dungeons-screen .datatable input[type='checkbox']:checked::after {
+  content: '';
+  position: absolute;
+  top: 4px; left: 7px;
+  width: 4px; height: 8px;
+  border: solid #000;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Add Dungeon Form / row actions */
+.dungeons-screen .row-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.dungeons-screen > .row-actions {
+  background: var(--bg-panel);
+  padding: 24px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  margin-top: 15px;
+}
+
+.dungeons-screen > .row-actions input,
+.dungeons-screen > .row-actions select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-light);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.dungeons-screen > .row-actions input:focus,
+.dungeons-screen > .row-actions select:focus {
+  outline: none;
+  border-color: var(--primary-accent);
+  box-shadow: 0 0 0 3px var(--primary-accent-dim);
+}
+
+/* Buttons in futuristic style */
+.dungeons-screen button, .dungeons-screen .Button {
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.dungeons-screen .row-actions button {
+  background: var(--primary-accent);
+  border: none;
+  color: #000;
+  padding: 10px 20px;
+  font-weight: 600;
+}
+
+.dungeons-screen .row-actions button:hover {
+  background: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.dungeons-screen .row-actions button:disabled {
+  background: #374151;
+  color: #9CA3AF;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.dungeons-screen .datatable .row-actions button {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-light);
+  color: #E5E7EB;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.dungeons-screen .datatable .row-actions button:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #FCA5A5;
 }
 
 @media (max-width: 768px) {
   .dungeons-screen .datatable-scroll {
     --sticky-col: 116px;
   }
-
-  /* Genuinely tighter than the base --s2 --s3, which is 8px 12px. */
   .dungeons-screen .datatable th,
   .dungeons-screen .datatable td {
-    padding: var(--s1) var(--s2);
+    padding: 10px 12px;
   }
-
   .dungeons-screen .datatable input[type='number'] {
     width: 64px;
   }
-
-  /* The touch target the rest of the app already uses for editable rows. */
   .dungeons-screen .datatable input {
     min-height: 40px;
   }
-
   .dungeons-screen .admin-setting {
     margin: 10px 0 16px;
+    padding: 16px;
+  }
+  .dungeons-screen > .row-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

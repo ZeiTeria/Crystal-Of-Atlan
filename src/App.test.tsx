@@ -4,10 +4,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Session } from '@supabase/supabase-js';
 import App from './App';
 import { stubMatchMedia } from './ui/testing/matchMedia';
+import type { Profile } from './data/profile';
 
 const session = { user: { id: 'u1', email: 'me@example.com' } } as Session;
 let currentSession: Session | null = null;
-let currentProfile: { discord_username: string | null; is_admin: boolean } | null = null;
+let currentProfile: Profile | null = null;
 
 vi.mock('./lib/auth', () => ({
   getSession: () => Promise.resolve(currentSession),
@@ -23,6 +24,10 @@ vi.mock('./data/profile', () => ({
 // Every screen is stubbed: this test is about the shell, not their contents.
 vi.mock('./screens/PlanScreen', () => ({ default: () => <div>plan screen</div> }));
 vi.mock('./screens/DungeonsScreen', () => ({ default: () => <div>dungeons screen</div> }));
+vi.mock('./screens/UsersScreen', () => ({ default: () => <div>users screen</div> }));
+// Not a screen, but it renders over one on first visit and would sit on top of
+// every assertion below.
+vi.mock('./ui/PatchNotesModal', () => ({ default: () => null }));
 
 afterEach(() => {
   cleanup();
@@ -39,21 +44,35 @@ describe('App shell', () => {
 
   it('shows the plan first once signed in', async () => {
     currentSession = session;
-    currentProfile = { discord_username: 'zei', is_admin: true };
+    currentProfile = { discord_username: 'zei', is_admin: true, is_approved: false };
     const { findByText } = render(<App />);
     expect(await findByText('plan screen')).toBeDefined();
   });
 
-  it('shows under development screen to non-admin', async () => {
+  it('shuts out a user who is neither admin nor approved', async () => {
     currentSession = session;
-    currentProfile = { discord_username: 'zei', is_admin: false };
+    currentProfile = { discord_username: 'zei', is_admin: false, is_approved: false };
     render(<App />);
-    expect(await screen.findByText('Under Development')).toBeDefined();
+    expect(await screen.findByText('Access Restricted')).toBeDefined();
+    expect(screen.queryByText('plan screen')).toBeNull();
+  });
+
+  it('lets an approved non-admin in, without the admin tabs', async () => {
+    // The whole point of `is_approved`: access to the planner without access to
+    // the shared catalogue behind Dungeons, Gold and Users.
+    currentSession = session;
+    currentProfile = { discord_username: 'zei', is_admin: false, is_approved: true };
+    render(<App />);
+    expect(await screen.findByText('plan screen')).toBeDefined();
+    expect(screen.queryByText('Access Restricted')).toBeNull();
+    for (const tab of [/^dungeons$/i, /^gold$/i, /^users$/i]) {
+      expect(screen.queryByRole('button', { name: tab })).toBeNull();
+    }
   });
 
   it('shows the dungeons tab to an admin', async () => {
     currentSession = session;
-    currentProfile = { discord_username: 'zei', is_admin: true };
+    currentProfile = { discord_username: 'zei', is_admin: true, is_approved: false };
     render(<App />);
     expect(await screen.findByRole('button', { name: /^dungeons$/i })).toBeDefined();
   });
@@ -76,7 +95,7 @@ describe('App shell', () => {
   ])('renders exactly one navigation on %s', async (_label, isPhone, present, absent) => {
     stubMatchMedia(isPhone);
     currentSession = session;
-    currentProfile = { discord_username: 'zei', is_admin: true };
+    currentProfile = { discord_username: 'zei', is_admin: true, is_approved: false };
     const { container } = render(<App />);
     await screen.findByText('plan screen');
 

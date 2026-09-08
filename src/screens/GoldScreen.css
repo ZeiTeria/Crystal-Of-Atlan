@@ -1,56 +1,92 @@
+/* Sleek Space-Age Theme for Gold Screen */
+
 .gold-screen {
+  --primary-accent: #00E5FF;
+  --bg-panel: rgba(16, 24, 39, 0.7);
+  --border-light: rgba(255, 255, 255, 0.08);
+  --text-main: #F3F4F6;
+  --text-muted: #9CA3AF;
+
   padding: 24px;
-  max-width: 800px;
+  max-width: 1000px;
   margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text-main);
 }
 
-.gold-screen .section-head {
+.gold-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 24px;
+  margin-bottom: 24px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.gold-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+  background: rgba(30, 41, 59, 0.8);
+}
+
+.gold-card-title {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 1px;
+  color: #fff;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 12px;
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 32px 0 16px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .22em;
-  text-transform: uppercase;
-  color: var(--text-dim);
+  align-items: center;
+  gap: 12px;
 }
 
-.gold-screen .section-head:first-child {
-  margin-top: 0;
+.gold-card-title::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--primary-accent);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--primary-accent);
 }
 
 .gold-formula-block {
-  background: var(--surface-2);
-  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
   padding: 16px;
-  margin-bottom: 16px;
-  font-family: monospace;
+  margin-bottom: 20px;
+  font-family: 'Consolas', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.6;
-  color: var(--text);
+  color: var(--primary-accent);
   overflow-x: auto;
 }
 
-.gold-formula-block .formula-line {
-  white-space: pre;
-}
-
 .gold-notes {
-  margin: 0 0 24px 0;
+  margin: 0;
   padding-left: 20px;
-  color: var(--text);
-  line-height: 1.5;
+  color: #D1D5DB;
+  line-height: 1.6;
 }
 
 .gold-notes li {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+}
+.gold-notes li strong {
+  color: #fff;
 }
 
 .gold-table-container {
   overflow-x: auto;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .gold-table {
@@ -62,18 +98,26 @@
 
 .gold-table th,
 .gold-table td {
-  padding: 12px;
+  padding: 12px 16px;
   text-align: left;
-  border-bottom: 1px solid var(--line);
-  color: var(--text);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.gold-table tbody tr {
+  transition: background 0.2s;
+}
+
+.gold-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .gold-table th {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  background: var(--surface-2);
-  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  background: rgba(0, 0, 0, 0.2);
+  color: #94A3B8;
+  text-transform: uppercase;
 }
 
 .gold-table th.num,
@@ -82,7 +126,11 @@
 }
 
 .gold-tier-ref {
-  margin: 8px 0;
-  color: var(--text);
+  margin: 12px 0 0;
+  color: #9CA3AF;
   line-height: 1.5;
+  font-size: 14px;
+}
+.gold-tier-ref strong {
+  color: var(--text-main);
 }

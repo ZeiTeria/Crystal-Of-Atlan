@@ -204,12 +204,12 @@ describe('stone gold', () => {
   });
 
   it('never prices a tier below its base when the stone figure is lower', () => {
-    // A typo, rather than a real premium.
+    // A typo, rather than a real bonus.
     expect(goldOf({ gold_elite: 30, gold_elite_stone: 5 })?.elite).toBe(30);
   });
 
-  it('blends the premium at the configured rate, rounded to whole gold', () => {
-    // premium 101 at rate 0.4 is 40.4, so the tier is worth 70.4 before
+  it('blends the bonus at the configured rate, rounded to whole gold', () => {
+    // bonus 101 at rate 0.4 is 40.4, so the tier is worth 70.4 before
     // rounding. Gold must stay integral: the LP renderer states its
     // coefficients are always integers, and assertFeasible re-checks the plan
     // in integer arithmetic.
@@ -218,10 +218,10 @@ describe('stone gold', () => {
     expect(Number.isInteger(gold)).toBe(true);
   });
 
-  it('carries the premium onto a tier whose base was borrowed', () => {
+  it('carries the bonus onto a tier whose base was borrowed', () => {
     // The Deep Dive in the live catalogue: elite is entered with its stone
     // figure, legend is blank. `fillGoldGaps` hands legend elite's base, but
-    // gold_legend_stone stays 0 - so reading the premium per tier left legend
+    // gold_legend_stone stays 0 - so reading the bonus per tier left legend
     // pricing BELOW elite (75,000 against 77,000) on a dungeon where the two
     // tiers are known to pay identically.
     const gold = goldOf({
@@ -235,8 +235,8 @@ describe('stone gold', () => {
     expect(gold?.legend).toBe(77000);
   });
 
-  it('applies one premium across every tier, not one per tier', () => {
-    // Measured: the premium is a property of the dungeon, identical at story
+  it('applies one bonus across every tier, not one per tier', () => {
+    // Measured: the bonus is a property of the dungeon, identical at story
     // and elite on both dungeons where both are known.
     const gold = goldOf({
       gold_solo: 0,
@@ -250,7 +250,7 @@ describe('stone gold', () => {
   });
 
   it('leaves a dungeon alone when no tier has both figures', () => {
-    // Nothing to borrow. An invented premium would be worse than none.
+    // Nothing to borrow. An invented bonus would be worse than none.
     expect(goldOf({ gold_solo: 0, gold_story: 0, gold_elite: 50000, gold_legend: 0 })?.elite).toBe(50000);
   });
 });
@@ -339,7 +339,7 @@ describe('buffs and the plan', () => {
     // toggle, gold per run must not move: the title that loadPlanInput subtracts
     // is added straight back by the character's own buffPct.
     //
-    // 80,500 stored, plus 0.4 of the 5,000 stone premium, is what the old code
+    // 80,500 stored, plus 0.4 of the 5,000 stone bonus, is what the old code
     // priced this run at. If this number ever changes, every existing plan has
     // silently re-priced.
     expect(priceFor({ has_title: true })).toBe(82500);

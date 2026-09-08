@@ -399,7 +399,7 @@ describe('PlanScreen gold that is standing in', () => {
     );
     render(<PlanScreen />);
     await screen.findAllByText('Mage');
-    expect(screen.queryAllByRole('button', { name: /has no gold figure/i })).toHaveLength(0);
+    expect(screen.queryAllByRole('button', { name: /has no gold data/i })).toHaveLength(0);
   });
 
   it('marks the cell when the difficulty it actually runs has no figure', async () => {
@@ -407,7 +407,7 @@ describe('PlanScreen gold that is standing in', () => {
       aState({ dungeons: [{ ...dungeon, goldEstimated: ['elite'] }] }),
     );
     render(<PlanScreen />);
-    const dot = await screen.findByRole('button', { name: /has no gold figure for elite/i });
+    const dot = await screen.findByRole('button', { name: /has no gold data for elite/i });
     // The catalogue is admin-only, so a player is pointed at whoever can edit it
     // rather than at a screen they cannot open.
     expect(dot.getAttribute('aria-label')).toMatch(/@zteria/i);
@@ -420,7 +420,7 @@ describe('PlanScreen gold that is standing in', () => {
       aState({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
     );
     render(<PlanScreen />);
-    expect(await screen.findByRole('button', { name: /no gold figures at all/i })).toBeDefined();
+    expect(await screen.findByRole('button', { name: /no gold data at all/i })).toBeDefined();
   });
 
   it('opens an explanation on click, and closes it on Escape', async () => {
@@ -428,7 +428,7 @@ describe('PlanScreen gold that is standing in', () => {
       aState({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
     );
     render(<PlanScreen />);
-    const dot = await screen.findByRole('button', { name: /no gold figures at all/i });
+    const dot = await screen.findByRole('button', { name: /no gold data at all/i });
 
     fireEvent.click(dot);
     expect(screen.getByRole('dialog')).toBeDefined();
@@ -452,7 +452,7 @@ describe('PlanScreen explanation on hover', () => {
       aState({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
     );
     render(<PlanScreen />);
-    const dot = await screen.findByRole('button', { name: /no gold figures at all/i });
+    const dot = await screen.findByRole('button', { name: /no gold data at all/i });
     const wrap = dot.parentElement as HTMLElement;
 
     fireEvent.mouseEnter(wrap);
@@ -469,7 +469,7 @@ describe('PlanScreen explanation on hover', () => {
       aState({ dungeons: [{ ...dungeon, goldUnknown: true }] }),
     );
     render(<PlanScreen />);
-    const dot = await screen.findByRole('button', { name: /no gold figures at all/i });
+    const dot = await screen.findByRole('button', { name: /no gold data at all/i });
     const wrap = dot.parentElement as HTMLElement;
 
     fireEvent.mouseEnter(wrap);

@@ -16,14 +16,17 @@ import { LogoMark } from './ui/Shared';
 import './App.css';
 import ErrorBanner from './ui/ErrorBanner';
 import GoldScreen from './screens/GoldScreen';
+import PatchNotesModal from './ui/PatchNotesModal';
+import UsersScreen from './screens/UsersScreen';
 
-export type View = 'board' | 'log' | 'dungeons' | 'gold';
+export type View = 'board' | 'log' | 'dungeons' | 'gold' | 'users';
 
 const TABS: { view: View; label: string; adminOnly?: boolean }[] = [
   { view: 'log', label: 'Character' },
   { view: 'board', label: 'Plan' },
   { view: 'dungeons', label: 'Dungeons', adminOnly: true },
   { view: 'gold', label: 'Gold', adminOnly: true },
+  { view: 'users', label: 'Users', adminOnly: true },
 ];
 
 export default function App() {
@@ -121,7 +124,9 @@ export default function App() {
     return <div className="app-container">Loading profile...</div>;
   }
 
-  if (!profile?.is_admin) {
+  const hasAccess = profile?.is_admin || profile?.is_approved;
+
+  if (!hasAccess) {
     return (
       <div className="app-layout">
         <header className="app-header">
@@ -139,8 +144,12 @@ export default function App() {
         </header>
         <div className="app-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
           <div style={{ textAlign: 'center' }}>
-            <h2>Under Development</h2>
-            <p>The website is under development. Only admins can access it right now.</p>
+            <h2>Access Restricted</h2>
+            <p>This planner is private. Your account must be approved by an administrator to use it.</p>
+            <p style={{ marginTop: '16px' }}>
+              Join this Discord server and ask for verification:<br/>
+              <a href="https://discord.gg/nSWeS7JYxH" target="_blank" rel="noreferrer" style={{ color: 'var(--primary-accent, #00E5FF)', fontWeight: 'bold', fontSize: '18px', display: 'inline-block', marginTop: '8px' }}>discord.gg/nSWeS7JYxH</a>
+            </p>
           </div>
         </div>
       </div>
@@ -192,12 +201,14 @@ export default function App() {
         </div>
       </header>
 
+      <PatchNotesModal />
       <ErrorBanner message={error} />
 
       <div className="app-content">
         {(view === 'board' || view === 'log') && <PlanScreen activeView={view} />}
         {view === 'dungeons' && profile?.is_admin && <DungeonsScreen />}
         {view === 'gold' && profile?.is_admin && <GoldScreen />}
+        {view === 'users' && profile?.is_admin && <UsersScreen />}
       </div>
       
       {isPhone && (

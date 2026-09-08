@@ -1,6 +1,6 @@
 import { derivePlanInput, type Settings } from '../engine/counters';
 import type { Character, Dungeon, GridEntry, PlanInput } from '../engine/types';
-import { fillGoldGaps, stonePremium } from '../engine/gold';
+import { fillGoldGaps, stoneBonus } from '../engine/gold';
 import type { Database } from '../lib/database.types';
 import { supabase } from '../lib/supabase';
 
@@ -63,10 +63,10 @@ export function buildPlanInput(rows: PlanRows): PlanInput {
         });
 
         const stoneRate = rows.settings.stone_rate;
-        // One premium for the whole dungeon, not one per tier: it was measured
+        // One bonus for the whole dungeon, not one per tier: it was measured
         // as constant across difficulties, and reading it per tier meant a
-        // borrowed base kept none of it. See `stonePremium`.
-        const premium = stonePremium(
+        // borrowed base kept none of it. See `stoneBonus`.
+        const bonus = stoneBonus(
           { solo: d.gold_solo, story: d.gold_story, elite: d.gold_elite, legend: d.gold_legend },
           {
             solo: d.gold_solo_stone,
@@ -82,7 +82,7 @@ export function buildPlanInput(rows: PlanRows): PlanInput {
         const applyStone = (base: number) => {
           if (base <= 0) return base;
           const unbuffedBase = Math.max(0, base - 0.02 * d.gold_c);
-          return Math.round(unbuffedBase + stoneRate * premium);
+          return Math.round(unbuffedBase + stoneRate * bonus);
         };
 
         const effectiveGold = {

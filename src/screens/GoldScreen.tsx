@@ -4,20 +4,20 @@ type DungeonGold = {
   dungeon: string;
   mode: 'auto' | 'manual';
   base: number;
-  c: number | null;
-  premium: number;
+  c: 'censored' | null;
+  stone: number;
 };
 
 const GOLD_CONSTANTS: DungeonGold[] = [
-  { dungeon: 'Temple Of Fate', mode: 'auto', base: 101720, c: 52000, premium: 4000 },
-  { dungeon: 'Checkmate', mode: 'auto', base: 95385, c: 53500, premium: 6000 },
-  { dungeon: 'Duskfeather Lair', mode: 'auto', base: 80500, c: 50000, premium: 5000 },
-  { dungeon: "Kraken's Spine", mode: 'auto', base: 73840, c: 44000, premium: 5000 },
-  { dungeon: 'Apocalyptic Descent', mode: 'auto', base: 65960, c: 36000, premium: 4000 },
-  { dungeon: 'Heart Of Taboos', mode: 'auto', base: 52750, c: 25000, premium: 5000 },
-  { dungeon: 'Queen Coronation', mode: 'auto', base: 46200, c: 20000, premium: 8000 },
-  { dungeon: 'The Deep Dive', mode: 'manual', base: 75000, c: null, premium: 5000 },
-  { dungeon: 'Shackled Psyche', mode: 'manual', base: 50000, c: null, premium: 5000 },
+  { dungeon: 'Temple Of Fate', mode: 'auto', base: 101720, c: 'censored', stone: 4000 },
+  { dungeon: 'Checkmate', mode: 'auto', base: 95385, c: 'censored', stone: 6000 },
+  { dungeon: 'Duskfeather Lair', mode: 'auto', base: 80500, c: 'censored', stone: 5000 },
+  { dungeon: "Kraken's Spine", mode: 'auto', base: 73840, c: 'censored', stone: 5000 },
+  { dungeon: 'Apocalyptic Descent', mode: 'auto', base: 65960, c: 'censored', stone: 4000 },
+  { dungeon: 'Heart Of Taboos', mode: 'auto', base: 52750, c: 'censored', stone: 5000 },
+  { dungeon: 'Queen Coronation', mode: 'auto', base: 46200, c: 'censored', stone: 8000 },
+  { dungeon: 'The Deep Dive', mode: 'manual', base: 75000, c: null, stone: 5000 },
+  { dungeon: 'Shackled Psyche', mode: 'manual', base: 50000, c: null, stone: 5000 },
 ];
 
 type BuffReading = {
@@ -25,7 +25,6 @@ type BuffReading = {
   sum: string;
   observed: number;
   base: number;
-  /** What B + C x (buff %) predicts for that base. C = 50,000, B = 79,500. */
   predicted: number;
 };
 
@@ -43,125 +42,119 @@ const BUFF_READINGS: BuffReading[] = [
 export default function GoldScreen() {
   return (
     <div className="gold-screen">
-      <h3 className="section-head">
-        1. The formula
-      </h3>
-      <div className="gold-formula-block">
-        <div className="formula-line">one run  =  base(tier, mode)  +  stone premium (only when a stone drops)</div>
-        <br />
-        <div className="formula-line">base, auto mode    =  B  +  C x (sum of active buff percentages)</div>
-        <div className="formula-line">base, manual mode  =  B_manual        &lt;- buffs do NOT apply</div>
+      
+      <div className="gold-card">
+        <h3 className="gold-card-title">1. The Formula</h3>
+        <div className="gold-formula-block">
+          <div className="formula-line">Total Run = Base Gold (tier, mode) + Stone Bonus (if a stone drops)</div>
+          <br />
+          <div className="formula-line">Auto Mode Base   = B + C x (Total Buff Percentages)</div>
+          <div className="formula-line">Manual Mode Base = B_manual (Buffs don't apply here)</div>
+        </div>
+        <ul className="gold-notes">
+          <li>The <strong>stone bonus</strong> is a flat bonus. Buffs never affect it, and it stays the same across all modes and difficulties.</li>
+          <li>The <strong>C value</strong> is the only part that buffs multiply. It makes up roughly half the reward but isn't a fixed ratio, so it's measured individually per dungeon.</li>
+          <li><strong>Elite</strong> and <strong>Legend</strong> difficulties pay exactly the same amount.</li>
+          <li><strong>Auto mode</strong> pays more and saves time, so use it whenever possible (only The Deep Dive and Shackled Psyche require manual runs).</li>
+          <li><strong>Manual runs</strong> ignore all buffs, making B_manual a constant value.</li>
+          <li><strong>Buffs</strong> are simple percentages of C. For example, testing on Duskfeather Lair showed the title added 1,000 gold, abnormal sense added 2,500, and the potion added 5,000. These equal exactly 2%, 5%, and 10% of C (███).</li>
+        </ul>
       </div>
-      <ul className="gold-notes">
-        <li>The stone premium is FLAT: a fixed number of gold per dungeon. Buffs never touch it, and it is the same in auto and manual mode and at every difficulty.</li>
-        <li>C is the only part a buff multiplies. It is roughly half the reward but not a fixed fraction, so it has to be measured per dungeon.</li>
-        <li>Elite and Legend always pay exactly the same.</li>
-        <li>Auto pays more than manual and costs no time, so always timeskip when the dungeon allows it. Only The Deep Dive and Shackled Psyche force manual.</li>
-        <li>No buff of any kind applies to a manual run, so B_manual is a constant.</li>
-        <li>All three buffs are plain percentages of C. Measured one at a time on Duskfeather Lair the title added exactly 1,000, abnormal sense exactly 2,500 and the potion exactly 5,000 - 2%, 5% and 10% of C = 50,000. Verified for one buff at a time; two readings with several buffs at once do not fit and are listed below.</li>
-      </ul>
 
-      <h3 className="section-head">
-        2. Measured constants
-      </h3>
-      <div className="gold-table-container">
-        <table className="gold-table">
-          <thead>
-            <tr>
-              <th>Dungeon</th>
-              <th>Mode</th>
-              <th className="num">Base (title on)</th>
-              <th className="num">C</th>
-              <th className="num">Stone premium</th>
-            </tr>
-          </thead>
-          <tbody>
-            {GOLD_CONSTANTS.map((d) => (
-              <tr key={d.dungeon}>
-                <td>{d.dungeon}</td>
-                <td>{d.mode}</td>
-                <td className="num">{d.base.toLocaleString('en-US')}</td>
-                <td className="num">{d.c === null ? 'n/a' : d.c.toLocaleString('en-US')}</td>
-                <td className="num">{d.premium.toLocaleString('en-US')}</td>
+      <div className="gold-card">
+        <h3 className="gold-card-title">2. Measured Constants</h3>
+        <div className="gold-table-container">
+          <table className="gold-table">
+            <thead>
+              <tr>
+                <th>Dungeon</th>
+                <th>Mode</th>
+                <th className="num">Base (title on)</th>
+                <th className="num">C</th>
+                <th className="num">Stone Bonus</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {GOLD_CONSTANTS.map((d) => (
+                <tr key={d.dungeon}>
+                  <td>{d.dungeon}</td>
+                  <td>{d.mode}</td>
+                  <td className="num">{d.base.toLocaleString('en-US')}</td>
+                  <td className="num">{d.c === null ? 'n/a' : '███'}</td>
+                  <td className="num">{d.stone.toLocaleString('en-US')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="gold-tier-ref">
+          <strong>Story tier:</strong> We only have measurements for three dungeons so far: Kraken's Spine (59,960), Heart Of Taboos (42,200), and Shackled Psyche (40,000). We don't have any solo figures yet.
+        </p>
+        <p className="gold-tier-ref">
+          <strong>Manual comparison:</strong> Duskfeather Lair pays 75,000 when played manually, compared to 80,500 on auto (about 7.3% less).
+        </p>
       </div>
-      <p className="gold-tier-ref">
-        <strong>Story tier:</strong> only three are measured - Kraken's Spine 59,960, Heart Of Taboos 42,200, Shackled Psyche 40,000. No solo figure has ever been measured.
-      </p>
-      <p className="gold-tier-ref">
-        <strong>Manual reference:</strong> Duskfeather Lair pays 75,000 played by hand versus 80,500 on auto, 7.3% less.
-      </p>
 
-      <h3 className="section-head">
-        Buff readings - Duskfeather Lair elite, auto
-      </h3>
-      <div className="gold-table-container">
-        <table className="gold-table">
-          <thead>
-            <tr>
-              <th>Buffs active</th>
-              <th className="num">Sum</th>
-              <th className="num">Observed</th>
-              <th className="num">Base</th>
-              <th className="num">Predicted</th>
-            </tr>
-          </thead>
-          <tbody>
-            {BUFF_READINGS.map((r) => (
-              <tr key={r.buffs}>
-                <td>{r.buffs}</td>
-                <td className="num">{r.sum}</td>
-                <td className="num">{r.observed.toLocaleString('en-US')}</td>
-                <td className="num">{r.base.toLocaleString('en-US')}</td>
-                <td className="num">
-                  {r.predicted.toLocaleString('en-US')}
-                  {r.base !== r.predicted && ` (off ${(r.base - r.predicted).toLocaleString('en-US')})`}
-                </td>
+      <div className="gold-card">
+        <h3 className="gold-card-title">Buff Readings (Duskfeather Lair - Elite, Auto)</h3>
+        <div className="gold-table-container">
+          <table className="gold-table">
+            <thead>
+              <tr>
+                <th>Active Buffs</th>
+                <th className="num">Sum</th>
+                <th className="num">Observed</th>
+                <th className="num">Base</th>
+                <th className="num">Predicted</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {BUFF_READINGS.map((r) => (
+                <tr key={r.buffs}>
+                  <td>{r.buffs}</td>
+                  <td className="num">{r.sum}</td>
+                  <td className="num">{r.observed.toLocaleString('en-US')}</td>
+                  <td className="num">{r.base.toLocaleString('en-US')}</td>
+                  <td className="num">
+                    {r.predicted.toLocaleString('en-US')}
+                    {r.base !== r.predicted && ` (off ${(r.base - r.predicted).toLocaleString('en-US')})`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="gold-tier-ref">
+          "Base" is the observed amount minus the 5,000 stone bonus if a stone dropped. Every row perfectly matches our C prediction except for the last two. Those were our first attempts at measuring multiple buffs at once. Later tests with the same setup (Title + Potion) correctly gave 90,500. This means the 92,138 and 89,650 figures were just bad readings. We kept them here to show what a flawed measurement looks like.
+        </p>
       </div>
-      <p className="gold-tier-ref">
-        Base is the observed figure less the 5,000 stone premium where a stone dropped. Every row
-        matches what C predicts except the last two, which were the first readings taken with
-        several buffs at once. Title plus potion was later measured again in exactly the same
-        configuration and came in at 90,500, matching the model to the gold - so the 92,138 above
-        is a bad reading rather than evidence of a stacking bonus, and the 89,650 beside it is
-        almost certainly the same - all three buffs were later read at 93,000, matching the model
-        and not the 89,650. Both bad readings are kept here rather than deleted, because they are
-        what a contaminated reading looks like.
-      </p>
 
-      <h3 className="section-head">
-        3. How this was established
-      </h3>
-      <ul className="gold-notes">
-        <li><strong>The stone premium is flat and unbuffed</strong> - Temple Of Fate showed a 4,000 gap with the title on (105,720 vs 101,720) and the same 4,000 with it off (104,680 vs 100,680).</li>
-        <li><strong>The title is 2% of C, not 2% of the reward</strong> - the title-off drops are not proportional to the bases (drops in a ratio of 2.08 where the bases are 1.93). Solving drop / 0.02 gives a C that lands on a multiple of 500 for all seven auto dungeons.</li>
-        <li><strong>No buff touches a manual run</strong> - Duskfeather Lair paid 80,000 with the title, 80,000 without it, and 80,000 again with all three buffs active, every time with a stone.</li>
-        <li><strong>Every buff is a percentage of the same C</strong> - measured one at a time, the title added 1,000, abnormal sense 2,500 and the potion 5,000 on Duskfeather Lair, and the potion added 2,000 on Queen Coronation. Four readings, four exact hits against C = 50,000 and C = 20,000.</li>
-        <li><strong>Queen Coronation's C is confirmed twice over</strong> - it was derived from the title (400 being 2% of 20,000) and the potion independently agrees (2,000 being 10%).</li>
-        <li><strong>Buffs stack by adding their percentages</strong> - title and potion together behave as a flat 12%, giving 85,500 on Duskfeather Lair exactly as 2% + 10% predicts, and all three together behave as 17%, predicted at 93,000 with a stone and read at 93,000. Every combination has now been checked.</li>
-        <li><strong>The stone premium survives buffs</strong> - that same run paid 90,500 with a stone against 85,500 without, the same 5,000 as an unbuffed run.</li>
-        <li><strong>Auto pays more than manual</strong> - Duskfeather Lair, title on: 80,500 auto against 75,000 manual.</li>
-        <li><strong>The premium applies in manual too</strong> - Duskfeather Lair manual, 80,000 with a stone and 75,000 without.</li>
-        <li><strong>Elite and Legend are identical on every dungeon</strong> (confirmed in game).</li>
-      </ul>
+      <div className="gold-card">
+        <h3 className="gold-card-title">3. How We Figured This Out</h3>
+        <ul className="gold-notes">
+          <li><strong>Stone bonus is flat and unbuffed:</strong> Temple Of Fate always had a 4,000 gold difference when a stone dropped, whether the title was equipped (105,720 vs 101,720) or not (104,680 vs 100,680).</li>
+          <li><strong>The title is 2% of C, not the whole reward:</strong> If it affected the whole reward, the drops would scale evenly, but they don't. Calculating the difference gives us a C value that lands cleanly on a multiple of 500 for all seven auto dungeons.</li>
+          <li><strong>Buffs don't affect manual runs:</strong> Duskfeather Lair gave exactly 80,000 gold with the title, without it, and with all three buffs active (always with a stone).</li>
+          <li><strong>All buffs multiply the same C:</strong> Tested individually on Duskfeather Lair, the title added 1,000, abnormal sense added 2,500, and the potion added 5,000. These perfectly match 2%, 5%, and 10% of a ███ C. We saw similar perfect math on Queen Coronation.</li>
+          <li><strong>Queen Coronation's C was verified twice:</strong> We figured it out using the title buff, and later the potion buff perfectly matched the same expected value.</li>
+          <li><strong>Buffs stack additively:</strong> Title (2%) and potion (10%) together act as a flat 12% buff. All three combined act as a 17% buff. Every combination tested perfectly matched the math.</li>
+          <li><strong>Auto pays better than manual:</strong> Duskfeather Lair with title gives 80,500 on auto, but only 75,000 manually.</li>
+          <li><strong>Stone bonuses still apply in manual:</strong> Duskfeather Lair manual runs gave 80,000 with a stone and 75,000 without.</li>
+          <li><strong>Elite and Legend pay the same:</strong> We verified this directly in the game for every dungeon.</li>
+        </ul>
+      </div>
 
-      <h3 className="section-head">
-        4. Still unmeasured
-      </h3>
-      <ul className="gold-notes">
-        <li><strong>What went wrong in those two early readings?</strong> Not urgent - the model is confirmed without them - but the same configuration measured twice gave 90,500 and 92,138, so something varied between the runs. A different character is the obvious suspect, since buffs are per-character and a different title would carry a different percentage.</li>
-        <li><strong>Story gold for six dungeons:</strong> Checkmate, Queen Coronation, Temple Of Fate, Apocalyptic Descent, Duskfeather Lair, The Deep Dive.</li>
-        <li><strong>Does C change with difficulty?</strong> No story-tier C has been measured anywhere.</li>
-        <li><strong>Kraken's Spine disagrees on the elite/story ratio.</strong> Heart Of Taboos and Shackled Psyche are both exactly 1.25; Kraken's Spine is 1.23149. At 1.25 its story figure would be 59,072 rather than the stored 59,960, so it is worth re-running.</li>
-        <li><strong>The stone drop rate is still the 0.40 placeholder.</strong> docs/stone-gold-tally.csv is the tally sheet.</li>
-      </ul>
+      <div className="gold-card">
+        <h3 className="gold-card-title">4. What We Still Need to Measure</h3>
+        <ul className="gold-notes">
+          <li><strong>What messed up those two early readings?</strong> It's not a huge deal since the model is proven, but getting 90,500 and 92,138 on the same setup means something changed between runs. It was likely a different character, since title buffs vary by character.</li>
+          <li><strong>Missing Story gold:</strong> We still need numbers for Checkmate, Queen Coronation, Temple Of Fate, Apocalyptic Descent, Duskfeather Lair, and The Deep Dive.</li>
+          <li><strong>Does C scale with difficulty?</strong> We haven't measured any C values for Story tier yet.</li>
+          <li><strong>Kraken's Spine math is slightly off.</strong> The elite-to-story ratio for Heart Of Taboos and Shackled Psyche is exactly 1.25. Kraken's Spine is currently at 1.23149. It's worth re-running to check if the 59,960 recorded value is wrong.</li>
+          <li><strong>The stone drop rate:</strong> It's still using a 0.40 placeholder estimate. Check docs/stone-gold-tally.csv for the actual tallies.</li>
+        </ul>
+      </div>
+
     </div>
   );
 }

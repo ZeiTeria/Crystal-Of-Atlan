@@ -25,6 +25,7 @@ import AttemptBoard from './AttemptBoard';
 import QuestLog from './QuestLog';
 import { describeConflict, describeReason, type Names } from './planText';
 import OnboardingPopup from '../ui/OnboardingPopup';
+import './PlanScreen.css';
 
 interface Solved {
   input: PlanInput;

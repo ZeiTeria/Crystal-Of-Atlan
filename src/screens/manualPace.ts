@@ -36,8 +36,5 @@ export function manualDaysLeft(
  */
 export function manualWarning(daysLeft: number | undefined, runs: number): string | null {
   if (daysLeft === undefined || runs <= daysLeft) return null;
-  return (
-    `Only ${daysLeft}d until reset, but ${runs} runs planned. ` +
-    'Manual dungeons only allow one run per day.'
-  );
+  return `Only ${daysLeft}d until reset.`;
 }

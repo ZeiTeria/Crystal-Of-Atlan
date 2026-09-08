@@ -17,11 +17,11 @@ export function goldWarning(
   tier: Tier | undefined,
 ): string | null {
   if (dungeon.goldUnknown) {
-    return `${dungeon.name} has no gold figures at all, so this plan cannot weigh it against anything else. Contact @zteria on Discord to get it filled in.`;
+    return `${dungeon.name} has no gold data at all, so this plan cannot weigh it against anything else. Contact @zteria on Discord to get it filled in.`;
   }
   if (!tier || tier === 'none') return null;
   if (!dungeon.goldEstimated.includes(tier)) return null;
-  return `${dungeon.name} has no gold figure for ${tier}. Another difficulty's figure is standing in, so this row is an estimate. Contact @zteria on Discord to get it filled in.`;
+  return `${dungeon.name} has no gold data for ${tier}. Another difficulty's gold data is used, so this row is an estimate. Contact @zteria on Discord to get it filled in.`;
 }
 
 /**

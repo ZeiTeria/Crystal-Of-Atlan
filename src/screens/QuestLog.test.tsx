@@ -361,7 +361,7 @@ describe('QuestLog cells', () => {
     renderLog({
       input: anInput({ dungeons: [{ ...dungeon, goldEstimated: ['elite'] }] }),
     });
-    const dot = await screen.findByRole('button', { name: /has no gold figure for elite/i });
+    const dot = await screen.findByRole('button', { name: /has no gold data for elite/i });
     expect(dot.getAttribute('aria-label')).toMatch(/@zteria/i);
   });
 });
