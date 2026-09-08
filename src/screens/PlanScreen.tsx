@@ -184,25 +184,24 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
           Nothing is unlocked yet — set each character&rsquo;s tier per dungeon in the Character
           view.
         </p>
-      ) : result.status === 'infeasible' ? (
-        <section className="plan-infeasible">
-          <p>These requirements cannot all be met:</p>
-          <ul>
-            {result.conflicts.map((c, i) => (
-              <li key={i}>{describeConflict(c, names)}</li>
-            ))}
-          </ul>
-          <p className="muted">Lower a minimum in the Character view, then come back.</p>
-        </section>
-      ) : (
-        <>
-          {solved.relaxed && (
-            <p className="plan-relaxed">
-              <strong>No choices to make</strong> — every character can simply run its maximum.
-            </p>
-          )}
-
-          {activeView === 'board' ? (
+      ) : activeView === 'board' ? (
+        result.status === 'infeasible' ? (
+          <section className="plan-infeasible">
+            <p>These requirements cannot all be met:</p>
+            <ul>
+              {result.conflicts.map((c, i) => (
+                <li key={i}>{describeConflict(c, names)}</li>
+              ))}
+            </ul>
+            <p className="muted">Lower a minimum in the Character view, then come back.</p>
+          </section>
+        ) : (
+          <>
+            {solved.relaxed && (
+              <p className="plan-relaxed">
+                <strong>No choices to make</strong> — every character can simply run its maximum.
+              </p>
+            )}
             <AttemptBoard
               input={input}
               assignments={result.assignments}
@@ -216,29 +215,33 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
               onAddClick={() => setShowAddModal(true)}
               mutate={mutate}
             />
-          ) : (
-            <QuestLog
-              input={input}
-              assignments={result.assignments}
-              gridRows={gridRows}
-              roster={roster}
-              mutate={mutate}
-              relabel={relabel}
-              atCap={atCap}
-              maxCharacters={solved.maxCharacters}
-              onAddClick={() => setShowAddModal(true)}
-            />
+            {solved.reasons.some((r) => r.kind === 'gold-cap-reached') && (
+              <ul className="muted plan-reasons">
+                {solved.reasons
+                  .filter((r) => r.kind === 'gold-cap-reached')
+                  .map((r, i) => (
+                    <li key={i}>{describeReason(r, names)}</li>
+                  ))}
+              </ul>
+            )}
+          </>
+        )
+      ) : (
+        <>
+          {result.status === 'infeasible' && (
+            <ErrorBanner message="These requirements cannot all be met. Please lower some minimums." />
           )}
-
-          {solved.reasons.some((r) => r.kind === 'gold-cap-reached') && (
-            <ul className="muted plan-reasons">
-              {solved.reasons
-                .filter((r) => r.kind === 'gold-cap-reached')
-                .map((r, i) => (
-                  <li key={i}>{describeReason(r, names)}</li>
-                ))}
-            </ul>
-          )}
+          <QuestLog
+            input={input}
+            assignments={result.status === 'optimal' ? result.assignments : []}
+            gridRows={gridRows}
+            roster={roster}
+            mutate={mutate}
+            relabel={relabel}
+            atCap={atCap}
+            maxCharacters={solved.maxCharacters}
+            onAddClick={() => setShowAddModal(true)}
+          />
         </>
       )}
 
