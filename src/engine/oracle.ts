@@ -103,5 +103,14 @@ export function solveExhaustive(input: PlanInput): PlanResult {
     }
   });
 
-  return { status: 'optimal', assignments, totals: best.totals };
+  let clampedGold = 0;
+  for (const character of input.characters) {
+    const earned = assignments
+      .filter((a) => a.characterId === character.id)
+      .reduce((sum, a) => sum + a.goldTotal, 0);
+    const headroom = input.goldHeadroom[character.id] ?? 0;
+    clampedGold += Math.min(earned, headroom);
+  }
+
+  return { status: 'optimal', assignments, totals: { attempts: best.totals.attempts, gold: clampedGold } };
 }

@@ -146,7 +146,7 @@ export default function AttemptBoard({
                 </div>
                 <div className="tile-bottom">
                   <div className="tile-gold-row">
-                    <span className={capped ? 'warning-text' : undefined}>{gold(planned)}</span>
+                    <span className={capped ? 'warning-text' : undefined}>{gold(Math.min(planned, cap))}</span>
                     <span>{planned > cap ? 'over cap' : capped ? 'at cap' : `${Math.round((planned / cap) * 100)}% of cap`}</span>
                   </div>
                   <div className="tile-meter">
@@ -342,6 +342,7 @@ export default function AttemptBoard({
             const mine = assignments.filter((a) => a.characterId === c.id);
             const runs = mine.reduce((sum, a) => sum + a.runs, 0);
             const planned = mine.reduce((sum, a) => sum + a.goldTotal, 0);
+            const cap = settings.goldCap;
             // Dungeon order, so every card reads down in the same sequence as
             // the board above it.
             const rows = dungeons
@@ -387,7 +388,7 @@ export default function AttemptBoard({
                     </div>
                     <div className="char-card-foot">
                       <span>{rows.length} dungeons</span>
-                      <span className="char-card-gold">{gold(planned)}</span>
+                      <span className="char-card-gold">{gold(Math.min(planned, cap))}</span>
                     </div>
                   </>
                 )}

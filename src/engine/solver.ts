@@ -187,8 +187,19 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
       goldTotal,
     });
     totals.attempts += runs;
-    totals.gold += goldTotal;
   }
+
+  // Cap the total gold at the headroom so the overall total reflects reality
+  // even if minimums force a character over the cap.
+  let clampedGold = 0;
+  for (const character of input.characters) {
+    const earned = assignments
+      .filter((a) => a.characterId === character.id)
+      .reduce((sum, a) => sum + a.goldTotal, 0);
+    const headroom = input.goldHeadroom[character.id] ?? 0;
+    clampedGold += Math.min(earned, headroom);
+  }
+  totals.gold = clampedGold;
 
   assertFeasible(input, cells, assignments);
   return { status: 'optimal', assignments, totals };

@@ -401,7 +401,7 @@ export default function QuestLog({
           <div className="quest-header-right">
             <div className="qh-gold-line">
               <span className={capped ? 'qh-gold-val warning-text' : 'qh-gold-val'}>
-                {gold(planned)}
+                {gold(Math.min(planned, cap))}
               </span>
               <span className="qh-gold-cap">of {gold(cap)} cap</span>
             </div>
