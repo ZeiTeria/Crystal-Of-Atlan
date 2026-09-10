@@ -38,7 +38,7 @@ afterEach(() => {
 describe('App shell', () => {
   it('offers Discord sign-in when signed out', async () => {
     const { findByRole } = render(<App />);
-    expect(await findByRole('button', { name: /admin sign in/i })).toBeDefined();
+    expect(await findByRole('button', { name: /sign in with discord/i })).toBeDefined();
     expect(screen.queryByRole('button', { name: /^plan$/i })).toBeNull();
   });
 
@@ -49,19 +49,11 @@ describe('App shell', () => {
     expect(await findByText('plan screen')).toBeDefined();
   });
 
-  it('shuts out a user who is neither admin nor approved', async () => {
-    currentSession = session;
-    currentProfile = { discord_username: 'zei', is_admin: false, is_approved: false };
-    render(<App />);
-    expect(await screen.findByText('Access Restricted')).toBeDefined();
-    expect(screen.queryByText('plan screen')).toBeNull();
-  });
-
-  it('lets an approved non-admin in, without the admin tabs', async () => {
+  it('lets an unapproved non-admin in, without the admin tabs', async () => {
     // The whole point of `is_approved`: access to the planner without access to
     // the shared catalogue behind Dungeons, Gold and Users.
     currentSession = session;
-    currentProfile = { discord_username: 'zei', is_admin: false, is_approved: true };
+    currentProfile = { discord_username: 'zei', is_admin: false, is_approved: false };
     render(<App />);
     expect(await screen.findByText('plan screen')).toBeDefined();
     expect(screen.queryByText('Access Restricted')).toBeNull();

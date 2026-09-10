@@ -21,13 +21,13 @@ export default function LandingScreen({ error }: { error?: string | null }) {
 
       <div className="landing-hero" style={{ justifyContent: 'center', textAlign: 'center' }}>
         <div className="hero-content slide-up" style={{ alignItems: 'center' }}>
-          <h1 className="hero-h1">Under Development</h1>
+          <h1 className="hero-h1">Welcome to Crystal of Atlan</h1>
           <p className="hero-p" style={{ maxWidth: '600px' }}>
-            The website is currently under development. Only administrators can access the system at this time.
+            Sign in to start planning your dailies and weeklies.
           </p>
           <div className="hero-actions" style={{ marginTop: '2rem' }}>
-            <button className="btn-primary" style={{ opacity: 0.5 }} onClick={() => void signInWithDiscord()}>
-              Admin Sign In
+            <button className="btn-primary" onClick={() => void signInWithDiscord()}>
+              Sign In with Discord
             </button>
           </div>
         </div>

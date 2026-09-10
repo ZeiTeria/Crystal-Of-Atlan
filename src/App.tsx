@@ -124,40 +124,8 @@ export default function App() {
     return <div className="app-container">Loading profile...</div>;
   }
 
-  const hasAccess = profile?.is_admin || profile?.is_approved;
-
-  if (!hasAccess) {
-    return (
-      <div className="app-layout">
-        <header className="app-header">
-          <div className="header-left">
-            <div className="brand">
-              <LogoMark />
-              <span className="brand-text">CRYSTAL OF ATLAN</span>
-            </div>
-          </div>
-          <div className="header-right">
-            <button type="button" className="sign-out-btn" onClick={() => void signOut()}>
-              Sign out
-            </button>
-          </div>
-        </header>
-        <div className="app-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-          <div style={{ textAlign: 'center' }}>
-            <h2>Access Restricted</h2>
-            <p>This planner is private. Your account must be approved by an administrator to use it.</p>
-            <p style={{ marginTop: '16px' }}>
-              Join this Discord server and ask for verification:<br/>
-              <a href="https://discord.gg/nSWeS7JYxH" target="_blank" rel="noreferrer" style={{ color: 'var(--primary-accent, #00E5FF)', fontWeight: 'bold', fontSize: '18px', display: 'inline-block', marginTop: '8px' }}>discord.gg/nSWeS7JYxH</a>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const tabs = TABS.filter((t) => !t.adminOnly || profile?.is_admin);
-
+  
   return (
     <div className="app-layout">
       <header className="app-header">
