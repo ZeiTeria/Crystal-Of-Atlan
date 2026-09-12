@@ -31,3 +31,14 @@ create policy plan_cache_own on public.plan_cache
 
 -- Explicit, and to `authenticated` only: nothing here is public.
 grant select, insert, update, delete on public.plan_cache to authenticated;
+
+-- 0001 revoked anon on `all tables in schema public`, but that is a one-time
+-- statement over the tables existing then - it cannot reach a table created
+-- nineteen migrations later. Verified against the live project: anon SELECT on
+-- plan_cache returned `[]` (RLS blocking the rows) where `dungeons` returns
+-- "permission denied", i.e. only RLS stood between anon and this table. Writes
+-- were already refused (42501), so this is defence in depth, not a hole - but
+-- the posture should be identical across the schema.
+--
+-- Re-running this whole file is safe: every statement above is idempotent.
+revoke all on public.plan_cache from anon;
