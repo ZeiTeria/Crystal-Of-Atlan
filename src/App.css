@@ -219,3 +219,33 @@
 .app-content {
   min-height: 0;
 }
+
+/*
+ * The gate a signed-in but unapproved account meets. Classes rather than the
+ * inline style blob this screen first shipped with, so it obeys the same
+ * palette as everything else and the phone gets the same centring.
+ */
+.restricted-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: 24px;
+}
+
+.restricted-card {
+  max-width: 34rem;
+  text-align: center;
+}
+
+.restricted-invite {
+  margin-top: 16px;
+}
+
+.restricted-invite a {
+  color: var(--primary-accent, #00e5ff);
+  font-weight: 700;
+  font-size: 18px;
+  display: inline-block;
+  margin-top: 8px;
+}

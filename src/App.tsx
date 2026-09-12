@@ -124,8 +124,46 @@ export default function App() {
     return <div className="app-container">Loading profile...</div>;
   }
 
+  // Access is by approval. The landing page and sign-in are public, but the
+  // planner itself is not: a new Discord account lands here until an admin
+  // approves it on the Users tab (`setApproval`, policy in 0019). An admin
+  // always has access, or the first approval could never be granted.
+  const hasAccess = profile?.is_admin || profile?.is_approved;
+
+  if (!hasAccess) {
+    return (
+      <div className="app-layout">
+        <header className="app-header">
+          <div className="header-left">
+            <div className="brand">
+              <LogoMark />
+              <span className="brand-text">CRYSTAL OF ATLAN</span>
+            </div>
+          </div>
+          <div className="header-right">
+            <button type="button" className="sign-out-btn" onClick={() => void signOut()}>
+              Sign out
+            </button>
+          </div>
+        </header>
+        <div className="app-content restricted-content">
+          <div className="restricted-card">
+            <h2>Access Restricted</h2>
+            <p>This planner is private. Your account must be approved by an administrator to use it.</p>
+            <p className="restricted-invite">
+              Join this Discord server and ask for verification:<br />
+              <a href="https://discord.gg/nSWeS7JYxH" target="_blank" rel="noreferrer">
+                discord.gg/nSWeS7JYxH
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const tabs = TABS.filter((t) => !t.adminOnly || profile?.is_admin);
-  
+
   return (
     <div className="app-layout">
       <header className="app-header">

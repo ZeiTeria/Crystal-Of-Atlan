@@ -49,11 +49,21 @@ describe('App shell', () => {
     expect(await findByText('plan screen')).toBeDefined();
   });
 
-  it('lets an unapproved non-admin in, without the admin tabs', async () => {
+  it('shuts out a user who is neither admin nor approved', async () => {
+    currentSession = session;
+    currentProfile = { discord_username: 'zei', is_admin: false, is_approved: false };
+    render(<App />);
+    expect(await screen.findByText('Access Restricted')).toBeDefined();
+    expect(screen.queryByText('plan screen')).toBeNull();
+    // Sign-out must be reachable, or a rejected account is stuck on this screen.
+    expect(screen.getByRole('button', { name: /sign out/i })).toBeDefined();
+  });
+
+  it('lets an approved non-admin in, without the admin tabs', async () => {
     // The whole point of `is_approved`: access to the planner without access to
     // the shared catalogue behind Dungeons, Gold and Users.
     currentSession = session;
-    currentProfile = { discord_username: 'zei', is_admin: false, is_approved: false };
+    currentProfile = { discord_username: 'zei', is_admin: false, is_approved: true };
     render(<App />);
     expect(await screen.findByText('plan screen')).toBeDefined();
     expect(screen.queryByText('Access Restricted')).toBeNull();
