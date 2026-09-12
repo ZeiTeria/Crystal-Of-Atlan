@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlanScreen from './PlanScreen';
 import { loadPlanState } from '../data/loadPlanInput';
+import { planFingerprint, readCachedPlan, writeCachedPlan } from '../data/planCache';
 import {
   createCharacter,
   currentGameAccountId,
@@ -16,6 +17,11 @@ import { stubMatchMedia } from '../ui/testing/matchMedia';
 
 vi.mock('../data/loadPlanInput', () => ({ loadPlanState: vi.fn() }));
 vi.mock('../data/grid', () => ({ setGridCell: vi.fn(), setGridCells: vi.fn() }));
+vi.mock('../data/planCache', () => ({
+  planFingerprint: vi.fn(),
+  readCachedPlan: vi.fn(),
+  writeCachedPlan: vi.fn(),
+}));
 // The roster is read separately from the plan input: the input has already
 // dropped parked characters, and the log has to be able to unpark one.
 vi.mock('../data/accounts', () => ({
@@ -111,6 +117,9 @@ beforeEach(() => {
   vi.mocked(createCharacter).mockResolvedValue({ ...MAGE, id: 'new', name: 'Rogue' });
   vi.mocked(setGridCells).mockResolvedValue(undefined);
   vi.mocked(loadPlanState).mockResolvedValue(aState());
+  vi.mocked(planFingerprint).mockResolvedValue('fp');
+  vi.mocked(readCachedPlan).mockResolvedValue(null);
+  vi.mocked(writeCachedPlan).mockResolvedValue(undefined);
 });
 
 /** Opens the add form from the board and fills in a name. */
@@ -504,5 +513,46 @@ describe('PlanScreen leftover attempts', () => {
     await screen.findAllByText('Mage');
     expect(screen.getByText('0 / 3')).toBeDefined();
     expect(screen.queryByRole('button', { name: /left unused|cannot be used/i })).toBe(null);
+  });
+});
+
+describe('the stored plan', () => {
+  /** A plan no solve of `aState()` would produce, so the screen betrays which it used. */
+  const STORED = {
+    status: 'optimal' as const,
+    assignments: [
+      { characterId: 'c1', dungeonId: 'd1', runs: 2, goldPerRun: 30, goldTotal: 60 },
+    ],
+    totals: { attempts: 2, gold: 60 },
+  };
+
+  it('is used when the fingerprint matches, instead of solving', async () => {
+    vi.mocked(readCachedPlan).mockResolvedValue({ fingerprint: 'fp', plan: STORED });
+    render(<PlanScreen />);
+
+    // The solver would give this character its full 3 attempts; the stored plan
+    // says 2, so seeing 2 is the cache being read rather than re-derived.
+    await screen.findAllByText('Mage');
+    const card = document.querySelector('.char-card') as HTMLElement;
+    expect(within(card).getByText('2×')).toBeDefined();
+    expect(vi.mocked(writeCachedPlan)).not.toHaveBeenCalled();
+  });
+
+  it('is ignored and replaced when the fingerprint does not match', async () => {
+    vi.mocked(readCachedPlan).mockResolvedValue({ fingerprint: 'stale', plan: STORED });
+    render(<PlanScreen />);
+
+    await screen.findAllByText('Mage');
+    const card = document.querySelector('.char-card') as HTMLElement;
+    expect(within(card).getByText('3×')).toBeDefined();
+    expect(vi.mocked(writeCachedPlan)).toHaveBeenCalledWith('acc', 'fp', expect.objectContaining({
+      status: 'optimal',
+    }));
+  });
+
+  it('is stored after a solve when there was nothing cached', async () => {
+    render(<PlanScreen />);
+    await waitFor(() => expect(vi.mocked(writeCachedPlan)).toHaveBeenCalledWith(
+      'acc', 'fp', expect.objectContaining({ status: 'optimal' })));
   });
 });

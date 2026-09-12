@@ -93,6 +93,17 @@ const TOLERANCES: Record<Pass, Record<string, number>[]> = {
 
 type Pass = 'gold' | 'attempts';
 
+/**
+ * Identifies this solver's behaviour for the plan cache.
+ *
+ * The cache keys a stored plan on the inputs it was solved from, so anything
+ * that changes the answer for UNCHANGED inputs has to change this string or the
+ * screen keeps serving a plan built under the old rules. The tolerances do that
+ * automatically; bump the leading version by hand when the model itself moves -
+ * a new constraint, a different objective order, a change to `goldPerRun`.
+ */
+export const SOLVER_SIGNATURE = `v1|${JSON.stringify(TOLERANCES)}`;
+
 
 interface Term {
   name: string;

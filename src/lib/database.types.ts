@@ -217,6 +217,28 @@ export interface Database {
         };
         Relationships: [];
       };
+      /** Added by migration 0020. A solved plan keyed by its inputs' fingerprint. */
+      plan_cache: {
+        Row: {
+          game_account_id: string;
+          fingerprint: string;
+          plan: Record<string, unknown>;
+          solved_at: string;
+        };
+        Insert: {
+          game_account_id: string;
+          fingerprint: string;
+          plan: Record<string, unknown>;
+          solved_at?: string;
+        };
+        Update: {
+          game_account_id?: string;
+          fingerprint?: string;
+          plan?: Record<string, unknown>;
+          solved_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

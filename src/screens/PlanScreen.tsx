@@ -8,6 +8,7 @@ import {
 import { setGridCells, type GridRow } from '../data/grid';
 import { maxCharacters } from '../data/roster';
 import { loadPlanState } from '../data/loadPlanInput';
+import { planFingerprint, readCachedPlan, writeCachedPlan } from '../data/planCache';
 import {
   attemptCeiling,
   explainCeiling,
@@ -62,8 +63,25 @@ export default function PlanScreen({ activeView = 'board' }: PlanScreenProps) {
       // the screens need what the engine drops - parked characters, and grid
       // rows whose tier is `none`. Asking for those separately fetched
       // characters, the grid and the settings a second time apiece.
-      const state = await loadPlanState(await accountId());
-      const result = await solveOptimal(state.input);
+      const account = await accountId();
+      // The stored plan is read alongside the rows, not after them: it is one
+      // small row and the whole point is to not wait twice.
+      const [state, cached] = await Promise.all([
+        loadPlanState(account),
+        readCachedPlan(account),
+      ]);
+
+      // A plan is a pure function of these inputs, so a matching fingerprint
+      // means the stored answer IS the answer - no solve. A miss solves and
+      // stores, so the cost is paid once per change instead of once per load.
+      const fingerprint = await planFingerprint(state.input);
+      let result = cached?.fingerprint === fingerprint ? cached.plan : null;
+      if (!result) {
+        result = await solveOptimal(state.input);
+        // Not awaited: the plan is on screen either way, and a cache write that
+        // fails only costs a solve next time.
+        void writeCachedPlan(account, fingerprint, result);
+      }
       setSolved({
         input: state.input,
         result,
