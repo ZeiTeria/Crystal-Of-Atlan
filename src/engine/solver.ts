@@ -66,10 +66,11 @@ const runVar = (i: number) => `n${i}`;
  *
  * **Attempts: exact.** A relative gap is meaningless on an objective of ~160:
  * 1% is 1.6 attempts, and leaving an attempt unused is exactly what this pass
- * exists to prevent. It stays affordable because gold is pinned only to its
- * tolerant optimum, which leaves it room - 716ms on the real catalogue, 2.9s
- * on the harder instance in `solver.perf.test.ts`, and its fallback rung gives
- * up one attempt rather than the whole pass.
+ * exists to prevent. Measured 991ms on the real catalogue, so the 10s rung is
+ * a backstop and not the normal path - but that is only true because of
+ * PIN_SLACK below. Pinned rigidly it could not finish at all: it burned its
+ * whole time limit on every solve and fell through to the fallback rung, for
+ * 21.6s of the 22.1s a real page load cost.
  *
  * **Why optimality is the only thing relaxed.** `assertFeasible` re-checks
  * every account, character and gold cap in integer arithmetic afterwards, so a
@@ -80,6 +81,30 @@ const runVar = (i: number) => `n${i}`;
  * a deliberately loose fallback. If even that expires, the pass throws and the
  * screen shows an error with a Retry button. Never a page that hangs.
  */
+/**
+ * How far below pass 1's gold figure pass 2 is allowed to land: 1 part in
+ * 10,000, about 1,200 gold on an ~11,960,000 week.
+ *
+ * Pass 2 maximises attempts subject to keeping pass 1's gold, and pinning that
+ * at `>= z` exactly - the obvious way to write it - is **tighter than the
+ * number being pinned.** `z` is the incumbent of a solve that was itself only
+ * taken to a 1% gap, so demanding pass 2 reproduce it to the gold is false
+ * precision, and it costs enormously: it leaves pass 2 a needle-thin feasible
+ * region to search.
+ *
+ * Measured on the real catalogue (12 characters x 9 dungeons, live `gold_c`):
+ *
+ *   rigid pin   22,109ms   attempts 162, gold 11,962,130
+ *   1e-4 slack   1,476ms   attempts 162, gold 11,964,980
+ *
+ * Fifteen times faster for the same 162 attempts - and it returns MORE gold,
+ * because the rigid pin was locking pass 2 out of solutions better than the
+ * incumbent it was built from. The slack is two orders of magnitude smaller
+ * than the 1% already accepted on the gold objective itself, so it cannot
+ * change which of the two objectives wins.
+ */
+const PIN_SLACK = 1 - 1e-4;
+
 const TOLERANCES: Record<Pass, Record<string, number>[]> = {
   gold: [
     { mip_rel_gap: 1e-2, time_limit: 10 },
@@ -101,8 +126,10 @@ type Pass = 'gold' | 'attempts';
  * screen keeps serving a plan built under the old rules. The tolerances do that
  * automatically; bump the leading version by hand when the model itself moves -
  * a new constraint, a different objective order, a change to `goldPerRun`.
+ * v2 relaxed the gold pin, which changes the answer, so it had to invalidate
+ * every plan v1 had stored.
  */
-export const SOLVER_SIGNATURE = `v1|${JSON.stringify(TOLERANCES)}`;
+export const SOLVER_SIGNATURE = `v2|${PIN_SLACK}|${JSON.stringify(TOLERANCES)}`;
 
 
 interface Term {
@@ -233,7 +260,7 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
 
   const pin = (name: string, terms: Term[], z: number) => {
     if (terms.length === 0) return;
-    pins.push({ name: `pin_${name}`, terms, op: '>=', rhs: Math.round(z) });
+    pins.push({ name: `pin_${name}`, terms, op: '>=', rhs: Math.floor(z * PIN_SLACK) });
   };
 
   const gold = solvePass('gold', goldObjective);

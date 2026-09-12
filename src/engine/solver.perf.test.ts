@@ -15,11 +15,17 @@ import type { GridEntry } from './types';
  * the exact optimum on the real catalogue did not finish inside 120 seconds;
  * this instance is the same shape - irregular figures, C on seven of nine
  * dungeons, one dungeon with no minimum - but not the measured ones, which are
- * not public. It takes 30 SECONDS to solve exactly, and ~3.5s as configured.
- * See `TOLERANCES` in `solver.ts`.
+ * not public. It takes 30 SECONDS to solve exactly, and ~0.8s as configured.
+ * See `TOLERANCES` and `PIN_SLACK` in `solver.ts`.
  *
  * The bound this asserts is deliberately loose - the point is seconds versus
  * minutes, not a benchmark.
+ *
+ * It is a WEAK guard for `PIN_SLACK` specifically, and should not be mistaken
+ * for a strong one: this instance takes 0.8s with the slack and 2.4s without,
+ * so no threshold separates them without going fragile on a slower machine.
+ * What proves the pin is the live measurement recorded against `PIN_SLACK` -
+ * 1.5s vs 22.1s on the real catalogue, where the gap is 15x.
  */
 function buffedFullAccount() {
   // Irregular figures, and C on seven of nine dungeons, because that is what
@@ -61,7 +67,7 @@ describe('solveOptimal on a buffed full account', () => {
 
     expect(result.status).toBe('optimal');
     if (result.status !== 'optimal') return;
-    expect(elapsed).toBeLessThan(10_000);
+    expect(elapsed).toBeLessThan(5_000);
     // The attempts pass keeps its exact tolerance, so the plan still spends
     // nearly every attempt the account caps allow (9 dungeons x 18).
     expect(result.totals.attempts).toBeGreaterThan(155);
