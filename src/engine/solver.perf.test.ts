@@ -27,7 +27,7 @@ import type { GridEntry } from './types';
  * What proves the pin is the live measurement recorded against `PIN_SLACK` -
  * 1.5s vs 22.1s on the real catalogue, where the gap is 15x.
  */
-function buffedFullAccount() {
+function buffedFullAccount(roster = 12) {
   // Irregular figures, and C on seven of nine dungeons, because that is what
   // measuring produces - and it is what makes this hard. The same instance with
   // round multiples of 500 solves exactly in 771ms; these figures take 30s.
@@ -44,7 +44,7 @@ function buffedFullAccount() {
   // The four buff combinations that exist with abnormal sense off: a character
   // has a title (+2%), a potion (+10%), both, or neither.
   const buffs = [0, 0.02, 0.1, 0.12];
-  const characters = Array.from({ length: 12 }, (_, i) =>
+  const characters = Array.from({ length: roster }, (_, i) =>
     aCharacter(`c${i}`, { buffPct: buffs[i % buffs.length] }),
   );
 
@@ -73,4 +73,32 @@ describe('solveOptimal on a buffed full account', () => {
     expect(result.totals.attempts).toBeGreaterThan(155);
     console.log(`solve ${elapsed}ms attempts ${result.totals.attempts} gold ${result.totals.gold}`);
   }, 300_000);
+});
+
+describe('solveOptimal on a small roster', () => {
+  /**
+   * A character can finish within ~10 gold of its 1,000,000 cap, so a plan
+   * leaving tens of thousands unspent is the gold tolerance and not the
+   * arithmetic of indivisible runs. This is the guard on `EXACT_GOLD_ROSTER`:
+   * measured on the live catalogue, three characters under the 1% rung got
+   * 990,615 on the worst of them, and exactly 0.1% is far inside that - so this
+   * fails if the exact rung stops being offered at this size.
+   */
+  it('spends a small roster to within 0.1% of the gold cap', async () => {
+    const input = buffedFullAccount(3);
+    const result = await solveOptimal(input);
+
+    expect(result.status).toBe('optimal');
+    if (result.status !== 'optimal') return;
+
+    for (const character of input.characters) {
+      const earned = result.assignments
+        .filter((a) => a.characterId === character.id)
+        .reduce((sum, a) => sum + a.goldTotal, 0);
+      const cap = input.goldHeadroom[character.id] ?? 0;
+      expect(cap).toBeGreaterThan(0);
+      expect(earned, `character ${character.id} left ${cap - earned} gold unspent`)
+        .toBeGreaterThan(cap * 0.999);
+    }
+  });
 });

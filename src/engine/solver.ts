@@ -53,16 +53,29 @@ const runVar = (i: number) => `n${i}`;
  * 121ms with the same data and no buffs, where every character shares one
  * coefficient. That is the page sitting on "Solving..." forever.
  *
- * It cannot be fixed by tightening instead. The LP bound is the sum of the
- * caps - twelve characters x 1,000,000 - and no whole number of runs lands on
- * exactly 1,000,000, so the bound sits ~0.3% above anything integral and a gap
- * below that can never close, however long it runs.
+ * Tightening the gap is not a general fix either, though not for the reason
+ * first written here: that said the cap-sum bound sits ~0.3% above anything
+ * integral so a tighter gap could never close, and it is **wrong** - at one
+ * character the bound is 1,000,000 and the best integral plan is 999,990,
+ * 0.001% under. The gap closes fine. What costs the time is *proving* it, and
+ * that is what explodes with roster size.
  *
- * **Gold: 1% relative.** Measured 397ms, and the plan it returns is within
- * ~0.3% of the best figure a 26-second solve could find. On an ~11,900,000
- * gold week the difference is smaller than one run of the cheapest dungeon,
- * and the gold figures themselves are built on an explicitly estimated
- * `stone_rate` of 0.40 - so chasing the last 0.3% is false precision.
+ * **Gold: exact on a small roster, 1% relative on a large one.** The 1% rung
+ * measures 397ms on twelve characters, but 1% of a 12,000,000 gold week is
+ * 120,000 - so the solver stops at the first plan inside that, and it really
+ * does leave gold unspent. Measured against an exact solve of the same live
+ * catalogue:
+ *
+ *   1 character    998,140 (14 runs)   exact  999,990 (13 runs)
+ *   3 characters  2,986,480            exact 2,999,500
+ *
+ * A character can get within ~10 gold of its 1,000,000 cap, so a plan handing
+ * back 998,140 is not the arithmetic of indivisible runs - it is this
+ * tolerance. Exact is also affordable at that size (138ms at one character,
+ * 2.6s at three, 6.1s at four, 2.3s at five) and hopeless just past it: six
+ * characters did not finish in 150 seconds. Hence `EXACT_GOLD_ROSTER` - the
+ * tight rung is offered only where measurement says it lands, and a large
+ * roster pays nothing for it.
  *
  * **Attempts: exact.** A relative gap is meaningless on an objective of ~160:
  * 1% is 1.6 attempts, and leaving an attempt unused is exactly what this pass
@@ -116,6 +129,20 @@ const TOLERANCES: Record<Pass, Record<string, number>[]> = {
   ],
 };
 
+/**
+ * The roster size up to which the gold pass is asked for a proven optimum.
+ *
+ * Measured on the live catalogue: exact takes 138ms / 812ms / 2.6s / 6.1s /
+ * 2.3s at one to five characters (it is a MILP - it is not monotonic), and at
+ * six it had not finished in 150 seconds. So the cliff is real and it sits
+ * here. Above it the exact rung would only burn its time limit on every solve,
+ * which is the mistake the attempts pass already made once.
+ */
+const EXACT_GOLD_ROSTER = 5;
+
+/** Tried ahead of `TOLERANCES.gold` when the roster is at or under the cliff. */
+const EXACT_GOLD_RUNG = { time_limit: 10 };
+
 type Pass = 'gold' | 'attempts';
 
 /**
@@ -126,10 +153,11 @@ type Pass = 'gold' | 'attempts';
  * screen keeps serving a plan built under the old rules. The tolerances do that
  * automatically; bump the leading version by hand when the model itself moves -
  * a new constraint, a different objective order, a change to `goldPerRun`.
- * v2 relaxed the gold pin, which changes the answer, so it had to invalidate
- * every plan v1 had stored.
+ * v2 relaxed the gold pin and v3 solves a small roster exactly; both change
+ * the answer, so both had to invalidate what the previous version had stored.
  */
-export const SOLVER_SIGNATURE = `v2|${PIN_SLACK}|${JSON.stringify(TOLERANCES)}`;
+export const SOLVER_SIGNATURE =
+  `v3|${PIN_SLACK}|${EXACT_GOLD_ROSTER}|${JSON.stringify(EXACT_GOLD_RUNG)}|${JSON.stringify(TOLERANCES)}`;
 
 
 interface Term {
@@ -243,7 +271,12 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
 
   const solvePass = (name: Pass, objective: Term[]) => {
     const lp = buildLp(objective);
-    const rungs = TOLERANCES[name];
+    // A small roster is asked for the proven optimum first; a large one would
+    // only ever time out on that rung, so it is not offered.
+    const rungs =
+      name === 'gold' && input.characters.length <= EXACT_GOLD_ROSTER
+        ? [EXACT_GOLD_RUNG, ...TOLERANCES.gold]
+        : TOLERANCES[name];
     let result = solver.solve(lp, rungs[0]);
     for (let i = 1; i < rungs.length && result.Status !== 'Optimal'; i++) {
       result = solver.solve(lp, rungs[i]);
