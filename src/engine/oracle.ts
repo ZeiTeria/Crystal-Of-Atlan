@@ -2,7 +2,7 @@ import { buildCells, type Cell } from './cells';
 import { validate } from './validate';
 import type { PlanAssignment, PlanInput, PlanResult, PlanTotals } from './types';
 
-/** Lexicographic comparison: gold, then attempts. */
+/** Lexicographic comparison: credited gold, then attempts. */
 function isBetter(a: PlanTotals, b: PlanTotals): boolean {
   if (a.gold !== b.gold) return a.gold > b.gold;
   return a.attempts > b.attempts;
@@ -23,51 +23,53 @@ interface Best {
  */
 function findBest(input: PlanInput, cells: Cell[]): Best | null {
   const accountLeft: Record<string, number> = { ...input.accountAttemptsLeft };
-  
-  const goldLeft: Record<string, number> = {};
-  for (const c of input.characters) {
-    const charCells = cells.filter((cell) => cell.characterId === c.id);
-    const requiredGold = charCells.reduce((sum, cell) => sum + cell.min * cell.goldPerRun, 0);
-    const headroom = input.goldHeadroom[c.id] ?? 0;
-    goldLeft[c.id] = Math.max(headroom, requiredGold);
-  }
-  
+
+  // Gold is NOT a budget that limits runs. The weekly cap truncates what a
+  // character is paid, so running past it is legal and simply unpaid - which
+  // means the only thing pruning this search is the account attempt pool.
+  const earned: Record<string, number> = Object.fromEntries(
+    input.characters.map((c) => [c.id, 0]),
+  );
+
+  /** What the account is actually paid: every character's gold, each capped. */
+  const credited = (): number =>
+    input.characters.reduce(
+      (sum, c) => sum + Math.min(earned[c.id] ?? 0, input.goldHeadroom[c.id] ?? 0),
+      0,
+    );
+
   const current = new Array<number>(cells.length).fill(0);
   let best: Best | null = null;
 
-  const search = (index: number, totals: PlanTotals): void => {
+  const search = (index: number, attempts: number): void => {
     const cell = cells[index];
     if (cell === undefined) {
       // Past the last cell: a complete plan.
+      const totals: PlanTotals = { attempts, gold: credited() };
       if (best === null || isBetter(totals, best.totals)) {
-        best = { totals: { ...totals }, runs: [...current] };
+        best = { totals, runs: [...current] };
       }
       return;
     }
 
     for (let runs = cell.min; runs <= cell.max; runs++) {
-      // Consumption rises monotonically with `runs`, so the first failure means
+      // Attempts rise monotonically with `runs`, so the first failure means
       // every larger value fails too.
       if ((accountLeft[cell.dungeonId] ?? 0) < runs) break;
-      const gold = runs * cell.goldPerRun;
-      if ((goldLeft[cell.characterId] ?? 0) < gold) break;
 
       accountLeft[cell.dungeonId] = (accountLeft[cell.dungeonId] ?? 0) - runs;
-      goldLeft[cell.characterId] = (goldLeft[cell.characterId] ?? 0) - gold;
+      earned[cell.characterId] = (earned[cell.characterId] ?? 0) + runs * cell.goldPerRun;
       current[index] = runs;
 
-      search(index + 1, {
-        attempts: totals.attempts + runs,
-        gold: totals.gold + gold,
-      });
+      search(index + 1, attempts + runs);
 
       accountLeft[cell.dungeonId] = (accountLeft[cell.dungeonId] ?? 0) + runs;
-      goldLeft[cell.characterId] = (goldLeft[cell.characterId] ?? 0) + gold;
+      earned[cell.characterId] = (earned[cell.characterId] ?? 0) - runs * cell.goldPerRun;
       current[index] = 0;
     }
   };
 
-  search(0, { attempts: 0, gold: 0 });
+  search(0, 0);
   return best;
 }
 

@@ -16,16 +16,12 @@ import type { GridEntry } from './types';
  * this instance is the same shape - irregular figures, C on seven of nine
  * dungeons, one dungeon with no minimum - but not the measured ones, which are
  * not public. It takes 30 SECONDS to solve exactly, and ~0.8s as configured.
- * See `TOLERANCES` and `PIN_SLACK` in `solver.ts`.
+ * See `TOLERANCES` in `solver.ts`.
  *
  * The bound this asserts is deliberately loose - the point is seconds versus
- * minutes, not a benchmark.
- *
- * It is a WEAK guard for `PIN_SLACK` specifically, and should not be mistaken
- * for a strong one: this instance takes 0.8s with the slack and 2.4s without,
- * so no threshold separates them without going fragile on a slower machine.
- * What proves the pin is the live measurement recorded against `PIN_SLACK` -
- * 1.5s vs 22.1s on the real catalogue, where the gap is 15x.
+ * minutes, not a benchmark. Twelve characters is the one roster size the exact
+ * rung cannot close, so this is the case that has to stay merely fast; the test
+ * below it is the one that has to stay exact.
  */
 function buffedFullAccount(roster = 12) {
   // Irregular figures, and C on seven of nine dungeons, because that is what
@@ -67,7 +63,10 @@ describe('solveOptimal on a buffed full account', () => {
 
     expect(result.status).toBe('optimal');
     if (result.status !== 'optimal') return;
-    expect(elapsed).toBeLessThan(5_000);
+    // 2.8s measured here (a 2s exact leash that cannot close at this size, then
+    // 392ms at 1e-2 and 401ms for attempts). Generous for a slower machine, but
+    // still well clear of the 14s a 1e-4 middle rung cost.
+    expect(elapsed).toBeLessThan(8_000);
     // The attempts pass keeps its exact tolerance, so the plan still spends
     // nearly every attempt the account caps allow (9 dungeons x 18).
     expect(result.totals.attempts).toBeGreaterThan(155);
@@ -77,14 +76,17 @@ describe('solveOptimal on a buffed full account', () => {
 
 describe('solveOptimal on a small roster', () => {
   /**
-   * A character can finish within ~10 gold of its 1,000,000 cap, so a plan
-   * leaving tens of thousands unspent is the gold tolerance and not the
-   * arithmetic of indivisible runs. This is the guard on `EXACT_GOLD_ROSTER`:
-   * measured on the live catalogue, three characters under the 1% rung got
-   * 990,615 on the worst of them, and exactly 0.1% is far inside that - so this
-   * fails if the exact rung stops being offered at this size.
+   * A small roster must be CREDITED its cap exactly - 1,000,000 each, not
+   * 999,990 and not 990,615 - because running past the cap is legal and the
+   * overflow is simply unpaid, so there is always a plan that reaches it if the
+   * attempts exist. Nothing else competes for those attempts at this size.
+   *
+   * This is the guard on two things at once: the credit model (a hard gold row
+   * caps *earned*, which indivisible runs cannot land on exactly) and the exact
+   * first rung (a relative gap lets HiGHS report `Optimal` at 990,000, since
+   * the cap itself is the bound it measures against).
    */
-  it('spends a small roster to within 0.1% of the gold cap', async () => {
+  it('credits a small roster exactly its gold cap', async () => {
     const input = buffedFullAccount(3);
     const result = await solveOptimal(input);
 
@@ -97,8 +99,8 @@ describe('solveOptimal on a small roster', () => {
         .reduce((sum, a) => sum + a.goldTotal, 0);
       const cap = input.goldHeadroom[character.id] ?? 0;
       expect(cap).toBeGreaterThan(0);
-      expect(earned, `character ${character.id} left ${cap - earned} gold unspent`)
-        .toBeGreaterThan(cap * 0.999);
+      expect(Math.min(earned, cap), `character ${character.id} credited ${Math.min(earned, cap)} of its ${cap} cap`)
+        .toBe(cap);
     }
   });
 });

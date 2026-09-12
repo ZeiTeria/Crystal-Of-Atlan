@@ -42,8 +42,11 @@ describe('attemptCeiling', () => {
     const result = solveExhaustive(input);
     if (result.status !== 'optimal') throw new Error('expected optimal');
     expect(result.totals.gold).toBeLessThanOrEqual(await attemptCeiling(input));
-    expect(result.totals.gold).toBe(600_000);       // gold cap allows only one run
-    expect(await attemptCeiling(input)).toBe(1_800_000);  // attempts alone allow three
+    // Two runs earn 1,200,000 and are PAID the 1,000,000 cap - more than the
+    // 600,000 of stopping at one, which is why the cap truncates gold instead of
+    // forbidding the run. Three runs are allowed by the attempts alone.
+    expect(result.totals.gold).toBe(1_000_000);
+    expect(await attemptCeiling(input)).toBe(1_800_000);
   });
   it('respects minimums when assigning attempts', async () => {
     const input = anInput({

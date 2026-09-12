@@ -40,6 +40,14 @@ function highs(): Promise<Highs> {
 }
 
 const runVar = (i: number) => `n${i}`;
+/**
+ * The gold a character is actually paid: `min(earned, cap)`.
+ *
+ * Indexed, not named after the character: deriving an LP name from an id means
+ * sanitising it, and two ids that differ only in punctuation would then collide
+ * into one variable.
+ */
+const creditVar = (i: number) => `g${i}`;
 
 /**
  * How hard each pass is allowed to work, tried in order until one reports
@@ -53,73 +61,55 @@ const runVar = (i: number) => `n${i}`;
  * 121ms with the same data and no buffs, where every character shares one
  * coefficient. That is the page sitting on "Solving..." forever.
  *
- * Tightening the gap is not a general fix either, though not for the reason
- * first written here: that said the cap-sum bound sits ~0.3% above anything
- * integral so a tighter gap could never close, and it is **wrong** - at one
- * character the bound is 1,000,000 and the best integral plan is 999,990,
- * 0.001% under. The gap closes fine. What costs the time is *proving* it, and
- * that is what explodes with roster size.
+ * That figure, and every tolerance below it, was measured against the model
+ * this file no longer uses. The gold cap used to be a hard row forbidding runs
+ * past 1,000,000; it is now a credit variable that truncates what a run pays
+ * (see `solveOptimal`). The hardness went with it, so the two mitigations that
+ * block bought - a small-roster cliff and slack on the gold pin - are both
+ * deleted rather than retuned.
  *
- * **Gold: exact on a small roster, 1% relative on a large one.** The 1% rung
- * measures 397ms on twelve characters, but 1% of a 12,000,000 gold week is
- * 120,000 - so the solver stops at the first plan inside that, and it really
- * does leave gold unspent. Measured against an exact solve of the same live
- * catalogue:
+ * **Gold: exact, with a short leash.** A relative gap cannot be the first rung
+ * here, because HiGHS reports `Optimal` the moment the gap is met: at one
+ * character the bound is the 1,000,000 cap, so a 1% rung returns a plan worth
+ * 990,000 and calls it optimal. That is the "why is it 99x,xxx" the credit
+ * model exists to answer, and a tolerance would put it straight back. Exact is
+ * also what is affordable now - measured on the live catalogue, zero gap proves
+ * the optimum in 70ms at one character, 5ms at six, 110ms at eleven, and each
+ * one lands on an exact multiple of the cap (1,000,000 / 6,000,000 /
+ * 11,000,000) using the whole 162-attempt account pool.
  *
- *   1 character    998,140 (14 runs)   exact  999,990 (13 runs)
- *   3 characters  2,986,480            exact 2,999,500
+ * Twelve characters is the one size that does not close: zero gap could not
+ * prove it in 25 seconds. 162 weekly attempts cannot cap twelve characters, so
+ * this is the roster where the account pool binds rather than the gold cap, and
+ * the relaxed rung below is what answers it - returning 11,908,290, which a
+ * separate run proved optimal to within 0.01% (~1,200 gold).
  *
- * A character can get within ~10 gold of its 1,000,000 cap, so a plan handing
- * back 998,140 is not the arithmetic of indivisible runs - it is this
- * tolerance. Exact is also affordable at that size (138ms at one character,
- * 2.6s at three, 6.1s at four, 2.3s at five) and hopeless just past it: six
- * characters did not finish in 150 seconds. Hence `EXACT_GOLD_ROSTER` - the
- * tight rung is offered only where measurement says it lands, and a large
- * roster pays nothing for it.
+ * **Why the exact rung's leash is short, and the relaxed one is 1e-2.** A rung
+ * that fails costs its whole time limit, so the ladder's latency is set by the
+ * rungs that DON'T close. Exact closes in 184ms at eleven characters, so 2
+ * seconds is eight times the margin it needs; and on the perf instance 1e-4
+ * burned a full 10s while 1e-2 closed in 392ms, having found the same plan. So
+ * 1e-4 was dropped: it paid ten seconds for a tighter proof of an answer the
+ * looser rung already had. On the live catalogue 1e-2, 1e-4 and 1e-5 all return
+ * the identical 11,908,290 - the incumbent converges early there and only the
+ * proof is slow.
  *
  * **Attempts: exact.** A relative gap is meaningless on an objective of ~160:
  * 1% is 1.6 attempts, and leaving an attempt unused is exactly what this pass
- * exists to prevent. Measured 991ms on the real catalogue, so the 10s rung is
- * a backstop and not the normal path - but that is only true because of
- * PIN_SLACK below. Pinned rigidly it could not finish at all: it burned its
- * whole time limit on every solve and fell through to the fallback rung, for
- * 21.6s of the 22.1s a real page load cost.
+ * exists to prevent.
  *
  * **Why optimality is the only thing relaxed.** `assertFeasible` re-checks
  * every account, character and gold cap in integer arithmetic afterwards, so a
  * plan that breaks a cap remains impossible however loose the tolerance gets.
  *
  * **Why a time limit too.** The hardness is fragile - scaling the same
- * instance down by its GCD pushed it past 120 seconds - so the second rung is
- * a deliberately loose fallback. If even that expires, the pass throws and the
+ * instance down by its GCD pushed it past 120 seconds - so the last rung is a
+ * deliberately loose fallback. If even that expires, the pass throws and the
  * screen shows an error with a Retry button. Never a page that hangs.
  */
-/**
- * How far below pass 1's gold figure pass 2 is allowed to land: 1 part in
- * 10,000, about 1,200 gold on an ~11,960,000 week.
- *
- * Pass 2 maximises attempts subject to keeping pass 1's gold, and pinning that
- * at `>= z` exactly - the obvious way to write it - is **tighter than the
- * number being pinned.** `z` is the incumbent of a solve that was itself only
- * taken to a 1% gap, so demanding pass 2 reproduce it to the gold is false
- * precision, and it costs enormously: it leaves pass 2 a needle-thin feasible
- * region to search.
- *
- * Measured on the real catalogue (12 characters x 9 dungeons, live `gold_c`):
- *
- *   rigid pin   22,109ms   attempts 162, gold 11,962,130
- *   1e-4 slack   1,476ms   attempts 162, gold 11,964,980
- *
- * Fifteen times faster for the same 162 attempts - and it returns MORE gold,
- * because the rigid pin was locking pass 2 out of solutions better than the
- * incumbent it was built from. The slack is two orders of magnitude smaller
- * than the 1% already accepted on the gold objective itself, so it cannot
- * change which of the two objectives wins.
- */
-const PIN_SLACK = 1 - 1e-4;
-
 const TOLERANCES: Record<Pass, Record<string, number>[]> = {
   gold: [
+    { mip_rel_gap: 0, mip_abs_gap: 0, time_limit: 2 },
     { mip_rel_gap: 1e-2, time_limit: 10 },
     { mip_rel_gap: 1e-1, time_limit: 20 },
   ],
@@ -128,20 +118,6 @@ const TOLERANCES: Record<Pass, Record<string, number>[]> = {
     { mip_abs_gap: 1, time_limit: 20 },
   ],
 };
-
-/**
- * The roster size up to which the gold pass is asked for a proven optimum.
- *
- * Measured on the live catalogue: exact takes 138ms / 812ms / 2.6s / 6.1s /
- * 2.3s at one to five characters (it is a MILP - it is not monotonic), and at
- * six it had not finished in 150 seconds. So the cliff is real and it sits
- * here. Above it the exact rung would only burn its time limit on every solve,
- * which is the mistake the attempts pass already made once.
- */
-const EXACT_GOLD_ROSTER = 5;
-
-/** Tried ahead of `TOLERANCES.gold` when the roster is at or under the cliff. */
-const EXACT_GOLD_RUNG = { time_limit: 10 };
 
 type Pass = 'gold' | 'attempts';
 
@@ -153,11 +129,12 @@ type Pass = 'gold' | 'attempts';
  * screen keeps serving a plan built under the old rules. The tolerances do that
  * automatically; bump the leading version by hand when the model itself moves -
  * a new constraint, a different objective order, a change to `goldPerRun`.
- * v2 relaxed the gold pin and v3 solves a small roster exactly; both change
- * the answer, so both had to invalidate what the previous version had stored.
+ * v2 relaxed the gold pin, v3 solved a small roster exactly, and v4 replaced
+ * the hard gold cap with credit variables - every one of them changes the
+ * answer for inputs that did not move, so every one had to invalidate what the
+ * previous version had stored.
  */
-export const SOLVER_SIGNATURE =
-  `v3|${PIN_SLACK}|${EXACT_GOLD_ROSTER}|${JSON.stringify(EXACT_GOLD_RUNG)}|${JSON.stringify(TOLERANCES)}`;
+export const SOLVER_SIGNATURE = `v4|${JSON.stringify(TOLERANCES)}`;
 
 
 interface Term {
@@ -229,28 +206,42 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
     });
   }
 
-  // One row per character: the weekly gold cap.
-  for (const character of input.characters) {
-    const charCells = cells.filter((c) => c.characterId === character.id);
-    if (charCells.length === 0) continue;
-    
-    const terms = charCells.map((c) => ({ name: runVar(c.index), coef: c.goldPerRun }));
-    const requiredGold = charCells.reduce((sum, c) => sum + c.min * c.goldPerRun, 0);
-    const headroom = input.goldHeadroom[character.id] ?? 0;
-    
+  // One credit variable per character: the gold that character is actually paid.
+  //
+  // The weekly cap TRUNCATES gold, it does not forbid the run. A character on
+  // 970,000 that runs a 50,000 dungeon is paid 30,000 of it and finishes on
+  // exactly 1,000,000 - so `credit = min(earned, cap)`, which is linear once
+  // the minimum gets its own variable:
+  //
+  //   credit_c <= cap_c                      (a bound)
+  //   credit_c <= sum(goldPerRun * runs)     (a row)
+  //
+  // and the objective maximises the credits. Modelling the cap as
+  // `sum(goldPerRun * runs) <= cap` instead - which this did - **loses real
+  // plans**: it stopped a lone character at 13 runs and 999,990 because a
+  // 14th would have "overflowed" a cap that cannot overflow, while 14 unused
+  // attempts sat there and no other character wanted them.
+  const credits = input.characters
+    .filter((character) => cells.some((c) => c.characterId === character.id))
+    .map((character, i) => ({
+      name: creditVar(i),
+      cap: input.goldHeadroom[character.id] ?? 0,
+      terms: cells
+        .filter((c) => c.characterId === character.id)
+        .map((c) => ({ name: runVar(c.index), coef: c.goldPerRun })),
+    }));
+
+  for (const credit of credits) {
     rows.push({
-      name: `gold_${rows.length}`,
-      terms,
+      name: `credit_${rows.length}`,
+      terms: [{ name: credit.name, coef: 1 }, ...credit.terms.map((t) => ({ ...t, coef: -t.coef }))],
       op: '<=',
-      rhs: Math.max(headroom, requiredGold),
+      rhs: 0,
     });
   }
 
   const attemptsObjective: Term[] = cells.map((c) => ({ name: runVar(c.index), coef: 1 }));
-  const goldObjective: Term[] = cells.map((c) => ({
-    name: runVar(c.index),
-    coef: c.goldPerRun,
-  }));
+  const goldObjective: Term[] = credits.map((c) => ({ name: c.name, coef: 1 }));
 
   const pins: Row[] = [];
 
@@ -263,6 +254,11 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
     for (const cell of cells) {
       lines.push(` ${cell.min} <= ${runVar(cell.index)} <= ${cell.max}`);
     }
+    // Continuous on purpose: a credit is a consequence of the runs, not a
+    // decision, and leaving it out of `General` keeps the branching to runs.
+    for (const credit of credits) {
+      lines.push(` 0 <= ${credit.name} <= ${credit.cap}`);
+    }
     lines.push('General');
     lines.push(` ${cells.map((c) => runVar(c.index)).join(' ')}`);
     lines.push('End');
@@ -273,10 +269,7 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
     const lp = buildLp(objective);
     // A small roster is asked for the proven optimum first; a large one would
     // only ever time out on that rung, so it is not offered.
-    const rungs =
-      name === 'gold' && input.characters.length <= EXACT_GOLD_ROSTER
-        ? [EXACT_GOLD_RUNG, ...TOLERANCES.gold]
-        : TOLERANCES[name];
+    const rungs = TOLERANCES[name];
     let result = solver.solve(lp, rungs[0]);
     for (let i = 1; i < rungs.length && result.Status !== 'Optimal'; i++) {
       result = solver.solve(lp, rungs[i]);
@@ -293,7 +286,7 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
 
   const pin = (name: string, terms: Term[], z: number) => {
     if (terms.length === 0) return;
-    pins.push({ name: `pin_${name}`, terms, op: '>=', rhs: Math.floor(z * PIN_SLACK) });
+    pins.push({ name: `pin_${name}`, terms, op: '>=', rhs: Math.floor(z) });
   };
 
   const gold = solvePass('gold', goldObjective);
@@ -318,8 +311,8 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
     totals.attempts += runs;
   }
 
-  // Cap the total gold at the headroom so the overall total reflects reality
-  // even if minimums force a character over the cap.
+  // The same min() the model maximises, recomputed from the assignments rather
+  // than read back off the solver.
   let clampedGold = 0;
   for (const character of input.characters) {
     const earned = assignments
@@ -376,21 +369,8 @@ function assertFeasible(
     }
   }
 
-  for (const character of input.characters) {
-    const earned = assignments
-      .filter((a) => a.characterId === character.id)
-      .reduce((sum, a) => sum + a.goldTotal, 0);
-    
-    const charCells = cells.filter((c) => c.characterId === character.id);
-    const requiredGold = charCells.reduce((sum, c) => sum + c.min * c.goldPerRun, 0);
-    const headroom = input.goldHeadroom[character.id] ?? 0;
-    const effectiveCap = Math.max(headroom, requiredGold);
-
-    if (earned > effectiveCap) {
-      throw new SolverNotOptimalError(
-        'verify',
-        `character ${character.id} earned ${earned} gold against a ${effectiveCap} cap`,
-      );
-    }
-  }
+  // The weekly gold cap is deliberately NOT checked here. It is no longer a
+  // constraint on the plan - running past it is legal and the overflow is
+  // simply unpaid - so it is a function applied to the answer (the min() above)
+  // rather than a row the solver could violate. There is nothing left to verify.
 }
