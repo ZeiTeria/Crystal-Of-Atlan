@@ -41,6 +41,59 @@ function highs(): Promise<Highs> {
 
 const runVar = (i: number) => `n${i}`;
 
+/**
+ * How hard each pass is allowed to work, tried in order until one reports
+ * `Optimal`. Per pass, because the two objectives need opposite treatment.
+ *
+ * **Why a tolerance at all.** Once `gold_c` is filled in, every character
+ * prices a dungeon differently (buffs multiply C), so each character's weekly
+ * gold cap becomes a knapsack over ~50,000-100,000-gold runs and the whole
+ * model is twelve coupled knapsacks. Proving the exact optimum on the real
+ * catalogue does not finish: measured **>120 seconds** at a 0.1% gap, against
+ * 121ms with the same data and no buffs, where every character shares one
+ * coefficient. That is the page sitting on "Solving..." forever.
+ *
+ * It cannot be fixed by tightening instead. The LP bound is the sum of the
+ * caps - twelve characters x 1,000,000 - and no whole number of runs lands on
+ * exactly 1,000,000, so the bound sits ~0.3% above anything integral and a gap
+ * below that can never close, however long it runs.
+ *
+ * **Gold: 1% relative.** Measured 397ms, and the plan it returns is within
+ * ~0.3% of the best figure a 26-second solve could find. On an ~11,900,000
+ * gold week the difference is smaller than one run of the cheapest dungeon,
+ * and the gold figures themselves are built on an explicitly estimated
+ * `stone_rate` of 0.40 - so chasing the last 0.3% is false precision.
+ *
+ * **Attempts: exact.** A relative gap is meaningless on an objective of ~160:
+ * 1% is 1.6 attempts, and leaving an attempt unused is exactly what this pass
+ * exists to prevent. It stays affordable because gold is pinned only to its
+ * tolerant optimum, which leaves it room - 716ms on the real catalogue, 2.9s
+ * on the harder instance in `solver.perf.test.ts`, and its fallback rung gives
+ * up one attempt rather than the whole pass.
+ *
+ * **Why optimality is the only thing relaxed.** `assertFeasible` re-checks
+ * every account, character and gold cap in integer arithmetic afterwards, so a
+ * plan that breaks a cap remains impossible however loose the tolerance gets.
+ *
+ * **Why a time limit too.** The hardness is fragile - scaling the same
+ * instance down by its GCD pushed it past 120 seconds - so the second rung is
+ * a deliberately loose fallback. If even that expires, the pass throws and the
+ * screen shows an error with a Retry button. Never a page that hangs.
+ */
+const TOLERANCES: Record<Pass, Record<string, number>[]> = {
+  gold: [
+    { mip_rel_gap: 1e-2, time_limit: 10 },
+    { mip_rel_gap: 1e-1, time_limit: 20 },
+  ],
+  attempts: [
+    { time_limit: 10 },
+    { mip_abs_gap: 1, time_limit: 20 },
+  ],
+};
+
+type Pass = 'gold' | 'attempts';
+
+
 interface Term {
   name: string;
   coef: number;
@@ -150,8 +203,13 @@ export async function solveOptimal(input: PlanInput): Promise<PlanResult> {
     return lines.join('\n');
   };
 
-  const solvePass = (name: string, objective: Term[]) => {
-    const result = solver.solve(buildLp(objective), {});
+  const solvePass = (name: Pass, objective: Term[]) => {
+    const lp = buildLp(objective);
+    const rungs = TOLERANCES[name];
+    let result = solver.solve(lp, rungs[0]);
+    for (let i = 1; i < rungs.length && result.Status !== 'Optimal'; i++) {
+      result = solver.solve(lp, rungs[i]);
+    }
     if (result.Status !== 'Optimal') {
       throw new SolverNotOptimalError(name, String(result.Status));
     }
