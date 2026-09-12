@@ -23,16 +23,19 @@ import type { GridEntry } from './types';
  * rung cannot close, so this is the case that has to stay merely fast; the test
  * below it is the one that has to stay exact.
  */
-function buffedFullAccount(roster = 12) {
+function buffedFullAccount(roster = 12, dungeonCount = 9) {
   // Irregular figures, and C on seven of nine dungeons, because that is what
   // measuring produces - and it is what makes this hard. The same instance with
   // round multiples of 500 solves exactly in 771ms; these figures take 30s.
-  const figures = [93_117, 47_111, 99_143, 64_879, 79_313, 72_701, 52_579, 74_821, 50_411];
-  const cs = [51_900, 19_400, 50_600, 34_900, 48_500, 42_700, 24_300, 0, 0];
+  const figures = [93_117, 47_111, 99_143, 64_879, 79_313, 72_701, 52_579, 74_821, 50_411,
+    88_237, 61_543, 95_819].slice(0, dungeonCount);
+  const cs = [51_900, 19_400, 50_600, 34_900, 48_500, 42_700, 24_300, 0, 0,
+    46_100, 31_700, 53_300];
+  if (figures.length < dungeonCount) throw new Error(`no figures for ${dungeonCount} dungeons`);
   const dungeons = figures.map((g, i) =>
     aDungeon(`d${i}`, {
       gold: { solo: g, story: g, elite: g, legend: g },
-      goldC: cs[i],
+      goldC: cs[i] ?? 0,
       // One dungeon the player is not obliged to run, as in the real catalogue.
       default_min_runs: i === 8 ? 0 : 1,
     }),
@@ -100,6 +103,44 @@ describe('solveOptimal on a small roster', () => {
       const cap = input.goldHeadroom[character.id] ?? 0;
       expect(cap).toBeGreaterThan(0);
       expect(Math.min(earned, cap), `character ${character.id} credited ${Math.min(earned, cap)} of its ${cap} cap`)
+        .toBe(cap);
+    }
+  });
+
+  /**
+   * What happens when the account GROWS - a thirteenth character, a tenth
+   * dungeon - because the answer is counter-intuitive and worth pinning down.
+   *
+   * A new dungeon adds its own 18 weekly attempts to the account pool, and once
+   * the pool can cap every character the sum of the caps is ATTAINED: the LP
+   * bound equals the achievable value, so the exact rung proves it immediately.
+   * Measured on this instance:
+   *
+   *   12 chars,  9 dungeons (162 attempts)   2,929ms   11,688,564    1/12 capped
+   *   13 chars,  9 dungeons (162 attempts)   2,047ms   11,654,114    2/13 capped
+   *   12 chars, 10 dungeons (180 attempts)      83ms   12,000,000   12/12 capped
+   *   13 chars, 10 dungeons (180 attempts)     381ms   13,000,000   13/13 capped
+   *   14 chars, 10 dungeons (180 attempts)   2,591ms   13,331,046    0/14 capped
+   *   16 chars, 12 dungeons (216 attempts)   1,962ms   16,000,000   16/16 capped
+   *
+   * So growth is not the thing to fear - a new dungeon makes the solve FASTER.
+   * The hard cases are the ones where the attempts nearly but not quite suffice,
+   * because that is where the solver must decide who goes short. Today's account
+   * (12 x 9) is one of those.
+   */
+  it('caps every character once the attempts suffice, at a size above today', async () => {
+    const input = buffedFullAccount(13, 10);
+    const result = await solveOptimal(input);
+
+    expect(result.status).toBe('optimal');
+    if (result.status !== 'optimal') return;
+
+    for (const character of input.characters) {
+      const earned = result.assignments
+        .filter((a) => a.characterId === character.id)
+        .reduce((sum, a) => sum + a.goldTotal, 0);
+      const cap = input.goldHeadroom[character.id] ?? 0;
+      expect(Math.min(earned, cap), `character ${character.id} fell short of its cap`)
         .toBe(cap);
     }
   });
