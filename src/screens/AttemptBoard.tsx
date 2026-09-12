@@ -147,7 +147,10 @@ export default function AttemptBoard({
                 <div className="tile-bottom">
                   <div className="tile-gold-row">
                     <span className={capped ? 'warning-text' : undefined}>{gold(Math.min(planned, cap))}</span>
-                    <span>{planned > cap ? 'over cap' : capped ? 'at cap' : `${Math.round((planned / cap) * 100)}% of cap`}</span>
+                    {/* No 'over cap' state: a run that crosses the cap is paid
+                        only up to it, so overshooting is how a character REACHES
+                        the cap rather than a mistake to flag. */}
+                    <span>{capped ? 'at cap' : `${Math.round((planned / cap) * 100)}% of cap`}</span>
                   </div>
                   <div className="tile-meter">
                     <div
