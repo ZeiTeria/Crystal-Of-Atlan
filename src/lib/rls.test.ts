@@ -30,10 +30,16 @@ const TABLES = [
   'characters',
   'dungeons',
   'character_dungeon',
+  'plan_cache',
 ] as const;
 
 /** The tables whose rows belong to exactly one user. */
-const OWNED_TABLES = ['game_accounts', 'characters', 'character_dungeon'] as const;
+const OWNED_TABLES = [
+  'game_accounts',
+  'characters',
+  'character_dungeon',
+  'plan_cache',
+] as const;
 
 const NETWORK_TIMEOUT = 30_000;
 
@@ -63,7 +69,7 @@ async function signIn(client: SupabaseClient<Database>, email: string, password:
   return userId;
 }
 
-/** Removes this suite's accounts. Characters, grid rows and runs cascade. */
+/** Removes this suite's accounts. Characters, grid rows and cached plans cascade. */
 async function sweep(client: SupabaseClient<Database>) {
   await client.from('game_accounts').delete().in('name', TEST_ACCOUNT_NAMES);
 }
@@ -102,6 +108,13 @@ describe.skipIf(!configured)('row level security', () => {
       throw new Error(`A could not create its character: ${character.error.message}`);
     }
     aCharacterId = character.data.id;
+
+    // A cached plan for A, so the owner-scoped sweep below is not vacuous for
+    // `plan_cache`: that test proves B sees nothing only while A owns a row.
+    const cached = await a
+      .from('plan_cache')
+      .insert({ game_account_id: aAccountId, fingerprint: 'rls-test', plan: { status: 'optimal' } });
+    if (cached.error) throw new Error(`A could not cache its plan: ${cached.error.message}`);
   }, NETWORK_TIMEOUT);
 
   afterAll(async () => {
@@ -170,6 +183,16 @@ describe.skipIf(!configured)('row level security', () => {
     const reread = await a.from('characters').select('id').eq('id', aCharacterId);
     expect(reread.error).toBeNull();
     expect(reread.data).toHaveLength(1);
+  });
+
+  it('refuses B caching a plan against A’s account', { timeout: NETWORK_TIMEOUT }, async () => {
+    // The cached plan is derived from A's private rows, so writing one into A's
+    // account is how B would read A's data back out of its own cache. An insert
+    // cannot be filtered, so `with check` must raise.
+    const { error } = await b
+      .from('plan_cache')
+      .insert({ game_account_id: aAccountId, fingerprint: 'forged', plan: { status: 'optimal' } });
+    expect(error).not.toBeNull();
   });
 
   it('refuses a non-admin writing the shared catalogue', { timeout: NETWORK_TIMEOUT }, async () => {
